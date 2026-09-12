@@ -24,11 +24,22 @@ L'application est disponible sur http://localhost:5173.
 
 | Variable | Description |
 | --- | --- |
-| `VITE_SUPABASE_URL` | URL du projet Supabase (ex. `https://xxxx.supabase.co`) |
-| `VITE_SUPABASE_ANON_KEY` | Clé publique `anon` du projet Supabase |
+| `VITE_SUPABASE_URL` | URL du projet Supabase (Project Settings → API → Project URL) |
+| `VITE_SUPABASE_ANON_KEY` | Clé publique `anon` (Project Settings → API → anon public) |
 
-Ces deux variables doivent être définies dans Vercel (Settings → Environment
-Variables) pour les environnements *Production*, *Preview* et *Development*.
+Les deux sont **obligatoires**. Aucune valeur n'est écrite en dur dans le code :
+`vite.config.js` vérifie leur présence et **fait échouer le build** avec un
+message explicite si l'une manque, plutôt que de livrer une application qui
+plante sur un écran blanc.
+
+- **En local** : `cp .env.example .env`, puis renseignez vos clés. `.env` est
+  ignoré par Git et ne doit jamais être commité.
+- **Sur Vercel** : Settings → Environment Variables, pour les environnements
+  *Production*, *Preview* et *Development*. Vite remplace ces variables au
+  moment du build : après les avoir ajoutées ou modifiées, **relancez un
+  déploiement** pour qu'elles soient prises en compte.
+- **En CI** : `.github/workflows/ci.yml` fournit des valeurs factices. La CI
+  vérifie seulement que le projet compile, elle ne contacte aucun Supabase.
 
 ## Build de production
 
