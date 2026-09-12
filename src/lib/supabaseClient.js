@@ -1,13 +1,11 @@
 import { createClient } from "@supabase/supabase-js";
 
-const url = import.meta.env.VITE_SUPABASE_URL;
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const url = import.meta.env.VITE_SUPABASE_URL || "https://hqpwlsbrhyrhlchtdzqm.supabase.co";
+const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhxcHdsc2JyaHlyaGxjaHRkenFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYwNDI3MDQsImV4cCI6MjEwMTYxODcwNH0.QGQVnMK0uk1SjWjVn6fvDi9_qNzObiGP-67wbtyAgFk";
 
 if (!url || !anonKey) {
   throw new Error(
-    "Configuration Supabase manquante : définissez VITE_SUPABASE_URL et " +
-      "VITE_SUPABASE_ANON_KEY, puis relancez le build. En local, copiez " +
-      ".env.example vers .env ; sur Vercel, Settings → Environment Variables."
+    "VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY doivent être définies (fichier .env à la racine du projet)."
   );
 }
 

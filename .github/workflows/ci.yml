@@ -15,9 +15,4 @@ jobs:
           node-version: "20"
           cache: "npm"
       - run: npm ci
-      # Valeurs factices : la CI vérifie que le projet compile, elle ne se
-      # connecte à aucun Supabase. Les vraies clés vivent dans Vercel.
       - run: npm run build
-        env:
-          VITE_SUPABASE_URL: https://ci-placeholder.supabase.co
-          VITE_SUPABASE_ANON_KEY: ci-placeholder-anon-key
