@@ -23,6 +23,9 @@ export const PARTIAL_FRACTIONS = [1, 0.75, 0.5, 0.25];
 export function useStock(restaurantId) {
   const [items, setItems] = useState([]);
   const [movements, setMovements] = useState([]);
+  // Liens produit vendu -> article de stock. C'est eux qui permettent au
+  // declencheur consume_stock_on_sale de deduire le stock a chaque vente.
+  const [links, setLinks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -30,6 +33,7 @@ export function useStock(restaurantId) {
     if (!restaurantId) {
       setItems([]);
       setMovements([]);
+      setLinks([]);
       setLoading(false);
       return;
     }
@@ -37,20 +41,23 @@ export function useStock(restaurantId) {
     const since = new Date();
     since.setDate(since.getDate() - 90);
 
-    const [{ data: itemRows, error: itemErr }, { data: moveRows }] = await Promise.all([
-      supabase.from("stock_items").select("*").eq("restaurant_id", restaurantId).order("name"),
-      supabase
-        .from("stock_movements")
-        .select("*")
-        .eq("restaurant_id", restaurantId)
-        .gte("movement_date", since.toISOString().slice(0, 10))
-        .order("movement_date", { ascending: false }),
-    ]);
+    const [{ data: itemRows, error: itemErr }, { data: moveRows }, { data: linkRows }] =
+      await Promise.all([
+        supabase.from("stock_items").select("*").eq("restaurant_id", restaurantId).order("name"),
+        supabase
+          .from("stock_movements")
+          .select("*")
+          .eq("restaurant_id", restaurantId)
+          .gte("movement_date", since.toISOString().slice(0, 10))
+          .order("movement_date", { ascending: false }),
+        supabase.from("product_stock_links").select("*").eq("restaurant_id", restaurantId),
+      ]);
 
     if (itemErr) setError(itemErr.message);
     else setError(null);
     setItems(itemRows ?? []);
     setMovements(moveRows ?? []);
+    setLinks(linkRows ?? []);
     setLoading(false);
   }, [restaurantId]);
 
@@ -72,6 +79,11 @@ export function useStock(restaurantId) {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "stock_movements", filter: `restaurant_id=eq.${restaurantId}` },
+        () => load()
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "product_stock_links", filter: `restaurant_id=eq.${restaurantId}` },
         () => load()
       )
       .subscribe();
@@ -124,11 +136,18 @@ export function useStock(restaurantId) {
       if (!item) throw new Error("Article de stock introuvable.");
 
       const factor = inPurchaseUnit ? Number(item.units_per_purchase) || 1 : 1;
-      const qtyBase = Number(quantity) * factor;
-      if (!qtyBase || qtyBase <= 0) throw new Error("Quantité invalide.");
+      const raw = Number(quantity) * factor;
+      // Un ajustement d'inventaire peut corriger à la baisse : il accepte donc
+      // une quantité négative, contrairement aux autres mouvements dont le
+      // sens est déjà porté par le type.
+      const isAdjustment = kind === "ajustement";
+      if (!Number.isFinite(raw) || raw === 0 || (!isAdjustment && raw < 0)) {
+        throw new Error("Quantité invalide.");
+      }
 
       const sign = MOVEMENT_KINDS.find((k) => k.id === kind)?.sign ?? 1;
-      const signedQty = kind === "ajustement" ? Number(quantity) * factor : sign * qtyBase;
+      const qtyBase = Math.abs(raw);
+      const signedQty = isAdjustment ? raw : sign * qtyBase;
 
       // Le coût total saisi est réparti sur la quantité en unité de base,
       // ce qui alimente la moyenne pondérée calculée côté base.
@@ -192,8 +211,55 @@ export function useStock(restaurantId) {
         await supabase.from("expenses").delete().eq("id", expense.id);
         throw err;
       }
+
+      // Le dernier fournisseur connu est conservé sur l'article, pour que la
+      // fiche reste à jour sans ressaisie.
+      if (supplier && supplier !== item.supplier) {
+        await supabase.from("stock_items").update({ supplier }).eq("id", itemId);
+        await load();
+      }
     },
-    [restaurantId, items, addMovement]
+    [restaurantId, items, addMovement, load]
+  );
+
+  // Relie un produit du menu a un article de stock. quantityPerSale est
+  // exprime en unite de base : vendre 1 "Coca 33cl" sort 1 bouteille,
+  // vendre 1 "Casier Coca" en sort 12.
+  const addLink = useCallback(
+    async ({ productId, stockItemId, quantityPerSale }) => {
+      const qty = Number(quantityPerSale);
+      if (!qty || qty <= 0) throw new Error("Quantite deduite invalide.");
+      const { error: err } = await supabase.from("product_stock_links").insert({
+        restaurant_id: restaurantId,
+        product_id: productId,
+        stock_item_id: stockItemId,
+        quantity_per_sale: qty,
+      });
+      if (err) {
+        throw new Error(
+          err.code === "23505"
+            ? "Ce produit est deja relie a cet article de stock."
+            : err.message
+        );
+      }
+      await load();
+    },
+    [restaurantId, load]
+  );
+
+  const removeLink = useCallback(
+    async (id) => {
+      const { error: err } = await supabase.from("product_stock_links").delete().eq("id", id);
+      if (err) throw new Error(err.message);
+      await load();
+    },
+    [load]
+  );
+
+  // Historique complet d'un article, du plus recent au plus ancien.
+  const movementsFor = useCallback(
+    (itemId) => movements.filter((m) => m.stock_item_id === itemId),
+    [movements]
   );
 
   const stats = useMemo(() => {
@@ -220,6 +286,33 @@ export function useStock(restaurantId) {
       )
       .reduce((s, m) => s + Math.abs(Number(m.quantity)), 0);
 
+    // Ventilation par nature, pour distinguer sur le tableau de bord les
+    // achats de boissons des achats d'ingredients et des autres depenses.
+    const kindOf = Object.fromEntries(items.map((i) => [i.id, i.kind]));
+    const costOf = Object.fromEntries(items.map((i) => [i.id, Number(i.unit_cost) || 0]));
+    const thisMonth = (m) => String(m.movement_date).startsWith(monthPrefix);
+
+    const purchaseValue = (kind) =>
+      movements
+        .filter((m) => m.kind === "achat" && thisMonth(m) && kindOf[m.stock_item_id] === kind)
+        .reduce((s, m) => s + Number(m.quantity) * (Number(m.unit_cost) || 0), 0);
+
+    // Quantite de boissons reellement sortie par des ventes, en unite de base.
+    const drinksSoldThisMonth = movements
+      .filter((m) => m.kind === "vente" && thisMonth(m) && kindOf[m.stock_item_id] === "boisson")
+      .reduce((s, m) => s + Math.abs(Number(m.quantity)), 0);
+
+    // Valeur des ingredients consommes : les quantites (kg, litres...) ne
+    // s'additionnent pas entre elles, seule leur valeur est comparable.
+    const ingredientsConsumedValue = movements
+      .filter(
+        (m) =>
+          ["consommation", "vente", "perte"].includes(m.kind) &&
+          thisMonth(m) &&
+          kindOf[m.stock_item_id] === "ingredient"
+      )
+      .reduce((s, m) => s + Math.abs(Number(m.quantity)) * (costOf[m.stock_item_id] ?? 0), 0);
+
     return {
       totalValue: items.reduce((s, i) => s + value(i), 0),
       drinksValue: drinks.reduce((s, i) => s + value(i), 0),
@@ -230,6 +323,10 @@ export function useStock(restaurantId) {
       outOfStock: items.filter(isOut),
       lowStock: items.filter(isLow),
       purchasesThisMonth,
+      purchasesDrinksThisMonth: purchaseValue("boisson"),
+      purchasesIngredientsThisMonth: purchaseValue("ingredient"),
+      drinksSoldThisMonth,
+      ingredientsConsumedValue,
       consumedThisMonth,
       // Part des articles dont le niveau est encore sain.
       healthyRatio:
@@ -238,6 +335,24 @@ export function useStock(restaurantId) {
           : items.filter((i) => !isOut(i) && !isLow(i)).length / items.length,
     };
   }, [items, movements]);
+
+  // Achats de stock sur une période, ventilés boissons / ingrédients.
+  // On se cale sur la même période que le tableau de bord pour que la part
+  // « autres dépenses » se déduise sans double comptage.
+  const purchaseBreakdownSince = useCallback(
+    (fromDate) => {
+      const kindOf = Object.fromEntries(items.map((i) => [i.id, i.kind]));
+      const totals = { boisson: 0, ingredient: 0 };
+      for (const m of movements) {
+        if (m.kind !== "achat" || String(m.movement_date) < fromDate) continue;
+        const kind = kindOf[m.stock_item_id];
+        if (!kind) continue;
+        totals[kind] += Number(m.quantity) * (Number(m.unit_cost) || 0);
+      }
+      return { drinks: totals.boisson, ingredients: totals.ingredient };
+    },
+    [items, movements]
+  );
 
   // Coût des marchandises vendues sur une période, pour la marge réelle.
   const cogsSince = useCallback(
@@ -256,15 +371,20 @@ export function useStock(restaurantId) {
   return {
     items,
     movements,
+    links,
     loading,
     error,
     stats,
     cogsSince,
+    purchaseBreakdownSince,
+    movementsFor,
     reload: load,
     addItem,
     updateItem,
     deleteItem,
     addMovement,
     recordPurchase,
+    addLink,
+    removeLink,
   };
 }

@@ -212,7 +212,7 @@ function AppContent() {
           />
         )}
         {tab === "stock" && can("stock") && (
-          <StockTab stock={stock} canEdit={can("stock")} />
+          <StockTab stock={stock} products={products} canEdit={can("stock")} />
         )}
         {tab === "expenses" && can("expenses") && (
           <ExpensesTab expenses={expenses} onAdd={addExpense} onDelete={deleteExpense} canEdit={canEditExpenses} />

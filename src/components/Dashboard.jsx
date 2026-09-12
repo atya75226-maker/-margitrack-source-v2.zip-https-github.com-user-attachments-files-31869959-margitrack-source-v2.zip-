@@ -86,6 +86,12 @@ export function Dashboard({ products, sales, expenses, stock }) {
     // Marge réelle si le stock est renseigné : CA − coût des marchandises
     // réellement sorties du stock. Sinon on retombe sur CA − dépenses.
     const cogs = stock?.cogsSince ? stock.cogsSince(from) : 0;
+
+    // Ventilation des dépenses : achats de stock réellement enregistrés sur
+    // la période, le reste étant les autres dépenses (salaires, loyer...).
+    const purchases = stock?.purchaseBreakdownSince
+      ? stock.purchaseBreakdownSince(from)
+      : { drinks: 0, ingredients: 0 };
     const hasCogs = cogs > 0;
     const grossMargin = hasCogs ? revenue - cogs : null;
     const marginRatio = hasCogs && revenue > 0 ? grossMargin / revenue : null;
@@ -132,6 +138,9 @@ export function Dashboard({ products, sales, expenses, stock }) {
     return {
       revenue, prevRevenue, expenseTotal, prevExpenseTotal, profit, prevProfit,
       cogs, hasCogs, grossMargin, marginRatio, expenseRatio,
+      purchasesDrinks: purchases.drinks,
+      purchasesIngredients: purchases.ingredients,
+      otherExpenses: Math.max(expenseTotal - purchases.drinks - purchases.ingredients, 0),
       itemsSold: curSales.reduce((n, s) => n + s.quantity, 0),
       series, topCategories, topProducts,
       hasAnyData: sales.length > 0 || expenses.length > 0,
@@ -296,6 +305,9 @@ export function Dashboard({ products, sales, expenses, stock }) {
               <p className="text-[11px] mt-0.5" style={{ color: palette.muted }}>
                 {stockStats.drinksCount} article(s)
               </p>
+              <p className="text-[11px]" style={{ color: palette.muted }}>
+                {stockStats.drinksSoldThisMonth.toLocaleString("fr-FR")} vendue(s) ce mois
+              </p>
             </div>
             <div className="rounded-2xl p-4" style={card}>
               <p className="text-[11px]" style={{ color: palette.muted }}>🥘 Ingrédients</p>
@@ -304,6 +316,9 @@ export function Dashboard({ products, sales, expenses, stock }) {
               </p>
               <p className="text-[11px] mt-0.5" style={{ color: palette.muted }}>
                 {stockStats.ingredientsCount} article(s)
+              </p>
+              <p className="text-[11px]" style={{ color: palette.muted }}>
+                {formatMoney(stockStats.ingredientsConsumedValue)} consommé(s) ce mois
               </p>
             </div>
           </div>
@@ -319,6 +334,41 @@ export function Dashboard({ products, sales, expenses, stock }) {
               <span style={{ color: palette.muted }}>Achats de stock ce mois</span>
               <span className="font-semibold" style={{ color: palette.ink }}>
                 {formatMoney(stockStats.purchasesThisMonth)}
+              </span>
+            </div>
+          </div>
+
+          {/* Répartition des dépenses de la période : les achats de stock sont
+              déjà comptés dans le total, ils en sont ici isolés. */}
+          <div className="rounded-2xl p-4" style={card}>
+            <p className="text-sm font-semibold mb-1" style={{ color: palette.ink }}>
+              💰 Répartition des dépenses
+            </p>
+            <div className="flex justify-between text-sm py-1">
+              <span style={{ color: palette.muted }}>Achats d'ingrédients</span>
+              <span className="font-semibold" style={{ color: palette.ink }}>
+                {formatMoney(stats.purchasesIngredients)}
+              </span>
+            </div>
+            <div className="flex justify-between text-sm py-1">
+              <span style={{ color: palette.muted }}>Achats de boissons</span>
+              <span className="font-semibold" style={{ color: palette.ink }}>
+                {formatMoney(stats.purchasesDrinks)}
+              </span>
+            </div>
+            <div className="flex justify-between text-sm py-1">
+              <span style={{ color: palette.muted }}>Autres dépenses</span>
+              <span className="font-semibold" style={{ color: palette.ink }}>
+                {formatMoney(stats.otherExpenses)}
+              </span>
+            </div>
+            <div
+              className="flex justify-between text-sm pt-2 mt-1"
+              style={{ borderTop: `1px solid ${palette.line}` }}
+            >
+              <span style={{ color: palette.muted }}>Total dépenses</span>
+              <span className="font-bold font-display" style={{ color: palette.ink }}>
+                {formatMoney(stats.expenseTotal)}
               </span>
             </div>
           </div>

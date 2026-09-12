@@ -6,6 +6,7 @@ import {
   MOVEMENT_KINDS,
   PARTIAL_FRACTIONS,
 } from "../hooks/useStock";
+import { StockItemDetail } from "./StockItemDetail";
 
 const emptyItem = {
   name: "",
@@ -19,9 +20,10 @@ const emptyItem = {
   supplier: "",
 };
 
-export function StockTab({ stock, canEdit }) {
+export function StockTab({ stock, products = [], canEdit }) {
   const { palette, formatMoney } = usePreferences();
-  const { items, movements, stats, loading, addItem, deleteItem, addMovement, recordPurchase } = stock;
+  const { items, movements, links, stats, loading, addItem, deleteItem, addMovement, recordPurchase } =
+    stock;
 
   const [tab, setTab] = useState("boisson");
   const [form, setForm] = useState(emptyItem);
@@ -29,14 +31,18 @@ export function StockTab({ stock, canEdit }) {
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
 
+  const [detailItemId, setDetailItemId] = useState(null);
   const [moveItemId, setMoveItemId] = useState(null);
-  const [move, setMove] = useState({
+  const today = new Date().toISOString().slice(0, 10);
+  const emptyMove = {
     kind: "achat",
     quantity: "",
     inPurchaseUnit: true,
     totalCost: "",
     supplier: "",
-  });
+    date: today,
+  };
+  const [move, setMove] = useState(emptyMove);
 
   const card = { backgroundColor: palette.card, border: `1px solid ${palette.line}` };
   const input = { backgroundColor: palette.elevated, borderColor: palette.line, color: palette.ink };
@@ -75,6 +81,7 @@ export function StockTab({ stock, canEdit }) {
           inPurchaseUnit: move.inPurchaseUnit,
           totalCost: move.totalCost,
           supplier: move.supplier,
+          date: move.date || today,
         });
       } else {
         await addMovement({
@@ -83,10 +90,11 @@ export function StockTab({ stock, canEdit }) {
           quantity: move.quantity,
           inPurchaseUnit: move.inPurchaseUnit,
           totalCost: null,
+          date: move.date || today,
         });
       }
       setMoveItemId(null);
-      setMove({ kind: "achat", quantity: "", inPurchaseUnit: true, totalCost: "", supplier: "" });
+      setMove(emptyMove);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -292,6 +300,7 @@ export function StockTab({ stock, canEdit }) {
         {visible.map((item) => {
           const level = levelOf(item);
           const inPurchase = Number(item.units_per_purchase) > 1;
+          const linkCount = links.filter((l) => l.stock_item_id === item.id).length;
           return (
             <div key={item.id} className="rounded-xl p-3" style={card}>
               <div className="flex items-start justify-between gap-2">
@@ -317,24 +326,62 @@ export function StockTab({ stock, canEdit }) {
                     Coût moyen {formatMoney(item.unit_cost)} / {item.base_unit} · Valeur{" "}
                     {formatMoney(Math.max(Number(item.quantity), 0) * Number(item.unit_cost))}
                   </p>
+                  {item.unit_price != null && (
+                    <p className="text-xs" style={{ color: palette.muted }}>
+                      Vente {formatMoney(item.unit_price)} · Bénéfice{" "}
+                      <span
+                        style={{
+                          color:
+                            Number(item.unit_price) - Number(item.unit_cost) >= 0
+                              ? "#10B981"
+                              : "#F43F5E",
+                        }}
+                      >
+                        {formatMoney(Number(item.unit_price) - Number(item.unit_cost))}
+                      </span>{" "}
+                      / {item.base_unit}
+                    </p>
+                  )}
+                  {item.supplier && (
+                    <p className="text-xs" style={{ color: palette.muted }}>
+                      Fournisseur : {item.supplier}
+                    </p>
+                  )}
+                  {linkCount === 0 && (
+                    <p className="text-xs" style={{ color: "#F59E08" }}>
+                      Aucun produit relié — les ventes ne déduisent pas ce stock.
+                    </p>
+                  )}
                 </div>
-                {canEdit && (
-                  <div className="flex flex-col items-end gap-1 shrink-0">
-                    <button
-                      onClick={() => { setMoveItemId(item.id); setError(null); }}
-                      className="text-xs font-medium"
-                      style={{ color: "#7C5CFF" }}
-                    >
-                      Mouvement
-                    </button>
-                    <button
-                      onClick={() => deleteItem(item.id).catch((e) => setError(e.message))}
-                      className="text-xs text-rose-500"
-                    >
-                      Supprimer
-                    </button>
-                  </div>
-                )}
+                <div className="flex flex-col items-end gap-1 shrink-0">
+                  <button
+                    onClick={() => {
+                      setDetailItemId((id) => (id === item.id ? null : item.id));
+                      setError(null);
+                    }}
+                    className="text-xs font-medium"
+                    style={{ color: palette.muted }}
+                  >
+                    {detailItemId === item.id ? "Masquer" : "Détails"}
+                  </button>
+                  {canEdit && (
+                    <>
+                      <button
+                        onClick={() => { setMoveItemId(item.id); setError(null); }}
+                        className="text-xs font-medium"
+                        style={{ color: "#7C5CFF" }}
+                      >
+                        Mouvement
+                      </button>
+                      <button
+                        onClick={() => deleteItem(item.id).catch((e) => setError(e.message))}
+                        className="text-xs text-rose-500"
+                      >
+                        Supprimer
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
 
               {/* Formulaire de mouvement */}
@@ -370,6 +417,12 @@ export function StockTab({ stock, canEdit }) {
                     </select>
                   </div>
 
+                  {move.kind === "ajustement" && (
+                    <p className="text-[11px]" style={{ color: palette.muted }}>
+                      Saisissez une quantité négative pour corriger le stock à la baisse.
+                    </p>
+                  )}
+
                   {/* Quantités partielles pour les ingrédients */}
                   {item.kind === "ingredient" && move.kind !== "achat" && (
                     <div className="flex gap-1.5 flex-wrap">
@@ -392,6 +445,19 @@ export function StockTab({ stock, canEdit }) {
                       ))}
                     </div>
                   )}
+
+                  <div>
+                    <label className="text-[11px]" style={{ color: palette.muted }}>
+                      {move.kind === "achat" ? "Date d'achat" : "Date du mouvement"}
+                    </label>
+                    <input
+                      value={move.date}
+                      onChange={(e) => setMove((m) => ({ ...m, date: e.target.value }))}
+                      type="date"
+                      className="mt-1 w-full rounded-lg border px-2.5 py-2 text-sm"
+                      style={input}
+                    />
+                  </div>
 
                   {move.kind === "achat" && (
                     <>
@@ -436,6 +502,15 @@ export function StockTab({ stock, canEdit }) {
                     </button>
                   </div>
                 </form>
+              )}
+
+              {detailItemId === item.id && (
+                <StockItemDetail
+                  item={item}
+                  stock={stock}
+                  products={products}
+                  canEdit={canEdit}
+                />
               )}
             </div>
           );
