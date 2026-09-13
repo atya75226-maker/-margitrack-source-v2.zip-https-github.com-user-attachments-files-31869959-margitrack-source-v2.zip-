@@ -24,7 +24,7 @@ const emptyItem = {
   initialUnitCost: "",
 };
 
-export function StockTab({ stock, products = [], canEdit }) {
+export function StockTab({ stock, products = [], canEdit, canSell = false, onRecordSale }) {
   const { palette, formatMoney } = usePreferences();
   const { items, movements, links, stats, loading, addItem, deleteItem, addMovement, recordPurchase,
     setStockLevel } = stock;
@@ -568,6 +568,8 @@ export function StockTab({ stock, products = [], canEdit }) {
                   stock={stock}
                   products={products}
                   canEdit={canEdit}
+                  canSell={canSell}
+                  onRecordSale={onRecordSale}
                 />
               )}
             </div>

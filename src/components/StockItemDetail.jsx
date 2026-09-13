@@ -20,10 +20,10 @@ const PAGE_SIZE = 20;
  * possible : sans lien product_stock_links, le déclencheur Supabase
  * consume_stock_on_sale n'a rien à décrémenter lors d'une vente.
  */
-export function StockItemDetail({ item, stock, products, canEdit }) {
+export function StockItemDetail({ item, stock, products, canEdit, canSell = false, onRecordSale }) {
   const { palette, formatMoney } = usePreferences();
-  const { links, addLink, removeLink, updateItem, deleteMovement, setStockLevel, fetchMovementPage } =
-    stock;
+  const { links, addLink, removeLink, updateItem, deleteMovement, setStockLevel, fetchMovementPage,
+    addMovement } = stock;
 
   const [section, setSection] = useState("liens");
   const [error, setError] = useState(null);
@@ -39,6 +39,14 @@ export function StockItemDetail({ item, stock, products, canEdit }) {
     quantity: "",
     inPurchaseUnit: inPurchaseAvailable,
     unitCost: "",
+  });
+
+  // Sortie de stock : utilisation en cuisine, perte, ou vente.
+  const [out, setOut] = useState({
+    mode: "consommation",
+    quantity: "",
+    inPurchaseUnit: false,
+    productId: "",
   });
 
   const [edit, setEdit] = useState({
@@ -190,10 +198,83 @@ export function StockItemDetail({ item, stock, products, canEdit }) {
 
   const tabs = [
     { id: "liens", label: `Ventes liées (${itemLinks.length})` },
+    ...(canEdit ? [{ id: "sortie", label: "Sortie" }] : []),
     { id: "historique", label: "Historique" },
     ...(canEdit ? [{ id: "inventaire", label: "Inventaire" }] : []),
     ...(canEdit ? [{ id: "fiche", label: "Modifier" }] : []),
   ];
+
+  // Vendre depuis le stock passe par la table des ventes, jamais par un
+  // mouvement direct : c'est le déclencheur consume_stock_on_sale qui déduit
+  // alors le stock, et le chiffre d'affaires est compté. Enregistrer une
+  // sortie « à la main » ferait baisser le stock sans aucune recette.
+  const sellable = itemLinks
+    .map((l) => ({ link: l, product: products.find((p) => p.id === l.product_id) }))
+    .filter((x) => x.product);
+
+  const canSellHere = canSell && typeof onRecordSale === "function" && sellable.length > 0;
+
+  const outPreview = useMemo(() => {
+    const typed = Number(out.quantity);
+    if (out.quantity === "" || !Number.isFinite(typed) || typed <= 0) return null;
+    const stockNow = Number(item.quantity) || 0;
+
+    if (out.mode === "vente") {
+      const chosen = sellable.find((x) => x.product.id === out.productId);
+      if (!chosen) return null;
+      const leaving = Number(chosen.link.quantity_per_sale) * typed;
+      return { leaving, after: stockNow - leaving, product: chosen.product };
+    }
+
+    const factor = out.inPurchaseUnit ? Number(item.units_per_purchase) || 1 : 1;
+    const leaving = typed * factor;
+    return { leaving, after: stockNow - leaving };
+  }, [out, item.quantity, item.units_per_purchase, sellable]);
+
+  const submitOut = async (e) => {
+    e.preventDefault();
+    setError(null);
+    const typed = Number(out.quantity);
+    if (!Number.isFinite(typed) || typed <= 0) {
+      setError("Indiquez une quantité.");
+      return;
+    }
+
+    setBusy(true);
+    try {
+      if (out.mode === "vente") {
+        if (!out.productId) {
+          setError("Choisissez le produit vendu.");
+          return;
+        }
+        if (!Number.isInteger(typed)) {
+          setError("Une vente se compte en nombre entier.");
+          return;
+        }
+        await onRecordSale([
+          {
+            productId: out.productId,
+            quantity: typed,
+            date: new Date().toISOString().slice(0, 10),
+          },
+        ]);
+      } else {
+        await addMovement({
+          itemId: item.id,
+          kind: out.mode,
+          quantity: typed,
+          inPurchaseUnit: out.inPurchaseUnit,
+          totalCost: null,
+        });
+      }
+      setOut((o) => ({ ...o, quantity: "" }));
+      setHistoryKey((k) => k + 1);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   // Aperçu de l'écart, pour que l'utilisateur voie ce qui sera enregistré.
   const countPreview = useMemo(() => {
@@ -308,6 +389,123 @@ export function StockItemDetail({ item, stock, products, canEdit }) {
             </form>
           )}
         </div>
+      )}
+
+      {section === "sortie" && canEdit && (
+        <form onSubmit={submitOut} className="space-y-2">
+          <div className="grid grid-cols-3 gap-1.5">
+            {[
+              { id: "consommation", label: "Utilisé" },
+              { id: "perte", label: "Perte" },
+              ...(canSellHere ? [{ id: "vente", label: "Vendu" }] : []),
+            ].map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => setOut((o) => ({ ...o, mode: m.id, quantity: "" }))}
+                className="rounded-lg text-xs font-medium py-2 border"
+                style={
+                  out.mode === m.id
+                    ? { backgroundColor: "#7C5CFF", color: "#FFFFFF", borderColor: "#7C5CFF" }
+                    : { backgroundColor: palette.elevated, color: palette.ink, borderColor: palette.line }
+                }
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+
+          {out.mode === "vente" ? (
+            <>
+              <select
+                value={out.productId}
+                onChange={(e) => setOut((o) => ({ ...o, productId: e.target.value }))}
+                className="w-full rounded-lg border px-2.5 py-2 text-sm"
+                style={input}
+              >
+                <option value="">Qu'avez-vous vendu ?</option>
+                {sellable.map(({ link, product }) => (
+                  <option key={link.id} value={product.id}>
+                    {product.name} ({Number(link.quantity_per_sale).toLocaleString("fr-FR")}{" "}
+                    {item.base_unit})
+                  </option>
+                ))}
+              </select>
+              <input
+                value={out.quantity}
+                onChange={(e) => setOut((o) => ({ ...o, quantity: e.target.value }))}
+                type="text"
+                inputMode="numeric"
+                placeholder="Combien en avez-vous vendu ?"
+                className="w-full rounded-lg border px-2.5 py-2 text-sm"
+                style={input}
+              />
+              <p className="text-[11px]" style={{ color: palette.muted }}>
+                La vente est enregistrée dans le chiffre d'affaires, et le stock
+                est déduit automatiquement.
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="flex gap-2">
+                <input
+                  value={out.quantity}
+                  onChange={(e) => setOut((o) => ({ ...o, quantity: e.target.value }))}
+                  type="text"
+                  inputMode="decimal"
+                  placeholder={out.mode === "perte" ? "Quantité perdue" : "Quantité utilisée"}
+                  className="flex-1 rounded-lg border px-2.5 py-2 text-sm"
+                  style={input}
+                />
+                <select
+                  value={out.inPurchaseUnit ? "purchase" : "base"}
+                  onChange={(e) =>
+                    setOut((o) => ({ ...o, inPurchaseUnit: e.target.value === "purchase" }))
+                  }
+                  className="rounded-lg border px-2.5 py-2 text-sm"
+                  style={input}
+                >
+                  <option value="base">{item.base_unit}</option>
+                  {inPurchaseAvailable && <option value="purchase">{item.purchase_unit}</option>}
+                </select>
+              </div>
+              <p className="text-[11px]" style={{ color: palette.muted }}>
+                {out.mode === "perte"
+                  ? "Casse, vol ou marchandise avariée : sortie sans recette."
+                  : "Marchandise passée en cuisine : sortie sans recette."}
+                {canSellHere && " Pour une vente, utilisez l'onglet Vendu."}
+              </p>
+            </>
+          )}
+
+          {outPreview && (
+            <p className="text-[11px]" style={{ color: palette.muted }}>
+              Sortie de {outPreview.leaving.toLocaleString("fr-FR")} {item.base_unit} · stock{" "}
+              {Number(item.quantity).toLocaleString("fr-FR")} →{" "}
+              <span style={{ color: outPreview.after < 0 ? "#F43F5E" : palette.ink }}>
+                {outPreview.after.toLocaleString("fr-FR")} {item.base_unit}
+              </span>
+              {outPreview.after < 0 && " — attention, stock négatif"}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={busy}
+            className="w-full rounded-lg text-white text-xs font-semibold py-2 disabled:opacity-50"
+            style={{ backgroundColor: "#7C5CFF" }}
+          >
+            {busy ? "Enregistrement..." : "Enregistrer la sortie"}
+          </button>
+
+          {!canSellHere && itemLinks.length === 0 && (
+            <p className="text-[11px]" style={{ color: "#F59E08" }}>
+              Aucun produit relié : pour enregistrer une vente avec son chiffre
+              d'affaires, reliez d'abord cet article à un produit du menu dans
+              l'onglet « Ventes liées ».
+            </p>
+          )}
+        </form>
       )}
 
       {section === "historique" && (

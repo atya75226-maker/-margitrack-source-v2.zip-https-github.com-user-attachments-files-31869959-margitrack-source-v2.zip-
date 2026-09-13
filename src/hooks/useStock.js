@@ -11,10 +11,10 @@ export const PURCHASE_UNITS = [
 ];
 
 export const MOVEMENT_KINDS = [
-  { id: "achat", label: "Achat (entrée)", sign: 1 },
-  { id: "consommation", label: "Consommation (sortie)", sign: -1 },
-  { id: "perte", label: "Perte / casse (sortie)", sign: -1 },
-  { id: "ajustement", label: "Ajustement d'inventaire", sign: 1 },
+  { id: "achat", label: "Achat — entrée en stock", sign: 1 },
+  { id: "consommation", label: "Utilisé en cuisine — sortie", sign: -1 },
+  { id: "perte", label: "Perte, casse ou vol — sortie", sign: -1 },
+  { id: "ajustement", label: "Correction d'inventaire", sign: 1 },
 ];
 
 // Fractions courantes pour une consommation partielle d'ingrédient.
