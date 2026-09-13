@@ -215,9 +215,20 @@ npm run build     # génère dist/
 npm run preview   # sert dist/ en local
 ```
 
-`vercel.json` est prêt : framework Vite, sortie `dist`, réécriture SPA (toutes les
-routes renvoient vers `index.html`, indispensable pour `/:slug` et `/c/:id`).
-Sur Vercel, importez le dépôt et réglez **Root Directory** sur `kartaa`.
+`vercel.json` fixe le framework (Vite), la sortie `dist` et la réécriture SPA —
+toutes les routes renvoient vers `index.html`, ce qui est indispensable pour
+`/:slug` et `/c/:id`.
+
+Le dépôt est lié au projet Vercel **kartaa**, avec `kartaa` comme *Root Directory* :
+chaque push redéploie automatiquement. La branche de production est `main` ; tant
+que Kartaa vit sur une branche de travail, ce sont des déploiements de
+prévisualisation qui sont produits.
+
+Le projet est servi en accès libre, comme n'importe quel site vitrine : c'est
+nécessaire pour qu'un QR Code scanné depuis un téléphone ouvre le mini-site plutôt
+qu'un écran de connexion à l'hébergeur. Les zones privées de l'application — le
+tableau de bord et les coffres — restent protégées par l'authentification décrite
+plus haut.
 
 ### Vérification du chiffrement (hors ligne)
 
