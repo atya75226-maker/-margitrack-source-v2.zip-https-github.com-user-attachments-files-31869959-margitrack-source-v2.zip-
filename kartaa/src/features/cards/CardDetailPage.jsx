@@ -50,7 +50,7 @@ export default function CardDetailPage() {
       await exportCard(card, { front: frontRef.current, back: backRef.current }, format)
       toast.success(`Carte téléchargée en ${format.toUpperCase()}.`)
     } catch (error) {
-      toast.error("Le téléchargement a échoué. Réessayez.")
+      toast.error(error.message || 'Le téléchargement a échoué. Réessayez.')
     } finally {
       setExporting(null)
     }

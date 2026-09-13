@@ -2,8 +2,7 @@ import { useRef, useState } from 'react'
 import { Button, Field, Input, Panel } from '../../../components/ui'
 import { Avatar } from '../../../components/ui'
 import { Icon } from '../../../components/ui/Icons'
-import { storeImage } from '../../../hooks/useImageUpload'
-import { useBlobUrl } from '../../../hooks/useCardAssets'
+import { uploadImage, removeImage } from '../../../lib/storage'
 import { initialsOf } from '../../../lib/format'
 import { useToast } from '../../../state/ToastContext'
 
@@ -11,7 +10,7 @@ export default function StepIdentity({ draft, update, errors }) {
   const profile = draft.profile
   const fileRef = useRef(null)
   const [busy, setBusy] = useState(false)
-  const photoUrl = useBlobUrl(profile.photoId)
+  const photoUrl = profile.photoUrl || null
   const toast = useToast()
 
   const setField = (key) => (event) => update({ profile: { ...profile, [key]: event.target.value } })
@@ -24,11 +23,12 @@ export default function StepIdentity({ draft, update, errors }) {
     }
     setBusy(true)
     try {
-      const { id } = await storeImage(file, { maxSize: 800 })
-      update({ profile: { ...profile, photoId: id } })
+      const { path, url } = await uploadImage(file, { maxSize: 800 })
+      if (profile.photoPath) await removeImage(profile.photoPath)
+      update({ profile: { ...profile, photoUrl: url, photoPath: path } })
       toast.success('Photo ajoutée.')
-    } catch {
-      toast.error("Impossible de lire cette image.")
+    } catch (error) {
+      toast.error(error.message || "Impossible d'envoyer cette image.")
     } finally {
       setBusy(false)
     }
@@ -54,10 +54,13 @@ export default function StepIdentity({ draft, update, errors }) {
                 }}
               />
               <Button size="sm" variant="outline" icon="camera" loading={busy} onClick={() => fileRef.current?.click()}>
-                {profile.photoId ? 'Changer' : 'Ajouter une photo'}
+                {profile.photoUrl ? 'Changer' : 'Ajouter une photo'}
               </Button>
-              {profile.photoId && (
-                <Button size="sm" variant="ghost" icon="trash" onClick={() => update({ profile: { ...profile, photoId: null } })}>
+              {profile.photoUrl && (
+                <Button size="sm" variant="ghost" icon="trash" onClick={async () => {
+                  await removeImage(profile.photoPath)
+                  update({ profile: { ...profile, photoUrl: null, photoPath: null } })
+                }}>
                   Retirer
                 </Button>
               )}

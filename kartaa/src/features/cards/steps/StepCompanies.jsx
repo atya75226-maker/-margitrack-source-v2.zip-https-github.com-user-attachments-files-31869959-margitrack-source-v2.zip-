@@ -2,15 +2,14 @@ import { useRef, useState } from 'react'
 import { Button, Field, Input, Modal, Panel, Textarea, EmptyState } from '../../../components/ui'
 import { Icon, SocialIcon } from '../../../components/ui/Icons'
 import { SOCIAL_NETWORKS } from '../../../config/app.config'
-import { storeImage } from '../../../hooks/useImageUpload'
-import { useBlobUrl } from '../../../hooks/useCardAssets'
+import { uploadImage, removeImage } from '../../../lib/storage'
 import { randomId } from '../../../lib/crypto'
-import { formatNumber } from '../../../lib/format'
 
 const EMPTY_COMPANY = {
-  name: '', description: '', phone: '', whatsapp: '', address: '', website: '', logoId: null, socials: [],
+  name: '', description: '', phone: '', whatsapp: '', address: '', website: '',
+  logoUrl: null, logoPath: null, socials: [],
 }
-const EMPTY_SERVICE = { name: '', description: '', price: '', photoId: null }
+const EMPTY_SERVICE = { name: '', description: '', price: '', photoUrl: null, photoPath: null }
 
 export default function StepCompanies({ draft, update }) {
   const [companyDraft, setCompanyDraft] = useState(null)
@@ -99,7 +98,7 @@ export default function StepCompanies({ draft, update }) {
 }
 
 function CompanyRow({ company, onEdit, onRemove }) {
-  const logoUrl = useBlobUrl(company.logoId)
+  const logoUrl = company.logoUrl
   return (
     <div className="flex items-center gap-3.5 rounded-2xl border border-ink-100 p-3.5">
       <span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-ink-100 text-ink-500">
@@ -120,7 +119,7 @@ function CompanyRow({ company, onEdit, onRemove }) {
 }
 
 function ServiceRow({ service, onEdit, onRemove }) {
-  const photoUrl = useBlobUrl(service.photoId)
+  const photoUrl = service.photoUrl
   return (
     <div className="overflow-hidden rounded-2xl border border-ink-100">
       {photoUrl && <img src={photoUrl} alt="" className="h-28 w-full object-cover" />}
@@ -141,10 +140,9 @@ function ServiceRow({ service, onEdit, onRemove }) {
   )
 }
 
-function LogoPicker({ blobId, onChange, label = 'Logo', maxSize = 512 }) {
+function LogoPicker({ url, path, onChange, label = 'Logo', maxSize = 512 }) {
   const ref = useRef(null)
   const [busy, setBusy] = useState(false)
-  const url = useBlobUrl(blobId)
   return (
     <div className="flex items-center gap-4">
       <span className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-2xl bg-ink-100 text-ink-400">
@@ -163,8 +161,9 @@ function LogoPicker({ blobId, onChange, label = 'Logo', maxSize = 512 }) {
             if (!file) return
             setBusy(true)
             try {
-              const { id } = await storeImage(file, { maxSize })
-              onChange(id)
+              const uploaded = await uploadImage(file, { maxSize })
+              if (path) await removeImage(path)
+              onChange(uploaded)
             } finally {
               setBusy(false)
             }
@@ -172,10 +171,13 @@ function LogoPicker({ blobId, onChange, label = 'Logo', maxSize = 512 }) {
         />
         <div className="mt-1.5 flex gap-2">
           <Button size="sm" variant="outline" loading={busy} onClick={() => ref.current?.click()}>
-            {blobId ? 'Changer' : 'Choisir'}
+            {url ? 'Changer' : 'Choisir'}
           </Button>
-          {blobId && (
-            <Button size="sm" variant="ghost" onClick={() => onChange(null)}>
+          {url && (
+            <Button size="sm" variant="ghost" onClick={async () => {
+              await removeImage(path)
+              onChange(null)
+            }}>
               Retirer
             </Button>
           )}
@@ -213,7 +215,11 @@ function CompanyModal({ draft, setDraft, onSave }) {
       }
     >
       <div className="space-y-4">
-        <LogoPicker blobId={draft.logoId} onChange={(id) => setDraft({ ...draft, logoId: id })} />
+        <LogoPicker
+          url={draft.logoUrl}
+          path={draft.logoPath}
+          onChange={(image) => setDraft({ ...draft, logoUrl: image?.url || null, logoPath: image?.path || null })}
+        />
         <Field label="Nom de l'entreprise" required>
           <Input value={draft.name} onChange={set('name')} placeholder="Studio Akwaba" />
         </Field>
@@ -276,7 +282,13 @@ function ServiceModal({ draft, setDraft, onSave }) {
       }
     >
       <div className="space-y-4">
-        <LogoPicker blobId={draft.photoId} onChange={(id) => setDraft({ ...draft, photoId: id })} label="Photo (facultative)" maxSize={900} />
+        <LogoPicker
+          url={draft.photoUrl}
+          path={draft.photoPath}
+          onChange={(image) => setDraft({ ...draft, photoUrl: image?.url || null, photoPath: image?.path || null })}
+          label="Photo (facultative)"
+          maxSize={900}
+        />
         <Field label="Nom du service" required>
           <Input value={draft.name} onChange={set('name')} placeholder="Création de site web" />
         </Field>

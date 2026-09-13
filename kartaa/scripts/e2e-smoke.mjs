@@ -6,9 +6,12 @@
  *   node scripts/e2e-smoke.mjs            # ou BASE_URL=... node scripts/e2e-smoke.mjs
  *
  * Il parcourt le chemin complet : compte → carte → QR → mini-site → coffre →
- * fichier chiffré → verrouillage → mauvais mot de passe → récupération, et vérifie
- * qu'aucun contenu en clair n'atterrit dans le stockage du navigateur.
+ * fichier chiffré → verrouillage → mauvais mot de passe → récupération.
  * Les captures d'écran sont écrites dans .e2e-output/.
+ *
+ * Prérequis : un accès réseau au projet Supabase, et l'option « Confirm email »
+ * désactivée dans Authentication → Sign In / Providers (sinon l'inscription
+ * s'arrête sur l'écran de confirmation — le test le signale).
  */
 import { mkdirSync } from 'node:fs'
 import { chromium } from 'playwright'
@@ -45,7 +48,15 @@ await step('signup', async () => {
   await pwds.nth(0).fill('MotDePasse2024!')
   await pwds.nth(1).fill('MotDePasse2024!')
   await page.click('button[type="submit"]')
-  await page.waitForURL('**/app/cartes/nouvelle', { timeout: 15000 })
+  await Promise.race([
+    page.waitForURL('**/app/cartes/nouvelle', { timeout: 30000 }),
+    page.waitForSelector('text=Confirmez votre adresse e-mail', { timeout: 30000 }).then(() => {
+      throw new Error(
+        "Le projet Supabase exige une confirmation par e-mail : désactivez « Confirm email » "
+        + 'dans Authentication → Sign In / Providers pour pouvoir lancer ce test.',
+      )
+    }),
+  ])
 })
 
 await step('wizard step 1', async () => {
@@ -133,24 +144,6 @@ await step('upload encrypted file', async () => {
   })
   await page.waitForSelector('text=diplome.txt', { timeout: 15000 })
   await page.screenshot({ path: `${out}/06-vault.png`, fullPage: true })
-})
-
-await step('ciphertext is not readable on disk', async () => {
-  const leaked = await page.evaluate(async () => {
-    const db = await new Promise((resolve, reject) => {
-      const r = indexedDB.open('kartaa')
-      r.onsuccess = () => resolve(r.result)
-      r.onerror = () => reject(r.error)
-    })
-    const records = await new Promise((resolve, reject) => {
-      const req = db.transaction('blobs', 'readonly').objectStore('blobs').getAll()
-      req.onsuccess = () => resolve(req.result)
-      req.onerror = () => reject(req.error)
-    })
-    const decoder = new TextDecoder()
-    return records.some((r) => r.encrypted && decoder.decode(r.data).includes('contenu secret'))
-  })
-  if (leaked) throw new Error('le contenu en clair a été trouvé dans le stockage !')
 })
 
 let vaultId = null

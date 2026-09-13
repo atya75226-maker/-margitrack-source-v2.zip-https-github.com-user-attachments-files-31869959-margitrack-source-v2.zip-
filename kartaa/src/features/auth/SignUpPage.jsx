@@ -12,6 +12,7 @@ export default function SignUpPage() {
   const [form, setForm] = useState(EMPTY)
   const [errors, setErrors] = useState({})
   const [busy, setBusy] = useState(false)
+  const [pending, setPending] = useState(null)
   const { signUp } = useAuth()
   const toast = useToast()
   const navigate = useNavigate()
@@ -40,7 +41,11 @@ export default function SignUpPage() {
     if (!validate()) return
     setBusy(true)
     try {
-      await signUp(form)
+      const result = await signUp(form)
+      if (result?.pendingConfirmation) {
+        setPending(result.email)
+        return
+      }
       toast.success('Bienvenue ! Votre compte est créé.')
       navigate(nextRoute, { replace: true })
     } catch (error) {
@@ -52,6 +57,24 @@ export default function SignUpPage() {
   }
 
   const strength = passwordStrength(form.password)
+
+  if (pending) {
+    return (
+      <AuthShell
+        title="Confirmez votre adresse e-mail"
+        subtitle={`Nous avons envoyé un lien de confirmation à ${pending}. Ouvrez-le pour activer votre compte, puis connectez-vous.`}
+      >
+        <div className="space-y-4">
+          <div className="rounded-2xl bg-brand-50 p-4 text-sm leading-relaxed text-brand-800">
+            Pensez à regarder dans les courriers indésirables : le message arrive parfois là.
+          </div>
+          <Button as={Link} to="/connexion" full size="lg" iconRight="arrowRight">
+            J'ai confirmé, me connecter
+          </Button>
+        </div>
+      </AuthShell>
+    )
+  }
 
   return (
     <AuthShell

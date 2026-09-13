@@ -120,7 +120,7 @@ export default function VaultUnlock({ vault: initialVault, onUnlocked, standalon
             </form>
           )}
 
-          {vault.biometric && !status.locked && (
+          {vault.hasBiometric && !status.locked && (
             <Button full variant="outline" icon="fingerprint" onClick={submitBiometrics} disabled={busy}>
               Utiliser mon empreinte digitale
             </Button>

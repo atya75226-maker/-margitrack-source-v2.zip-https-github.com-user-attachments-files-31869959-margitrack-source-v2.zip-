@@ -5,7 +5,7 @@ import { Icon } from '../../components/ui/Icons'
 import VaultUnlock from './VaultUnlock'
 import VaultBrowser from './VaultBrowser'
 import RecoveryCodeScreen from './RecoveryCodeScreen'
-import { repo, revokeAllUrls } from '../../lib/storage'
+import { repo } from '../../lib/storage'
 import { addBiometrics, changePassword, regenerateRecoveryCode, removeBiometrics } from '../../lib/vaultService'
 import { useAuth } from '../../state/AuthContext'
 import { useData } from '../../state/DataContext'
@@ -47,10 +47,6 @@ export default function VaultDetailPage() {
       setLoading(false)
     })
   }, [vaultId])
-
-  // Les URL déchiffrées sont révoquées dès que l'on quitte la page ; la clé, elle,
-  // reste en mémoire le temps de la session (voir lib/vaultSession).
-  useEffect(() => () => revokeAllUrls(), [])
 
   if (loading) {
     return (
@@ -111,7 +107,6 @@ export default function VaultDetailPage() {
           onClick={() => {
             vaultSession.lock(vault.id)
             setVaultKey(null)
-            revokeAllUrls()
             toast.info('Coffre verrouillé.')
           }}
         >
@@ -227,9 +222,9 @@ function SecurityPanel({ vault, vaultKey, user, onChange, onDeleted }) {
   const toggleBiometrics = async () => {
     setBusy(true)
     try {
-      const updated = vault.biometric ? await removeBiometrics(vault) : await addBiometrics(vault, vaultKey, user.email)
+      const updated = vault.hasBiometric ? await removeBiometrics(vault) : await addBiometrics(vault, vaultKey, user.email)
       onChange(updated)
-      toast.success(vault.biometric ? 'Biométrie désactivée.' : 'Biométrie activée sur cet appareil.')
+      toast.success(vault.hasBiometric ? 'Biométrie désactivée.' : 'Biométrie activée sur cet appareil.')
     } catch (err) {
       toast.error(err.message || "L'enrôlement biométrique a échoué.")
     } finally {
@@ -251,15 +246,15 @@ function SecurityPanel({ vault, vaultKey, user, onChange, onDeleted }) {
             icon="fingerprint"
             title="Déverrouillage biométrique"
             description={
-              vault.biometric
+              vault.hasBiometric
                 ? 'Activé sur cet appareil. Aucune donnée biométrique n\'est stockée par l\'application.'
                 : biometricsAvailable
                   ? "Utilise le capteur du téléphone via le système d'exploitation."
                   : "Aucun capteur compatible détecté sur cet appareil."
             }
           >
-            <Button size="sm" variant={vault.biometric ? 'dangerSoft' : 'outline'} loading={busy} disabled={!biometricsAvailable && !vault.biometric} onClick={toggleBiometrics}>
-              {vault.biometric ? 'Désactiver' : 'Activer'}
+            <Button size="sm" variant={vault.hasBiometric ? 'dangerSoft' : 'outline'} loading={busy} disabled={!biometricsAvailable && !vault.hasBiometric} onClick={toggleBiometrics}>
+              {vault.hasBiometric ? 'Désactiver' : 'Activer'}
             </Button>
           </SecurityRow>
           <SecurityRow

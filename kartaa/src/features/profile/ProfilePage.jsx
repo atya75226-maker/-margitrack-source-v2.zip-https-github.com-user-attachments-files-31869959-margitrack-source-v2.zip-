@@ -1,12 +1,11 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Avatar, Badge, Button, ConfirmDialog, Field, Input, Modal, Panel, Progress, SectionTitle } from '../../components/ui'
+import { Avatar, Badge, Button, Field, Input, Modal, Panel, Progress, SectionTitle } from '../../components/ui'
 import { Icon } from '../../components/ui/Icons'
 import { useAuth } from '../../state/AuthContext'
 import { useData } from '../../state/DataContext'
 import { useToast } from '../../state/ToastContext'
 import { FEATURE_FLAGS, PLANS, PLAN_ORDER, planOf } from '../../config/app.config'
-import { repo } from '../../lib/storage'
 import { formatBytes, initialsOf } from '../../lib/format'
 
 export default function ProfilePage() {
@@ -22,7 +21,6 @@ export default function ProfilePage() {
   })
   const [saving, setSaving] = useState(false)
   const [planModal, setPlanModal] = useState(null)
-  const [resetOpen, setResetOpen] = useState(false)
   const plan = planOf(user)
 
   const save = async () => {
@@ -152,14 +150,12 @@ export default function ProfilePage() {
 
       <Panel className="border-rose-100">
         <div className="space-y-3">
-          <Button variant="outline" icon="logout" full onClick={() => { signOut(); navigate('/', { replace: true }) }}>
+          <Button variant="outline" icon="logout" full onClick={async () => { await signOut(); navigate('/', { replace: true }) }}>
             Se déconnecter
           </Button>
-          <Button variant="dangerSoft" icon="trash" full onClick={() => setResetOpen(true)}>
-            Effacer toutes les données du prototype
-          </Button>
           <p className="hint text-center">
-            Les données du prototype sont enregistrées sur cet appareil uniquement.
+            Vos cartes, coffres et fichiers sont hébergés sur votre projet Supabase et
+            vous suivent d'un appareil à l'autre.
           </p>
         </div>
       </Panel>
@@ -198,18 +194,6 @@ export default function ProfilePage() {
         </ul>
       </Modal>
 
-      <ConfirmDialog
-        open={resetOpen}
-        onClose={() => setResetOpen(false)}
-        title="Effacer toutes les données ?"
-        description="Comptes, cartes, coffres et fichiers seront supprimés de cet appareil."
-        confirmLabel="Tout effacer"
-        onConfirm={async () => {
-          await repo.resetEverything()
-          signOut()
-          navigate('/', { replace: true })
-        }}
-      />
     </div>
   )
 }

@@ -4,7 +4,7 @@ import { Button, Panel, Spinner } from '../../components/ui'
 import { Icon, Logo } from '../../components/ui/Icons'
 import VaultUnlock from './VaultUnlock'
 import VaultBrowser from './VaultBrowser'
-import { repo, revokeAllUrls } from '../../lib/storage'
+import { repo } from '../../lib/storage'
 import { useAuth } from '../../state/AuthContext'
 import * as vaultSession from '../../lib/vaultSession'
 
@@ -14,24 +14,48 @@ import * as vaultSession from '../../lib/vaultSession'
  */
 export default function VaultAccessPage() {
   const { vaultId } = useParams()
-  const { user } = useAuth()
+  const { user, ready, isAuthenticated } = useAuth()
   const [vault, setVault] = useState(null)
   const [vaultKey, setVaultKey] = useState(() => vaultSession.getKey(vaultId))
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!ready) return
+    if (!isAuthenticated) {
+      setLoading(false)
+      return
+    }
     repo.vaults.get(vaultId).then((found) => {
       setVault(found)
       setLoading(false)
     })
-  }, [vaultId])
+  }, [vaultId, ready, isAuthenticated])
 
-  useEffect(() => () => revokeAllUrls(), [])
-
-  if (loading) {
+  if (loading || !ready) {
     return (
       <div className="grid min-h-screen place-items-center text-brand-600">
         <Spinner size={28} />
+      </div>
+    )
+  }
+
+  // Un coffre n'est pas un lien public : le QR Code mène ici, mais il faut d'abord
+  // être connecté au compte propriétaire, puis fournir le mot de passe du coffre.
+  if (!isAuthenticated) {
+    return (
+      <div className="grid min-h-screen place-items-center bg-ink-50 px-5">
+        <Panel className="max-w-sm text-center">
+          <span className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-ink-900 text-gold-400">
+            <Icon name="lock" size={26} />
+          </span>
+          <p className="font-display text-lg font-bold text-ink-900">Coffre Sécurité</p>
+          <p className="mt-1.5 text-sm leading-relaxed text-ink-500">
+            Ce coffre est protégé. Connectez-vous à votre compte, puis saisissez le mot de passe du coffre.
+          </p>
+          <Button as={Link} to="/connexion" full className="mt-5" iconRight="arrowRight">
+            Se connecter
+          </Button>
+        </Panel>
       </div>
     )
   }
@@ -43,7 +67,8 @@ export default function VaultAccessPage() {
           <Icon name="alert" size={28} className="mx-auto mb-3 text-ink-300" />
           <p className="font-display font-bold text-ink-900">Coffre introuvable</p>
           <p className="mt-1.5 text-sm text-ink-500">
-            Ce QR Code ne correspond à aucun coffre sur cet appareil. Le coffre a peut-être été supprimé.
+            Ce QR Code ne correspond à aucun coffre de votre compte. Il a peut-être été supprimé, ou il
+            appartient à un autre compte.
           </p>
           <Button as={Link} to="/" variant="outline" className="mt-5">
             Retour à l'accueil
@@ -89,7 +114,6 @@ export default function VaultAccessPage() {
               onClick={() => {
                 vaultSession.lock(vault.id)
                 setVaultKey(null)
-                revokeAllUrls()
               }}
             >
               Verrouiller

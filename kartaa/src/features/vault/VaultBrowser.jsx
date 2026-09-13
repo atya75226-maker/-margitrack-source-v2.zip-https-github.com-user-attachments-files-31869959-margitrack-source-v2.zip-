@@ -32,7 +32,7 @@ export default function VaultBrowser({ vault, vaultKey, onChange, readOnly = fal
       try {
         current = await addFile(current, vaultKey, file, folderId)
       } catch (error) {
-        toast.error(`« ${file.name} » n'a pas pu être ajouté.`)
+        toast.error(error.message || `« ${file.name} » n'a pas pu être ajouté.`)
       }
     }
     setUploading(null)

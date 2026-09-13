@@ -11,7 +11,13 @@ export function slugify(value = '') {
 
 export function suggestSlug(firstName, lastName) {
   const base = slugify(`${firstName || ''} ${lastName || ''}`.trim())
-  return base || `carte-${Math.random().toString(36).slice(2, 7)}`
+  return base.length >= 2 ? base : `carte-${Math.random().toString(36).slice(2, 7)}`
+}
+
+/** La base refuse les adresses d'un seul caractère : on complète plutôt que d'échouer. */
+export function normalizeSlug(value, firstName, lastName) {
+  const clean = slugify(value)
+  return clean.length >= 2 ? clean : suggestSlug(firstName, lastName)
 }
 
 export function publicUrl(slug) {

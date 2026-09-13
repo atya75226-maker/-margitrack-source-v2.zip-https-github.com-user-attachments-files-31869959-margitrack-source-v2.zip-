@@ -1,9 +1,7 @@
 /**
- * Point d'entrée unique du stockage.
- *
- * Toute l'application passe par `repo`. Pour brancher un backend réel, il suffit
- * d'écrire un adaptateur exposant la même API (users, session, cards, vaults)
- * et de l'exporter ici à la place de l'adaptateur local.
+ * Point d'entrée unique du stockage. L'application n'importe jamais le client
+ * Supabase directement : elle passe par `repo` et par les utilitaires d'images.
  */
-export * as repo from './local.adapter'
-export { blobs, objectUrl, revokeUrl, revokeAllUrls, ephemeralUrl } from './db'
+export * as repo from './supabase.adapter'
+export { notifyChange } from './supabase.adapter'
+export { uploadImage, removeImage, toDataUrl } from './assets'

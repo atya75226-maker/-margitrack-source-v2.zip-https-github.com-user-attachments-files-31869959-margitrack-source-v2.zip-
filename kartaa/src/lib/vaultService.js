@@ -1,68 +1,114 @@
 /**
- * Logique métier du Coffre Sécurité : création, déverrouillage, fichiers.
+ * Logique métier du Coffre Sécurité, côté client.
  *
- * Règles appliquées ici :
- *  - la clé du coffre n'existe en clair qu'en mémoire, après authentification ;
- *  - les fichiers sont chiffrés avant écriture ; aucun octet en clair n'est persisté ;
- *  - les tentatives de déverrouillage sont limitées et journalisées ;
- *  - le code de récupération est à usage unique : il est renouvelé après emploi.
+ * Ce que le serveur voit, et ce qu'il ne voit pas :
+ *  - il reçoit la clé du coffre **déjà chiffrée** et un « vérificateur » dont il ne
+ *    conserve que l'empreinte SHA-256 ; ni le mot de passe, ni le code de
+ *    récupération, ni la clé en clair ne quittent le navigateur ;
+ *  - c'est lui, en revanche, qui compte les tentatives et refuse de livrer la clé
+ *    chiffrée tant que le vérificateur ne correspond pas : impossible de forcer un
+ *    coffre hors ligne en récupérant la base ;
+ *  - les fichiers sont chiffrés avant téléversement et servis par URL signée de
+ *    courte durée.
  */
 
 import {
-  generateVaultKey, wrapVaultKey, unwrapVaultKey, encryptBytes, decryptBytes,
-  generateRecoveryCode, normalizeRecoveryCode, toBase64, randomBytes, randomId,
+  generateVaultKey, wrapVaultKey, openWrappedKey, deriveVaultMaterial,
+  encryptBytes, decryptBytes, generateRecoveryCode, normalizeRecoveryCode,
+  toBase64, randomBytes, ephemeralUrl, KDF_ITERATIONS,
 } from './crypto'
-import { repo, blobs, ephemeralUrl } from './storage'
+import { supabase, readableError } from './supabaseClient'
+import { repo, notifyChange } from './storage'
 import * as webauthn from './webauthn'
 
 export const MAX_ATTEMPTS = 5
-const LOCK_STEPS_MS = [0, 0, 30_000, 60_000, 300_000, 900_000]
 
 export class VaultError extends Error {}
 
+/* ------------------------------------------------------------------ erreurs */
+
+async function rpc(name, params, fallback) {
+  const { data, error } = await supabase.rpc(name, params)
+  if (error) throw new VaultError(readableError(error, fallback))
+  return data
+}
+
+function delayLabel(seconds = 0) {
+  return seconds > 60 ? `${Math.ceil(seconds / 60)} minutes` : `${Math.max(1, seconds)} secondes`
+}
+
+/**
+ * Le serveur répond par un statut plutôt qu'une erreur : c'est ce qui permet au
+ * comptage des tentatives d'être validé en base même quand l'essai échoue.
+ */
+function statusError(status) {
+  switch (status?.error) {
+    case 'locked':
+      return new VaultError(`Trop de tentatives. Réessayez dans ${delayLabel(status.retryInSeconds)}.`)
+    case 'password': {
+      const left = status.attemptsLeft ?? 0
+      return new VaultError(
+        left > 0
+          ? `Mot de passe incorrect. ${left} tentative${left > 1 ? 's' : ''} restante${left > 1 ? 's' : ''}.`
+          : 'Mot de passe incorrect. Coffre temporairement bloqué.',
+      )
+    }
+    case 'recovery':
+      return new VaultError('Code de récupération invalide.')
+    case 'biometric_disabled':
+      return new VaultError("La biométrie n'est pas activée sur ce coffre.")
+    default:
+      return new VaultError('Coffre inaccessible.')
+  }
+}
+
+/** Appelle une fonction d'ouverture et renvoie la clé chiffrée, ou lève l'erreur adaptée. */
+async function openRpc(name, params, fallback) {
+  const status = await rpc(name, params, fallback)
+  if (!status?.ok) throw statusError(status)
+  return status.wrap
+}
+
 /* -------------------------------------------------------------- création */
 
-export async function createVault({ userId, name, password, useBiometrics = false, userLabel }) {
+export async function createVault({ name, password, useBiometrics = false, userLabel }) {
   const vaultKey = await generateVaultKey()
   const recoveryCode = generateRecoveryCode()
 
-  const passwordWrap = await wrapVaultKey(vaultKey, password, toBase64(randomBytes(16)))
-  const recoveryWrap = await wrapVaultKey(vaultKey, recoveryCode, toBase64(randomBytes(16)))
+  const password_ = await wrapVaultKey(vaultKey, password)
+  const recovery_ = await wrapVaultKey(vaultKey, recoveryCode)
 
-  let vault = await repo.vaults.create(userId, {
-    name: name.trim(),
-    protection: 'password',
-    passwordWrap,
-    recoveryWrap,
-    recoveryIssuedAt: new Date().toISOString(),
-    recoveryUsedAt: null,
-    biometric: null,
-    usedBytes: 0,
-  })
-  await repo.vaults.appendLog(vault.id, { action: 'vault.created', result: 'ok' })
+  const vaultId = await rpc('vault_create', {
+    p_name: name.trim(),
+    p_kdf_iterations: KDF_ITERATIONS,
+    p_password_salt: password_.salt,
+    p_password_verifier: password_.verifier,
+    p_password_wrap: password_.wrap,
+    p_recovery_salt: recovery_.salt,
+    p_recovery_verifier: recovery_.verifier,
+    p_recovery_wrap: recovery_.wrap,
+  }, "Le coffre n'a pas pu être créé.")
+
+  let vault = await repo.vaults.get(vaultId)
 
   if (useBiometrics) {
-    // L'enrôlement peut échouer (appareil sans capteur, refus) : le coffre reste
-    // utilisable avec son mot de passe, la biométrie s'active plus tard.
+    // Un refus du capteur ne doit pas faire échouer la création : le mot de passe
+    // suffit, la biométrie s'ajoute plus tard.
     try {
       vault = await addBiometrics(vault, vaultKey, userLabel)
     } catch {
-      vault = await repo.vaults.get(vault.id)
+      vault = await repo.vaults.get(vaultId)
     }
   }
 
+  notifyChange()
   return { vault, recoveryCode, vaultKey }
 }
 
 /* --------------------------------------------------------- déverrouillage */
 
-function lockRemainingMs(vault) {
-  if (!vault?.lockedUntil) return 0
-  return Math.max(0, new Date(vault.lockedUntil).getTime() - Date.now())
-}
-
 export function lockStatus(vault) {
-  const remaining = lockRemainingMs(vault)
+  const remaining = vault?.lockedUntil ? Math.max(0, new Date(vault.lockedUntil).getTime() - Date.now()) : 0
   return {
     locked: remaining > 0,
     remainingMs: remaining,
@@ -70,145 +116,145 @@ export function lockStatus(vault) {
   }
 }
 
-async function registerFailure(vault) {
-  const failedAttempts = (vault.failedAttempts || 0) + 1
-  const delay = LOCK_STEPS_MS[Math.min(failedAttempts, LOCK_STEPS_MS.length - 1)]
-  const lockedUntil = delay ? new Date(Date.now() + delay).toISOString() : null
-  await repo.vaults.update(vault.id, { failedAttempts, lockedUntil })
-  await repo.vaults.appendLog(vault.id, { action: 'vault.unlock', result: 'failed', attempts: failedAttempts })
-  return { failedAttempts, delay }
-}
-
-async function registerSuccess(vault, method) {
-  await repo.vaults.update(vault.id, { failedAttempts: 0, lockedUntil: null, lastOpenedAt: new Date().toISOString() })
-  await repo.vaults.appendLog(vault.id, { action: 'vault.unlock', result: 'ok', method })
-}
-
-function assertUnlockable(vault) {
-  const status = lockStatus(vault)
-  if (status.locked) {
-    const seconds = Math.ceil(status.remainingMs / 1000)
-    const label = seconds > 60 ? `${Math.ceil(seconds / 60)} minutes` : `${seconds} secondes`
-    throw new VaultError(`Trop de tentatives. Réessayez dans ${label}.`)
-  }
+async function intro(vaultId) {
+  return rpc('vault_intro', { p_vault_id: vaultId }, 'Coffre introuvable.')
 }
 
 export async function unlockWithPassword(vault, password) {
-  assertUnlockable(vault)
+  const info = await intro(vault.id)
+  const { wrappingKey, verifier } = await deriveVaultMaterial(password, info.passwordSalt, info.kdfIterations)
+  const wrap = await openRpc('vault_open', { p_vault_id: vault.id, p_verifier: verifier }, 'Ouverture impossible.')
   try {
-    const vaultKey = await unwrapVaultKey(vault.passwordWrap, password)
-    await registerSuccess(vault, 'password')
-    return vaultKey
+    return await openWrappedKey(wrap, wrappingKey)
   } catch {
-    const { failedAttempts } = await registerFailure(vault)
-    const left = MAX_ATTEMPTS - failedAttempts
-    throw new VaultError(
-      left > 0
-        ? `Mot de passe incorrect. ${left} tentative${left > 1 ? 's' : ''} restante${left > 1 ? 's' : ''}.`
-        : 'Mot de passe incorrect. Coffre temporairement bloqué.',
-    )
+    throw new VaultError("La clé du coffre n'a pas pu être déchiffrée.")
   }
 }
 
 export async function unlockWithRecoveryCode(vault, code) {
-  assertUnlockable(vault)
+  const info = await intro(vault.id)
   const normalized = normalizeRecoveryCode(code)
+  const { wrappingKey, verifier } = await deriveVaultMaterial(normalized, info.recoverySalt, info.kdfIterations)
+  const wrap = await openRpc('vault_open_recovery', { p_vault_id: vault.id, p_verifier: verifier }, 'Ouverture impossible.')
   try {
-    const vaultKey = await unwrapVaultKey(vault.recoveryWrap, normalized)
-    await registerSuccess(vault, 'recovery')
-    return vaultKey
+    return await openWrappedKey(wrap, wrappingKey)
   } catch {
-    await registerFailure(vault)
     throw new VaultError('Code de récupération invalide.')
   }
 }
 
 export async function unlockWithBiometrics(vault) {
-  assertUnlockable(vault)
-  if (!vault.biometric) throw new VaultError("La biométrie n'est pas activée sur ce coffre.")
-  const prfSecret = await webauthn.assert(vault.biometric)
+  const info = await intro(vault.id)
+  if (!info.biometric) throw new VaultError("La biométrie n'est pas activée sur ce coffre.")
+
+  const prfSecret = await webauthn.assert(info.biometric)
   const secret = prfSecret || webauthn.getDeviceSecret(vault.id)
   if (!secret) {
     throw new VaultError("Cet appareil n'est pas enrôlé pour ce coffre. Utilisez votre mot de passe.")
   }
+
+  const wrap = await openRpc('vault_open_biometric', { p_vault_id: vault.id }, 'Déverrouillage biométrique impossible.')
   try {
-    const vaultKey = await unwrapVaultKey(vault.biometric.wrap, secret)
-    await registerSuccess(vault, 'biometric')
-    return vaultKey
+    const { wrappingKey } = await deriveVaultMaterial(secret, wrap.salt, wrap.iterations || KDF_ITERATIONS)
+    return await openWrappedKey(wrap, wrappingKey)
   } catch {
-    await registerFailure(vault)
     throw new VaultError('Déverrouillage biométrique impossible sur cet appareil.')
   }
 }
 
 /* ------------------------------------------------------------ biométrie */
 
-export async function enrollBiometrics({ vaultId, vaultName, userLabel, vaultKey }) {
-  const enrollment = await webauthn.enroll({ vaultId: vaultId || randomId('vlt'), vaultName, userLabel })
-  const secret = enrollment.prfSupported ? await webauthn.assert(enrollment) : toBase64(randomBytes(32))
-  const effectiveSecret = secret || toBase64(randomBytes(32))
-  const wrap = await wrapVaultKey(vaultKey, effectiveSecret, toBase64(randomBytes(16)))
-  return { ...enrollment, wrap, pendingSecret: enrollment.prfSupported ? null : effectiveSecret }
-}
-
-/** Active la biométrie sur un coffre déjà déverrouillé. */
 export async function addBiometrics(vault, vaultKey, userLabel) {
-  const biometric = await enrollBiometrics({ vaultId: vault.id, vaultName: vault.name, userLabel, vaultKey })
-  if (biometric.pendingSecret) {
-    webauthn.storeDeviceSecret(vault.id, biometric.pendingSecret)
-    delete biometric.pendingSecret
-  }
-  await repo.vaults.appendLog(vault.id, { action: 'vault.biometrics.enabled', result: 'ok' })
-  return repo.vaults.update(vault.id, { biometric, protection: 'password+biometric' })
+  const enrollment = await webauthn.enroll({ vaultId: vault.id, vaultName: vault.name, userLabel })
+  const secret = (enrollment.prfSupported ? await webauthn.assert(enrollment) : null) || toBase64(randomBytes(32))
+  const wrapped = await wrapVaultKey(vaultKey, secret)
+
+  if (!enrollment.prfSupported) webauthn.storeDeviceSecret(vault.id, secret)
+
+  await rpc('vault_set_biometric', {
+    p_vault_id: vault.id,
+    p_biometric: { credentialId: enrollment.credentialId, prfSalt: enrollment.prfSalt, prfSupported: enrollment.prfSupported, enrolledAt: enrollment.enrolledAt },
+    p_wrap: wrapped.wrap,
+  }, "L'enrôlement biométrique a échoué.")
+
+  notifyChange()
+  return repo.vaults.get(vault.id)
 }
 
 export async function removeBiometrics(vault) {
   webauthn.clearDeviceSecret(vault.id)
-  await repo.vaults.appendLog(vault.id, { action: 'vault.biometrics.disabled', result: 'ok' })
-  return repo.vaults.update(vault.id, { biometric: null, protection: 'password' })
+  await rpc('vault_set_biometric', { p_vault_id: vault.id, p_biometric: null, p_wrap: null }, 'Désactivation impossible.')
+  notifyChange()
+  return repo.vaults.get(vault.id)
 }
 
 /* ----------------------------------------------------------- récupération */
 
 /** Réinitialise le mot de passe avec le code de récupération, puis renouvelle ce code. */
 export async function resetPasswordWithRecovery(vault, code, newPassword) {
-  const vaultKey = await unlockWithRecoveryCode(vault, code)
-  const passwordWrap = await wrapVaultKey(vaultKey, newPassword, toBase64(randomBytes(16)))
+  const info = await intro(vault.id)
+  const normalized = normalizeRecoveryCode(code)
+  const { wrappingKey, verifier } = await deriveVaultMaterial(normalized, info.recoverySalt, info.kdfIterations)
+
+  // On récupère d'abord la clé du coffre : sans elle, impossible de la ré-envelopper.
+  const currentWrap = await openRpc('vault_open_recovery', { p_vault_id: vault.id, p_verifier: verifier }, 'Ouverture impossible.')
+  let vaultKey
+  try {
+    vaultKey = await openWrappedKey(currentWrap, wrappingKey)
+  } catch {
+    throw new VaultError('Code de récupération invalide.')
+  }
+
   const recoveryCode = generateRecoveryCode()
-  const recoveryWrap = await wrapVaultKey(vaultKey, recoveryCode, toBase64(randomBytes(16)))
-  const updated = await repo.vaults.update(vault.id, {
-    passwordWrap,
-    recoveryWrap,
-    recoveryIssuedAt: new Date().toISOString(),
-    recoveryUsedAt: new Date().toISOString(),
-    failedAttempts: 0,
-    lockedUntil: null,
-  })
-  await repo.vaults.appendLog(vault.id, { action: 'vault.password.reset', result: 'ok' })
-  return { vault: updated, recoveryCode, vaultKey }
+  const password_ = await wrapVaultKey(vaultKey, newPassword)
+  const recovery_ = await wrapVaultKey(vaultKey, recoveryCode)
+
+  const status = await rpc('vault_reset_password', {
+    p_vault_id: vault.id,
+    p_recovery_verifier: verifier,
+    p_password_salt: password_.salt,
+    p_password_verifier: password_.verifier,
+    p_password_wrap: password_.wrap,
+    p_new_recovery_salt: recovery_.salt,
+    p_new_recovery_verifier: recovery_.verifier,
+    p_new_recovery_wrap: recovery_.wrap,
+  }, 'Réinitialisation impossible.')
+  if (!status?.ok) throw statusError(status)
+
+  notifyChange()
+  return { vault: await repo.vaults.get(vault.id), recoveryCode, vaultKey }
 }
 
 /** Change le mot de passe depuis un coffre déverrouillé. */
 export async function changePassword(vault, vaultKey, newPassword) {
-  const passwordWrap = await wrapVaultKey(vaultKey, newPassword, toBase64(randomBytes(16)))
-  await repo.vaults.appendLog(vault.id, { action: 'vault.password.changed', result: 'ok' })
-  return repo.vaults.update(vault.id, { passwordWrap })
+  const wrapped = await wrapVaultKey(vaultKey, newPassword)
+  await rpc('vault_set_password', {
+    p_vault_id: vault.id,
+    p_salt: wrapped.salt,
+    p_verifier: wrapped.verifier,
+    p_wrap: wrapped.wrap,
+  }, 'Changement de mot de passe impossible.')
+  notifyChange()
+  return repo.vaults.get(vault.id)
 }
 
-/** Régénère un code de récupération (l'ancien devient inutilisable). */
+/** Régénère un code de récupération : l'ancien cesse immédiatement de fonctionner. */
 export async function regenerateRecoveryCode(vault, vaultKey) {
   const recoveryCode = generateRecoveryCode()
-  const recoveryWrap = await wrapVaultKey(vaultKey, recoveryCode, toBase64(randomBytes(16)))
-  const updated = await repo.vaults.update(vault.id, {
-    recoveryWrap,
-    recoveryIssuedAt: new Date().toISOString(),
-    recoveryUsedAt: null,
-  })
-  await repo.vaults.appendLog(vault.id, { action: 'vault.recovery.regenerated', result: 'ok' })
-  return { vault: updated, recoveryCode }
+  const wrapped = await wrapVaultKey(vaultKey, recoveryCode)
+  await rpc('vault_set_recovery', {
+    p_vault_id: vault.id,
+    p_salt: wrapped.salt,
+    p_verifier: wrapped.verifier,
+    p_wrap: wrapped.wrap,
+  }, 'Renouvellement impossible.')
+  notifyChange()
+  return { vault: await repo.vaults.get(vault.id), recoveryCode }
 }
 
 /* --------------------------------------------------------------- fichiers */
+
+const BUCKET = 'vault-files'
 
 export function categoryOf(mime = '', name = '') {
   if (mime.startsWith('image/')) return 'image'
@@ -218,60 +264,87 @@ export function categoryOf(mime = '', name = '') {
   return 'document'
 }
 
-/** Chiffre puis stocke un fichier. Retourne le coffre mis à jour. */
+/** Chiffre le fichier dans le navigateur, puis téléverse le résultat chiffré. */
 export async function addFile(vault, vaultKey, file, folderId = null) {
   const bytes = new Uint8Array(await file.arrayBuffer())
   const { iv, data } = await encryptBytes(vaultKey, bytes)
-  const blobId = randomId('blb')
-  await blobs.put(blobId, { mime: 'application/octet-stream', data, encrypted: true, iv })
 
-  const entry = {
-    id: randomId('fil'),
+  const storagePath = `${vault.userId}/${vault.id}/${crypto.randomUUID()}`
+  const { error: uploadError } = await supabase.storage
+    .from(BUCKET)
+    .upload(storagePath, new Blob([data], { type: 'application/octet-stream' }), {
+      contentType: 'application/octet-stream',
+      upsert: false,
+    })
+  if (uploadError) throw new VaultError(readableError(uploadError, "Le fichier n'a pas pu être envoyé."))
+
+  const { error } = await supabase.from('vault_files').insert({
+    vault_id: vault.id,
     name: file.name,
     mime: file.type || 'application/octet-stream',
     category: categoryOf(file.type, file.name),
     size: file.size,
-    folderId,
-    blobId,
+    folder_id: folderId,
+    storage_path: storagePath,
     iv,
-    addedAt: new Date().toISOString(),
+  })
+  if (error) {
+    await supabase.storage.from(BUCKET).remove([storagePath])
+    throw new VaultError(readableError(error, "Le fichier n'a pas pu être enregistré."))
   }
-  const files = [...(vault.files || []), entry]
-  const usedBytes = files.reduce((total, item) => total + (item.size || 0), 0)
-  const updated = await repo.vaults.update(vault.id, { files, usedBytes })
-  await repo.vaults.appendLog(vault.id, { action: 'file.added', result: 'ok', file: entry.name })
-  return updated
+
+  await repo.vaults.appendLog(vault.id, { action: 'file.added', result: 'ok', file: file.name })
+  notifyChange()
+  return repo.vaults.get(vault.id)
 }
 
-/** Déchiffre un fichier en mémoire et retourne une URL éphémère. */
+/** Télécharge le fichier chiffré par URL signée, puis le déchiffre en mémoire. */
 export async function openFile(vault, vaultKey, fileId, { log = true } = {}) {
   const file = (vault.files || []).find((item) => item.id === fileId)
   if (!file) throw new VaultError('Fichier introuvable.')
-  const record = await blobs.get(file.blobId)
-  if (!record) throw new VaultError('Contenu indisponible sur cet appareil.')
-  const plain = await decryptBytes(vaultKey, file.iv, record.data)
+
+  const { data: signed, error } = await supabase.storage
+    .from(BUCKET)
+    .createSignedUrl(file.storagePath, 60)
+  if (error || !signed?.signedUrl) throw new VaultError('Contenu indisponible.')
+
+  const response = await fetch(signed.signedUrl)
+  if (!response.ok) throw new VaultError('Contenu indisponible.')
+  const cipher = await response.arrayBuffer()
+
+  let plain
+  try {
+    plain = await decryptBytes(vaultKey, file.iv, cipher)
+  } catch {
+    throw new VaultError('Ce fichier ne peut pas être déchiffré avec cette clé.')
+  }
+
   if (log) await repo.vaults.appendLog(vault.id, { action: 'file.opened', result: 'ok', file: file.name })
   return { file, bytes: plain, url: ephemeralUrl(plain, file.mime) }
 }
 
 export async function removeFile(vault, fileId) {
   const file = (vault.files || []).find((item) => item.id === fileId)
-  if (file) await blobs.remove(file.blobId)
-  const files = (vault.files || []).filter((item) => item.id !== fileId)
-  const usedBytes = files.reduce((total, item) => total + (item.size || 0), 0)
-  await repo.vaults.appendLog(vault.id, { action: 'file.deleted', result: 'ok', file: file?.name })
-  return repo.vaults.update(vault.id, { files, usedBytes })
+  if (file) {
+    await supabase.storage.from(BUCKET).remove([file.storagePath])
+    await supabase.from('vault_files').delete().eq('id', fileId)
+    await repo.vaults.appendLog(vault.id, { action: 'file.deleted', result: 'ok', file: file.name })
+  }
+  notifyChange()
+  return repo.vaults.get(vault.id)
 }
 
+/* ---------------------------------------------------------------- dossiers */
+
 export async function createFolder(vault, name) {
-  const folders = [...(vault.folders || []), { id: randomId('fld'), name: name.trim(), createdAt: new Date().toISOString() }]
+  const folders = [...(vault.folders || []), { id: crypto.randomUUID(), name: name.trim(), createdAt: new Date().toISOString() }]
   return repo.vaults.update(vault.id, { folders })
 }
 
 export async function removeFolder(vault, folderId) {
   const folders = (vault.folders || []).filter((folder) => folder.id !== folderId)
-  const files = (vault.files || []).map((file) => (file.folderId === folderId ? { ...file, folderId: null } : file))
-  return repo.vaults.update(vault.id, { folders, files })
+  await supabase.from('vault_files').update({ folder_id: null }).eq('vault_id', vault.id).eq('folder_id', folderId)
+  return repo.vaults.update(vault.id, { folders })
 }
 
 export function usedBytesOf(vault) {

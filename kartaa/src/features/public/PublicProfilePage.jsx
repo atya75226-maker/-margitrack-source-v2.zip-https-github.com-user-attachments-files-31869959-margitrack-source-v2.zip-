@@ -3,13 +3,13 @@ import { Link, useParams } from 'react-router-dom'
 import { Button, Panel, Spinner, Modal } from '../../components/ui'
 import { Icon, Logo, SocialIcon } from '../../components/ui/Icons'
 import { repo } from '../../lib/storage'
-import { useBlobUrl, useCardAssets } from '../../hooks/useCardAssets'
+import { useCardAssets } from '../../hooks/useCardAssets'
 import { downloadVCard } from '../../lib/vcard'
-import { imageToDataUrl } from '../../hooks/useImageUpload'
+import { toDataUrl } from '../../lib/storage'
 import { copyToClipboard } from '../../lib/download'
 import { ensureHttp, initialsOf, prettyUrl, telHref, whatsappHref } from '../../lib/format'
 import { publicUrl } from '../../lib/slug'
-import { SOCIAL_NETWORKS, can } from '../../config/app.config'
+import { SOCIAL_NETWORKS } from '../../config/app.config'
 import { useToast } from '../../state/ToastContext'
 
 /** Mini-site public : la page qu'ouvre le QR Code. Pensée d'abord pour le téléphone. */
@@ -17,7 +17,6 @@ export default function PublicProfilePage() {
   const { slug } = useParams()
   const toast = useToast()
   const [card, setCard] = useState(null)
-  const [owner, setOwner] = useState(null)
   const [loading, setLoading] = useState(true)
   const [qrOpen, setQrOpen] = useState(false)
   const counted = useRef(false)
@@ -28,13 +27,12 @@ export default function PublicProfilePage() {
       if (cancelled) return
       setCard(found)
       setLoading(false)
-      if (found) setOwner(await repo.users.get(found.userId))
       if (found && !counted.current) {
         counted.current = true
         const key = `kartaa.seen.${found.id}`
         if (!sessionStorage.getItem(key)) {
           sessionStorage.setItem(key, '1')
-          await repo.cards.registerScan(found.id, 'qr')
+          await repo.cards.registerScan(found.slug, 'qr')
         }
       }
     })
@@ -73,10 +71,10 @@ export default function PublicProfilePage() {
   const fullName = [p.firstName, p.lastName].filter(Boolean).join(' ')
   const socials = (card.socials || []).filter((social) => social.enabled && social.value)
   const website = socials.find((social) => social.key === 'website')
-  const branded = !can(owner, 'removeBranding')
+  const branded = card.ownerPlan !== 'vip'
 
   const addToContacts = async () => {
-    const photo = p.photoId ? await imageToDataUrl(p.photoId) : null
+    const photo = await toDataUrl(p.photoUrl)
     downloadVCard(card, photo)
     toast.success('Fiche contact téléchargée.')
   }
@@ -281,7 +279,7 @@ function ActionButton({ href, icon, label, value, tone = 'default' }) {
 }
 
 function ServiceCard({ service, theme }) {
-  const photoUrl = useBlobUrl(service.photoId)
+  const photoUrl = service.photoUrl
   return (
     <div className="overflow-hidden rounded-2xl border border-ink-100">
       {photoUrl && <img src={photoUrl} alt="" className="h-36 w-full object-cover" />}
@@ -299,7 +297,7 @@ function ServiceCard({ service, theme }) {
 }
 
 function CompanyCard({ company, theme }) {
-  const logoUrl = useBlobUrl(company.logoId)
+  const logoUrl = company.logoUrl
   const socials = (company.socials || []).filter((social) => social.value)
   return (
     <div className="rounded-2xl border border-ink-100 p-4">

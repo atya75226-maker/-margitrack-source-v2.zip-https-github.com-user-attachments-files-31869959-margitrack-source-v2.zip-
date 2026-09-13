@@ -1,10 +1,11 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Badge, Button, EmptyState, Panel, Progress, SectionTitle } from '../../components/ui'
 import { Icon } from '../../components/ui/Icons'
 import ScanChart from './ScanChart'
 import StatTile from '../dashboard/StatTile'
 import { useData } from '../../state/DataContext'
+import { repo } from '../../lib/storage'
 import { useAuth } from '../../state/AuthContext'
 import { can, planOf } from '../../config/app.config'
 import { formatBytes, formatNumber } from '../../lib/format'
@@ -16,6 +17,18 @@ export default function StatsPage() {
   const { user } = useAuth()
   const detailed = can(user, 'advancedStats')
 
+  const [history, setHistory] = useState([])
+
+  useEffect(() => {
+    let cancelled = false
+    repo.cards.scanHistory(DAYS).then((rows) => {
+      if (!cancelled) setHistory(rows)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [cards.length])
+
   const series = useMemo(() => {
     const buckets = new Map()
     for (let index = DAYS - 1; index >= 0; index -= 1) {
@@ -24,11 +37,9 @@ export default function StatsPage() {
       date.setDate(date.getDate() - index)
       buckets.set(date.toISOString().slice(0, 10), 0)
     }
-    cards.forEach((card) => {
-      ;(card.scanLog || []).forEach((entry) => {
-        const key = entry.at.slice(0, 10)
-        if (buckets.has(key)) buckets.set(key, buckets.get(key) + 1)
-      })
+    history.forEach((entry) => {
+      const key = entry.at.slice(0, 10)
+      if (buckets.has(key)) buckets.set(key, buckets.get(key) + 1)
     })
     return Array.from(buckets.entries()).map(([key, value]) => {
       const date = new Date(key)
@@ -38,7 +49,7 @@ export default function StatsPage() {
         value,
       }
     })
-  }, [cards])
+  }, [history])
 
   const ranked = useMemo(() => [...cards].sort((a, b) => (b.scans || 0) - (a.scans || 0)), [cards])
   const totalScans = stats.scans

@@ -44,7 +44,6 @@ export default function VaultCreatePage() {
     setBusy(true)
     try {
       const created = await createVault({
-        userId: user.id,
         name: name.trim(),
         password,
         useBiometrics: useBiometrics && biometricsAvailable,

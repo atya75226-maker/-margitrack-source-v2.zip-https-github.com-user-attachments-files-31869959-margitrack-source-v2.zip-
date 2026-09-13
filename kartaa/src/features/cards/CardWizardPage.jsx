@@ -12,7 +12,7 @@ import { useAuth } from '../../state/AuthContext'
 import { useToast } from '../../state/ToastContext'
 import { useCardAssets } from '../../hooks/useCardAssets'
 import { repo } from '../../lib/storage'
-import { slugify, suggestSlug } from '../../lib/slug'
+import { normalizeSlug, suggestSlug } from '../../lib/slug'
 import { TEMPLATES, planOf } from '../../config/app.config'
 
 const STEPS = ['Informations', 'Réseaux', 'Présentation', 'Entreprises', 'Design']
@@ -23,7 +23,8 @@ function emptyCard(user) {
     template: 'standard',
     theme: { ...TEMPLATES[0].defaults },
     profile: {
-      photoId: null,
+      photoUrl: null,
+      photoPath: null,
       firstName: user?.firstName || '',
       lastName: user?.lastName || '',
       profession: '',
@@ -104,7 +105,7 @@ export default function CardWizardPage() {
       toast.error('Complétez les champs obligatoires.')
       return
     }
-    const slug = slugify(draft.slug) || suggestSlug(draft.profile.firstName, draft.profile.lastName)
+    const slug = normalizeSlug(draft.slug, draft.profile.firstName, draft.profile.lastName)
     const available = await repo.cards.slugAvailable(slug, cardId || null)
     if (!available) {
       setSlugError('Cette adresse est déjà utilisée. Choisissez-en une autre.')
