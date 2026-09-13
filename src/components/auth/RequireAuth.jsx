@@ -4,6 +4,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { LoginForm } from "./LoginForm";
 import { SignupForm } from "./SignupForm";
 import { SetPasswordForm, isAuthRedirectLink } from "./SetPasswordForm";
+import { useInstallPrompt } from "../../lib/pwa";
 
 function FullscreenLoader({ label }) {
   return (
@@ -16,6 +17,9 @@ function FullscreenLoader({ label }) {
 
 function AuthScreen({ initialMode = "login" }) {
   const [mode, setMode] = useState(initialMode);
+  // Cet écran appartient au scope de l'application : le navigateur y propose
+  // l'installation même lorsqu'il ne l'a pas fait sur le site vitrine.
+  const { canInstall, promptInstall, iosHint } = useInstallPrompt();
   return (
     <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: COLOR.paper }}>
       <div className="w-full max-w-sm rounded-3xl p-7 bg-[#111827]" style={{ border: `1px solid ${COLOR.line}`, boxShadow: "0 8px 30px rgba(0,0,0,0.4)" }}>
@@ -24,6 +28,23 @@ function AuthScreen({ initialMode = "login" }) {
           <p className="font-semibold text-lg" style={{ color: COLOR.ink }}>Margitrack</p>
         </div>
         {mode === "login" ? <LoginForm onSwitchToSignup={() => setMode("signup")} /> : <SignupForm onSwitchToLogin={() => setMode("login")} />}
+
+        {canInstall && (
+          <button
+            onClick={promptInstall}
+            className="w-full mt-5 rounded-full py-2.5 text-sm font-semibold border"
+            style={{ borderColor: COLOR.violet, color: COLOR.ink }}
+          >
+            📲 Installer l'application
+          </button>
+        )}
+
+        {iosHint && (
+          <p className="text-xs mt-5 text-center" style={{ color: "#5B6659" }}>
+            Sur iPhone : <strong>Partager</strong> puis <strong>Sur l'écran d'accueil</strong> pour
+            installer Margitrack.
+          </p>
+        )}
       </div>
     </div>
   );

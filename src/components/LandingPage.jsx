@@ -1,6 +1,7 @@
 import React from "react";
 import { COLOR } from "../lib/theme";
 import { useLegal } from "../contexts/LegalContext";
+import { useInstallPrompt } from "../lib/pwa";
 
 const FEATURES = [
   { icon: "📦", title: "Produits", text: "Ajoutez vos produits et leurs prix en quelques secondes, sans matériel spécial." },
@@ -47,6 +48,23 @@ function SectionTitle({ eyebrow, title, subtitle }) {
 
 export function LandingPage({ onStart, onLogin }) {
   const { openPrivacy, openTerms } = useLegal();
+  const { canInstall, promptInstall, iosHint } = useInstallPrompt();
+
+  // Le site vitrine sert aussi à installer l'application : « Commencer
+  // gratuitement » propose donc l'installation avant d'ouvrir la création de
+  // compte. Si le navigateur ne la propose pas (Safari, prompt déjà utilisé),
+  // on enchaîne directement, l'application reste utilisable dans l'onglet.
+  const handleStart = async () => {
+    if (canInstall) {
+      try {
+        await promptInstall();
+      } catch {
+        // Un refus d'installation ne doit pas bloquer l'inscription.
+      }
+    }
+    onStart();
+  };
+
   return (
     <div className="min-h-screen" style={{ backgroundColor: COLOR.bg }}>
       <header className="sticky top-0 z-20 backdrop-blur bg-[#0B0D17]/90 border-b border-[#1B1F2E]">
@@ -62,7 +80,7 @@ export function LandingPage({ onStart, onLogin }) {
           </nav>
           <div className="flex items-center gap-3">
             <button onClick={onLogin} className="text-sm font-medium text-gray-300 hover:text-white">Se connecter</button>
-            <button onClick={onStart} className="rounded-full text-sm font-semibold text-white px-4 py-2" style={{ backgroundColor: COLOR.violet }}>
+            <button onClick={handleStart} className="rounded-full text-sm font-semibold text-white px-4 py-2" style={{ backgroundColor: COLOR.violet }}>
               Commencer gratuitement
             </button>
           </div>
@@ -81,7 +99,7 @@ export function LandingPage({ onStart, onLogin }) {
           avec un Assistant IA qui répond à vos questions sur votre propre activité.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8">
-          <button onClick={onStart} className="w-full sm:w-auto rounded-full text-base font-semibold text-white px-8 py-3.5" style={{ backgroundColor: COLOR.violet }}>
+          <button onClick={handleStart} className="w-full sm:w-auto rounded-full text-base font-semibold text-white px-8 py-3.5" style={{ backgroundColor: COLOR.violet }}>
             Commencer gratuitement
           </button>
           <a href="#fonctionnalites" className="w-full sm:w-auto rounded-full text-base font-semibold px-8 py-3.5 border text-center" style={{ borderColor: COLOR.line, color: COLOR.ink }}>
@@ -89,6 +107,28 @@ export function LandingPage({ onStart, onLogin }) {
           </a>
         </div>
         <p className="text-xs text-gray-500 mt-4">7 jours d'essai gratuit — sans carte bancaire, sans engagement.</p>
+
+        {canInstall && (
+          <div className="mt-6 inline-flex flex-col items-center gap-2">
+            <button
+              onClick={promptInstall}
+              className="rounded-full text-sm font-semibold px-6 py-3 border"
+              style={{ borderColor: COLOR.violet, color: COLOR.ink }}
+            >
+              📲 Installer Margitrack sur mon téléphone
+            </button>
+            <span className="text-xs text-gray-500">
+              L'application s'ouvre ensuite directement sur votre espace, sans passer par cette page.
+            </span>
+          </div>
+        )}
+
+        {iosHint && (
+          <p className="text-xs text-gray-500 mt-6 max-w-sm mx-auto">
+            Sur iPhone : appuyez sur <strong className="text-gray-300">Partager</strong>, puis
+            <strong className="text-gray-300"> Sur l'écran d'accueil</strong> pour installer Margitrack.
+          </p>
+        )}
       </Section>
 
       <Section className="py-8">
@@ -161,7 +201,7 @@ export function LandingPage({ onStart, onLogin }) {
               </li>
             ))}
           </ul>
-          <button onClick={onStart} className="w-full rounded-full text-sm font-semibold text-white py-3 mt-6" style={{ backgroundColor: COLOR.violet }}>
+          <button onClick={handleStart} className="w-full rounded-full text-sm font-semibold text-white py-3 mt-6" style={{ backgroundColor: COLOR.violet }}>
             Commencer gratuitement
           </button>
         </div>
@@ -192,7 +232,7 @@ export function LandingPage({ onStart, onLogin }) {
 
       <Section className="py-14 text-center">
         <h2 className="text-2xl sm:text-3xl font-bold text-white font-display mb-4">Prêt à savoir ce que gagne vraiment votre restaurant ?</h2>
-        <button onClick={onStart} className="rounded-full text-base font-semibold text-white px-8 py-3.5" style={{ backgroundColor: COLOR.violet }}>
+        <button onClick={handleStart} className="rounded-full text-base font-semibold text-white px-8 py-3.5" style={{ backgroundColor: COLOR.violet }}>
           Commencer gratuitement
         </button>
       </Section>

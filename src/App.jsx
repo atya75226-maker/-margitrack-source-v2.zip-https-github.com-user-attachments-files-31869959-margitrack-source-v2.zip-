@@ -14,6 +14,7 @@ import { useTeamMembers } from "./hooks/useTeamMembers";
 import { useSubscription } from "./hooks/useSubscription";
 import { useStock } from "./hooks/useStock";
 import { usePermissions } from "./hooks/usePermissions";
+import { APP_PATH, SIGNUP_PATH, isAppRoute, isStandalone, navigate, useRoute } from "./lib/routes";
 import { Dashboard } from "./components/Dashboard";
 import { ProductsTab } from "./components/ProductsTab";
 import { SalesTab } from "./components/SalesTab";
@@ -278,22 +279,31 @@ function AppContent() {
   );
 }
 
+// Le site vitrine et l'application sont deux territoires distincts, separes
+// par l'URL : "/" presente Margitrack, "/app" est l'application. Seule cette
+// derniere est installable, et son scope l'empeche d'afficher la vitrine.
 function AppRouter() {
-  const { isAuthenticated, loading } = useAuth();
-  const [showAuth, setShowAuth] = useState(false);
-  const [authMode, setAuthMode] = useState("signup");
+  const path = useRoute();
+  const inApp = isAppRoute(path);
 
-  if (!loading && !isAuthenticated && !showAuth) {
+  // Filet de securite : si l'application installee se retrouvait malgre tout
+  // sur la page d'accueil (ancien raccourci, lien partage), on la ramene
+  // immediatement vers l'application.
+  useEffect(() => {
+    if (!inApp && isStandalone()) navigate(APP_PATH, { replace: true });
+  }, [inApp]);
+
+  if (!inApp) {
     return (
       <LandingPage
-        onStart={() => { setAuthMode("signup"); setShowAuth(true); }}
-        onLogin={() => { setAuthMode("login"); setShowAuth(true); }}
+        onStart={() => navigate(SIGNUP_PATH)}
+        onLogin={() => navigate(APP_PATH)}
       />
     );
   }
 
   return (
-    <RequireAuth initialMode={authMode}>
+    <RequireAuth initialMode={path === SIGNUP_PATH ? "signup" : "login"}>
       <AppContent />
     </RequireAuth>
   );
