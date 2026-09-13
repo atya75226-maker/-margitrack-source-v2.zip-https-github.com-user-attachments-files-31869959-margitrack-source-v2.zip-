@@ -219,6 +219,18 @@ npm run preview   # sert dist/ en local
 routes renvoient vers `index.html`, indispensable pour `/:slug` et `/c/:id`).
 Sur Vercel, importez le dépôt et réglez **Root Directory** sur `kartaa`.
 
+### Vérification du chiffrement (hors ligne)
+
+```bash
+npm run test:crypto
+```
+
+Seize contrôles sur `src/lib/crypto.js`, sans réseau ni navigateur : un mauvais
+mot de passe ne déchiffre rien, le vérificateur détenu par le serveur ne permet
+pas d'ouvrir le coffre, un chiffré modifié est rejeté, le code de récupération
+ouvre le même coffre, et une réinitialisation laisse les fichiers déjà chiffrés
+lisibles. C'est le test à relancer après toute modification du chiffrement.
+
 ### Test de bout en bout
 
 `scripts/e2e-smoke.mjs` rejoue tout le parcours dans un vrai navigateur — compte,
