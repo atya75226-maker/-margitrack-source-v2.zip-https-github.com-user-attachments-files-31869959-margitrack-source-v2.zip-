@@ -1,4 +1,5 @@
 import { ensureHttp } from './format'
+import { activeLinks } from './socialLinks'
 
 /** Construit un fichier .vcf (contact) à partir d'une carte. */
 export function buildVCard(card, photoDataUrl = null) {
@@ -18,11 +19,17 @@ export function buildVCard(card, photoDataUrl = null) {
   if (p.address || p.city || p.country) {
     lines.push(`ADR;TYPE=WORK:;;${escape(p.address || '')};${escape(p.city || '')};;;${escape(p.country || '')}`)
   }
-  const website = (card.socials || []).find((s) => s.key === 'website' && s.enabled)
-  if (website?.value) lines.push(`URL:${ensureHttp(website.value)}`)
-  ;(card.socials || [])
-    .filter((s) => s.enabled && s.value && s.key !== 'website' && s.key !== 'whatsapp')
-    .forEach((s) => lines.push(`X-SOCIALPROFILE;TYPE=${s.key}:${ensureHttp(s.value)}`))
+  // Tous les liens partent dans la fiche contact, y compris plusieurs par plateforme.
+  const links = activeLinks(card.socialLinks)
+  links
+    .filter((link) => link.platform === 'website' || link.platform === 'other')
+    .forEach((link) => lines.push(`URL:${ensureHttp(link.url)}`))
+  links
+    .filter((link) => !['website', 'other', 'whatsapp'].includes(link.platform))
+    .forEach((link) => lines.push(`X-SOCIALPROFILE;TYPE=${link.platform}:${ensureHttp(link.url)}`))
+  links
+    .filter((link) => link.platform === 'whatsapp')
+    .forEach((link) => lines.push(`TEL;TYPE=WHATSAPP:${link.url}`))
   if (card.about) lines.push(`NOTE:${escape(card.about)}`)
   if (photoDataUrl?.startsWith('data:image')) {
     const [meta, data] = photoDataUrl.split(',')

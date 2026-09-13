@@ -2,6 +2,8 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './state/AuthContext'
 import { DataProvider } from './state/DataContext'
 import { ToastProvider } from './state/ToastContext'
+import { LanguageProvider } from './i18n'
+import { ProLockProvider } from './components/ProLock'
 import { Toaster, Spinner } from './components/ui'
 import AppLayout from './router/AppLayout'
 import LandingPage from './features/landing/LandingPage'
@@ -18,6 +20,7 @@ import VaultDetailPage from './features/vault/VaultDetailPage'
 import VaultAccessPage from './features/vault/VaultAccessPage'
 import StatsPage from './features/stats/StatsPage'
 import ProfilePage from './features/profile/ProfilePage'
+import SubscriptionPage from './features/profile/SubscriptionPage'
 import PublicProfilePage from './features/public/PublicProfilePage'
 
 function RequireAuth({ children }) {
@@ -36,9 +39,11 @@ function RequireAuth({ children }) {
 
 export default function App() {
   return (
-    <ToastProvider>
-      <AuthProvider>
-        <DataProvider>
+    <LanguageProvider>
+      <ToastProvider>
+        <AuthProvider>
+          <DataProvider>
+            <ProLockProvider>
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/connexion" element={<SignInPage />} />
@@ -64,14 +69,17 @@ export default function App() {
               <Route path="coffres/:vaultId" element={<VaultDetailPage />} />
               <Route path="statistiques" element={<StatsPage />} />
               <Route path="profil" element={<ProfilePage />} />
+              <Route path="abonnement" element={<SubscriptionPage />} />
             </Route>
 
             <Route path="/:slug" element={<PublicProfilePage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
           <Toaster />
-        </DataProvider>
-      </AuthProvider>
-    </ToastProvider>
+            </ProLockProvider>
+          </DataProvider>
+        </AuthProvider>
+      </ToastProvider>
+    </LanguageProvider>
   )
 }

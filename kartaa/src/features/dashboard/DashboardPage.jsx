@@ -6,13 +6,15 @@ import CardMiniature from '../cards/CardMiniature'
 import VaultTile from '../vault/VaultTile'
 import { useAuth } from '../../state/AuthContext'
 import { useData } from '../../state/DataContext'
-import { planOf } from '../../config/app.config'
+import { isPro } from '../../config/app.config'
+import { useTranslation } from '../../i18n'
 import { formatBytes, formatNumber } from '../../lib/format'
 
 export default function DashboardPage() {
   const { user } = useAuth()
   const { cards, vaults, stats } = useData()
-  const plan = planOf(user)
+  const { t } = useTranslation()
+  const pro = isPro(user)
   const storagePercent = stats.quotaBytes ? (stats.usedBytes / stats.quotaBytes) * 100 : 0
 
   return (
@@ -22,8 +24,8 @@ export default function DashboardPage() {
           <p className="text-sm font-semibold text-ink-400">Bonjour {user?.firstName},</p>
           <h1 className="font-display text-2xl font-extrabold text-ink-900 sm:text-3xl">Votre tableau de bord</h1>
         </div>
-        <Badge tone={plan.id === 'free' ? 'neutral' : 'gold'} icon={plan.id === 'free' ? null : 'crown'}>
-          Offre {plan.name}
+        <Badge tone={pro ? 'gold' : 'neutral'} icon={pro ? 'crown' : null}>
+          {pro ? t('plan.pro') : t('plan.free')}
         </Badge>
       </header>
 
@@ -52,8 +54,8 @@ export default function DashboardPage() {
                 Créer une carte
               </Button>
             ) : (
-              <Button as={Link} to="/app/profil" size="sm" variant="outline" icon="crown">
-                Augmenter la limite
+              <Button as={Link} to="/app/abonnement" size="sm" variant="outline" icon="crown">
+                Passer à Pro
               </Button>
             )
           }
@@ -94,8 +96,8 @@ export default function DashboardPage() {
                 Créer un Coffre
               </Button>
             ) : (
-              <Button as={Link} to="/app/profil" size="sm" variant="outline" icon="crown">
-                Augmenter la limite
+              <Button as={Link} to="/app/abonnement" size="sm" variant="outline" icon="crown">
+                Passer à Pro
               </Button>
             )
           }

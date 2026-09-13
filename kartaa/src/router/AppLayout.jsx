@@ -4,7 +4,8 @@ import { Icon, Logo } from '../components/ui/Icons'
 import { Avatar, Badge, Button, Modal } from '../components/ui'
 import { useAuth } from '../state/AuthContext'
 import { useData } from '../state/DataContext'
-import { planOf } from '../config/app.config'
+import { isPro } from '../config/app.config'
+import { useTranslation } from '../i18n'
 import { initialsOf } from '../lib/format'
 
 const NAV = [
@@ -20,7 +21,8 @@ export default function AppLayout() {
   const { stats } = useData()
   const navigate = useNavigate()
   const [createOpen, setCreateOpen] = useState(false)
-  const plan = planOf(user)
+  const { t } = useTranslation()
+  const pro = isPro(user)
 
   return (
     <div className="min-h-screen bg-ink-50">
@@ -55,7 +57,7 @@ export default function AppLayout() {
             <span className="block truncate text-sm font-bold text-ink-900">
               {user?.firstName} {user?.lastName}
             </span>
-            <span className="block truncate text-xs text-ink-400">{plan.name}</span>
+            <span className="block truncate text-xs text-ink-400">{pro ? t('plan.pro') : t('plan.free')}</span>
           </span>
         </Link>
       </aside>
@@ -67,7 +69,7 @@ export default function AppLayout() {
             <Logo size={30} />
           </Link>
           <div className="flex items-center gap-2">
-            {plan.id !== 'free' && <Badge tone="gold" icon="crown">{plan.name}</Badge>}
+            {pro && <Badge tone="gold" icon="crown">{t('plan.pro')}</Badge>}
             <Link to="/app/profil">
               <Avatar src={user?.avatarUrl} initials={initialsOf(user?.firstName, user?.lastName)} size={36} />
             </Link>

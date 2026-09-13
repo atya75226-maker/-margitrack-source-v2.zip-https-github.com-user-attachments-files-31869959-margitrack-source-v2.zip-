@@ -29,7 +29,9 @@ stockage de fichiers et règles d'accès côté serveur.
 | Code de récupération + réinitialisation | fonctionnel, code renouvelé après usage |
 | QR Code du coffre → écran de déverrouillage | fonctionnel |
 | Statistiques (scans, stockage, classement) | fonctionnel |
-| Offres Gratuit / Premium / VIP | limites **appliquées en base**, pas seulement dans l'interface |
+| Réseaux et liens | **plusieurs comptes par plateforme**, nommés, réordonnables |
+| Offre unique Pro — 5 000 FCFA / mois | limites **appliquées en base**, pas seulement dans l'interface |
+| Langues français / anglais | détection navigateur + choix manuel ; le prix reste en FCFA |
 | Quotas de stockage | appliqués par déclencheur ; le plan Supabase lui-même plafonne l'espace total du projet (1 Go sur l'offre gratuite) |
 | Nom de domaine personnalisé | **interface + instructions DNS uniquement** — aucun registrar branché |
 | Commande de cartes physiques | **formulaire de demande uniquement** |
@@ -73,6 +75,42 @@ bas, pas le secret de cette clé.
 
 Les règles vivent dans la base, pas dans le client : un navigateur modifié ne peut
 donc pas les contourner. Tout est dans `supabase/migrations/`.
+
+### Réseaux et liens : autant de comptes que voulu
+
+Une carte peut porter trois TikTok, cinq chaînes YouTube et quatre sites web. Les
+liens vivent dans leur propre table `social_links` — plateforme, nom, adresse,
+ordre d'affichage, actif ou non — et non plus dans un champ par réseau.
+
+L'enregistrement passe par `set_card_social_links()`, qui remplace la liste
+complète **en une seule transaction** : une coupure de réseau ne peut pas laisser
+la moitié des liens enregistrés. Les lignes vides sont écartées, ce qui permet au
+formulaire d'afficher un premier champ par plateforme sans obliger à le remplir.
+
+Sur la carte, une icône par plateforme, sans doublon. Sur le mini-site, les liens
+sont groupés par plateforme avec le nom donné par l'utilisateur — « Compte
+personnel », « Ma boutique » — chacun cliquable.
+
+### Une seule offre payante
+
+Gratuit, puis **Pro à 5 000 FCFA par mois**. Pas de second abonnement, pas de
+second parcours d'achat : tous les chemins mènent à `/app/abonnement`, et les
+fonctionnalités verrouillées affichent le même message avec un unique bouton
+« Voir Pro ».
+
+Toute l'application fonctionne en **francs CFA** : `currency = XOF`,
+`display = FCFA`, `monthly_price = 5000` dans `src/config/app.config.js`. Aucune
+conversion, aucun taux de change, aucune détection de devise par pays — même en
+anglais, le prix reste `5,000 FCFA / month`. La structure permet d'ajouter
+d'autres devises plus tard sans rien réécrire ailleurs.
+
+### Langues
+
+Français et anglais, détectés d'après le navigateur puis modifiables depuis le
+profil ou la page d'abonnement (`src/i18n/`). Cette version traduit le parcours
+d'abonnement et le verrou Pro ; **le reste de l'interface est en français** et se
+traduira en complétant les mêmes dictionnaires. La langue est indépendante de la
+devise.
 
 ### Deux façons d'ouvrir un compte
 
@@ -190,6 +228,7 @@ documentées dans le schéma.
 | --- | --- | --- |
 | `profiles` | compte, offre | son propriétaire |
 | `cards` | cartes et mini-sites | son propriétaire ; le public via `card_by_slug()` |
+| `social_links` | réseaux et liens, plusieurs par plateforme | son propriétaire ; le public via `card_by_slug()` |
 | `card_scans` | journal des scans | le propriétaire de la carte |
 | `vaults` | coffres (métadonnées) | son propriétaire |
 | `vault_secrets` | clés chiffrées, vérificateurs | **personne** — fonctions `vault_*` uniquement |
@@ -215,6 +254,7 @@ documentées dans le schéma.
 | `/app/cartes`, `/app/cartes/nouvelle`, `/app/cartes/:id` | Cartes |
 | `/app/coffres`, `/app/coffres/nouveau`, `/app/coffres/:id` | Coffres |
 | `/app/statistiques`, `/app/profil` | Statistiques et profil |
+| `/app/abonnement` | **Page unique d'abonnement** — tous les chemins y mènent |
 | `/c/:vaultId` | **Cible du QR Code d'un coffre** — déverrouillage |
 | `/:slug` | **Cible du QR Code d'une carte** — mini-site public |
 
@@ -277,10 +317,11 @@ confirmation, ce que le test signale clairement).
 
 `FEATURE_FLAGS` dans `src/config/app.config.js` décrit l'état de chaque extension.
 
-- **Paiement** : l'offre se change aujourd'hui en mode démonstration depuis le
-  profil. Brancher un prestataire (Stripe, Wave, Orange Money…) revient à écrire
-  la colonne `profiles.plan` depuis un webhook serveur — les limites sont déjà
-  appliquées en base, elles suivront automatiquement.
+- **Paiement** : l'abonnement s'active aujourd'hui en mode démonstration depuis
+  `/app/abonnement`. Brancher un prestataire compatible FCFA (Wave, Orange Money,
+  MTN MoMo, Stripe…) revient à écrire la colonne `profiles.plan` depuis un webhook
+  serveur — les limites sont déjà appliquées en base, elles suivront
+  automatiquement. Le montant à transmettre est **5 000 FCFA par mois**.
 - **Impression physique** : le formulaire enregistre la demande ; il reste à la
   transmettre à un imprimeur.
 - **Domaine personnalisé** : l'interface enregistre le domaine et affiche les

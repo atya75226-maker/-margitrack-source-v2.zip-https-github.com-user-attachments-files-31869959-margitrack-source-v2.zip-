@@ -47,7 +47,6 @@ const toCard = (row) => row && {
   template: row.template,
   theme: row.theme || {},
   profile: row.profile || {},
-  socials: row.socials || [],
   about: row.about || '',
   activities: row.activities || [],
   companies: row.companies || [],
@@ -62,13 +61,22 @@ const toCard = (row) => row && {
 /** N'envoie que les colonnes réellement modifiables. */
 function fromCard(patch) {
   const row = {}
-  const direct = ['slug', 'template', 'theme', 'profile', 'socials', 'about', 'activities', 'companies', 'services', 'gallery']
+  const direct = ['slug', 'template', 'theme', 'profile', 'about', 'activities', 'companies', 'services', 'gallery']
   direct.forEach((key) => {
     if (patch[key] !== undefined) row[key] = patch[key]
   })
   if (patch.customDomain !== undefined) row.custom_domain = patch.customDomain
   return row
 }
+
+const toSocialLink = (row) => ({
+  id: row.id,
+  platform: row.platform,
+  title: row.title || '',
+  url: row.url,
+  displayOrder: row.display_order ?? 0,
+  isActive: row.is_active !== false,
+})
 
 const toVaultFile = (row) => ({
   id: row.id,
@@ -141,13 +149,28 @@ export const cards = {
     const { data, error } = await supabase
       .from('cards').select('*').eq('user_id', userId).order('created_at', { ascending: true })
     if (error) fail(error, 'Impossible de charger vos cartes.')
-    return data.map(toCard)
+
+    // Une seule requête pour les liens de toutes les cartes.
+    const ids = data.map((row) => row.id)
+    const grouped = new Map()
+    if (ids.length) {
+      const { data: links } = await supabase
+        .from('social_links').select('*').in('card_id', ids)
+        .order('display_order', { ascending: true })
+      ;(links || []).forEach((row) => {
+        const list = grouped.get(row.card_id) || []
+        list.push(toSocialLink(row))
+        grouped.set(row.card_id, list)
+      })
+    }
+    return data.map((row) => ({ ...toCard(row), socialLinks: grouped.get(row.id) || [] }))
   },
 
   async get(id) {
     const { data, error } = await supabase.from('cards').select('*').eq('id', id).maybeSingle()
     if (error) fail(error, 'Carte introuvable.')
-    return toCard(data)
+    if (!data) return null
+    return { ...toCard(data), socialLinks: await cards.socialLinks(id) }
   },
 
   /** Lecture publique du mini-site : passe par une fonction qui ne livre qu'une carte. */
@@ -181,6 +204,36 @@ export const cards = {
   async remove(id) {
     const { error } = await supabase.from('cards').delete().eq('id', id)
     if (error) fail(error, 'Suppression impossible.')
+    notifyChange()
+  },
+
+  /** Liens d'une carte, dans l'ordre d'affichage choisi. */
+  async socialLinks(cardId) {
+    const { data, error } = await supabase
+      .from('social_links').select('*').eq('card_id', cardId)
+      .order('display_order', { ascending: true })
+    if (error) return []
+    return data.map(toSocialLink)
+  },
+
+  /**
+   * Remplace d'un bloc la liste des liens d'une carte.
+   * L'opération est atomique côté base : une coupure ne peut pas en perdre la moitié.
+   */
+  async saveSocialLinks(cardId, links) {
+    const payload = (links || [])
+      .filter((link) => (link.url || '').trim())
+      .map((link) => ({
+        platform: link.platform,
+        title: (link.title || '').trim(),
+        url: link.url.trim(),
+        isActive: link.isActive !== false,
+      }))
+    const { error } = await supabase.rpc('set_card_social_links', {
+      p_card_id: cardId,
+      p_links: payload,
+    })
+    if (error) fail(error, "Les liens n'ont pas pu être enregistrés.")
     notifyChange()
   },
 

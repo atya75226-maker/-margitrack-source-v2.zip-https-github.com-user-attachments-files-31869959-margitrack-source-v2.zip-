@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Icon, SocialIcon } from '../ui/Icons'
 import { initialsOf, prettyUrl } from '../../lib/format'
 import { publicUrl } from '../../lib/slug'
+import { distinctPlatforms, activeLinks } from '../../lib/socialLinks'
 
 /**
  * Rendu « réaliste » d'une carte, à taille fixe (1050 × 600 px).
@@ -46,8 +47,9 @@ function contactLines(card) {
   ].filter(Boolean)
 }
 
+/** Sur la carte, une icône par plateforme : pas de doublon même avec dix comptes. */
 function socialList(card) {
-  return (card.socials || []).filter((social) => social.enabled && social.value)
+  return distinctPlatforms(card.socialLinks).map((network) => ({ key: network.key }))
 }
 
 /* ------------------------------------------------------------------ recto */
@@ -223,7 +225,8 @@ function Front({ card, theme, photoUrl, logoUrl, qr }) {
 function Back({ card, theme, qr, branded = true }) {
   const font = FONT_STACK[theme.font] || FONT_STACK.sans
   const dark = card.template === 'vip'
-  const socials = socialList(card)
+  // Le verso détaille les liens : on y montre les noms donnés par l'utilisateur.
+  const detail = activeLinks(card.socialLinks)
   return (
     <div
       style={{
@@ -266,12 +269,12 @@ function Back({ card, theme, qr, branded = true }) {
               </div>
             </>
           )}
-          {!!socials.length && (
+          {!!detail.length && (
             <div className="mt-8 space-y-2.5">
-              {socials.slice(0, 5).map((social) => (
-                <div key={social.key} className="flex items-center gap-3" style={{ fontSize: 18, color: dark ? '#cbcfe0' : '#41486c' }}>
-                  <SocialIcon network={social.key} size={19} />
-                  <span className="truncate">{prettyUrl(social.value)}</span>
+              {detail.slice(0, 5).map((link) => (
+                <div key={link.id || link.uid || link.url} className="flex items-center gap-3" style={{ fontSize: 18, color: dark ? '#cbcfe0' : '#41486c' }}>
+                  <SocialIcon network={link.platform} size={19} />
+                  <span className="truncate">{link.title?.trim() || prettyUrl(link.url)}</span>
                 </div>
               ))}
             </div>

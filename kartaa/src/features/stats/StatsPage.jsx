@@ -7,7 +7,7 @@ import StatTile from '../dashboard/StatTile'
 import { useData } from '../../state/DataContext'
 import { repo } from '../../lib/storage'
 import { useAuth } from '../../state/AuthContext'
-import { can, planOf } from '../../config/app.config'
+import { can } from '../../config/app.config'
 import { formatBytes, formatNumber } from '../../lib/format'
 
 const DAYS = 14
@@ -62,7 +62,7 @@ export default function StatsPage() {
           <h1 className="font-display text-2xl font-extrabold text-ink-900">Statistiques</h1>
           <p className="mt-1 text-sm text-ink-500">Ce que vos cartes et vos coffres font réellement.</p>
         </div>
-        {!detailed && <Badge tone="gold" icon="crown">Détail complet en Premium</Badge>}
+        {!detailed && <Badge tone="gold" icon="crown">Détail complet avec Pro</Badge>}
       </header>
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
@@ -156,12 +156,12 @@ export default function StatsPage() {
               <div>
                 <p className="font-display text-sm font-bold text-ink-900">Statistiques avancées</p>
                 <p className="hint mt-0.5">
-                  Provenance des scans, appareils, heures de pointe et export : inclus dans l'offre {planOf(user).id === 'free' ? 'Premium' : 'VIP'}.
+                  Provenance des scans, appareils, heures de pointe et export : inclus dans l'abonnement Pro.
                 </p>
               </div>
             </div>
-            <Button as={Link} to="/app/profil" variant="gold" size="sm">
-              Voir les offres
+            <Button as={Link} to="/app/abonnement" variant="gold" size="sm">
+              Voir Pro
             </Button>
           </div>
         </Panel>

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { APP, PLANS, PLAN_ORDER } from '../../config/app.config'
+import { APP } from '../../config/app.config'
 import { Icon, Logo, SocialIcon } from '../../components/ui/Icons'
 import { Badge, Button } from '../../components/ui'
 import { CardArtwork, CardScaler } from '../../components/card/CardArtwork'
@@ -428,54 +428,86 @@ function VaultSection() {
 
 /* ------------------------------------------------------------------ offres */
 
+const OFFRES = [
+  {
+    id: 'free',
+    name: 'Gratuit',
+    price: '0',
+    period: 'pour toujours',
+    tagline: 'Tout ce qu\'il faut pour commencer.',
+    features: [
+      'Une carte de visite et son QR Code',
+      'Mini-site public',
+      'Réseaux sociaux et liens illimités',
+      'Coordonnées, WhatsApp et e-mail',
+      'Un Coffre Sécurité — 200 Mo',
+      'Français et anglais',
+    ],
+  },
+  {
+    id: 'pro',
+    name: 'Pro',
+    price: '5 000',
+    currency: 'FCFA',
+    period: '/ mois',
+    tagline: 'Pour les professionnels et les entreprises.',
+    highlight: true,
+    features: [
+      'Cartes Premium et VIP',
+      'Plusieurs cartes',
+      'Mini-site avancé',
+      'Domaine personnalisé',
+      'Statistiques avancées',
+      'Plusieurs Coffres et plus de stockage',
+      'Suppression du branding Kartaa',
+    ],
+  },
+]
+
 function Pricing() {
   return (
     <section id="offres" className="container-app py-20 sm:py-24">
-      <SectionHeading eyebrow="Offres" title="Commencez gratuitement, montez en gamme si besoin." subtitle="Aucun paiement n'est demandé dans cette version : les offres décrivent ce que chaque niveau débloquera." />
-      <div className="grid gap-5 lg:grid-cols-3">
-        {PLAN_ORDER.map((id) => {
-          const plan = PLANS[id]
-          return (
-            <div
-              key={id}
-              className={`relative flex flex-col rounded-3xl border p-7 ${
-                plan.highlight ? 'border-brand-600 bg-ink-950 text-white shadow-card' : 'border-ink-100 bg-white shadow-soft'
-              }`}
-            >
-              {plan.highlight && (
-                <span className="absolute -top-3 left-7 rounded-full bg-gold-400 px-3 py-1 text-xs font-extrabold text-ink-900">
-                  Le plus choisi
-                </span>
-              )}
-              <h3 className="font-display text-lg font-bold">{plan.name}</h3>
-              <p className={`mt-1 text-sm ${plan.highlight ? 'text-white/60' : 'text-ink-500'}`}>{plan.tagline}</p>
-              <p className="mt-5 flex items-baseline gap-1.5">
-                <span className="font-display text-4xl font-extrabold">{plan.price}</span>
-                <span className={`text-sm font-semibold ${plan.highlight ? 'text-white/60' : 'text-ink-400'}`}>
-                  {plan.currency || ''} {plan.period}
-                </span>
-              </p>
-              <ul className="mt-6 flex-1 space-y-2.5">
-                {plan.features.map((feature) => (
-                  <li key={feature} className={`flex items-start gap-2.5 text-sm ${plan.highlight ? 'text-white/80' : 'text-ink-600'}`}>
-                    <Icon name="check" size={16} className={`mt-0.5 shrink-0 ${plan.highlight ? 'text-gold-400' : 'text-emerald-600'}`} />
-                    {feature}
-                  </li>
-                ))}
-              </ul>
-              <Button
-                as={Link}
-                to="/inscription"
-                full
-                className="mt-7"
-                variant={plan.highlight ? 'gold' : id === 'vip' ? 'dark' : 'outline'}
-              >
-                {id === 'free' ? 'Commencer gratuitement' : `Choisir ${plan.name}`}
-              </Button>
-            </div>
-          )
-        })}
+      <SectionHeading
+        eyebrow="Offres"
+        title="Une seule offre payante, sans surprise."
+        subtitle="Commencez gratuitement. Quand vous avez besoin de plus, tout se débloque d'un coup avec Pro."
+      />
+      <div className="mx-auto grid max-w-3xl gap-5 md:grid-cols-2">
+        {OFFRES.map((plan) => (
+          <div
+            key={plan.id}
+            className={`relative flex flex-col rounded-3xl border p-7 ${
+              plan.highlight ? 'border-brand-600 bg-ink-950 text-white shadow-card' : 'border-ink-100 bg-white shadow-soft'
+            }`}
+          >
+            {plan.highlight && (
+              <span className="absolute -top-3 left-7 rounded-full bg-gold-400 px-3 py-1 text-xs font-extrabold text-ink-900">
+                Tout compris
+              </span>
+            )}
+            <h3 className="font-display text-lg font-bold">{plan.name}</h3>
+            <p className={`mt-1 text-sm ${plan.highlight ? 'text-white/60' : 'text-ink-500'}`}>{plan.tagline}</p>
+            <p className="mt-5 flex items-baseline gap-1.5">
+              <span className="font-display text-4xl font-extrabold">{plan.price}</span>
+              <span className={`text-sm font-semibold ${plan.highlight ? 'text-white/60' : 'text-ink-400'}`}>
+                {plan.currency || ''} {plan.period}
+              </span>
+            </p>
+            <ul className="mt-6 flex-1 space-y-2.5">
+              {plan.features.map((feature) => (
+                <li key={feature} className={`flex items-start gap-2.5 text-sm ${plan.highlight ? 'text-white/80' : 'text-ink-600'}`}>
+                  <Icon name="check" size={16} className={`mt-0.5 shrink-0 ${plan.highlight ? 'text-gold-400' : 'text-emerald-600'}`} />
+                  {feature}
+                </li>
+              ))}
+            </ul>
+            <Button as={Link} to="/inscription" full className="mt-7" variant={plan.highlight ? 'gold' : 'outline'}>
+              {plan.id === 'free' ? 'Commencer gratuitement' : 'Passer à Pro'}
+            </Button>
+          </div>
+        ))}
       </div>
+      <p className="mt-6 text-center hint">Prix en francs CFA. Aucun paiement n'est encore prélevé.</p>
     </section>
   )
 }

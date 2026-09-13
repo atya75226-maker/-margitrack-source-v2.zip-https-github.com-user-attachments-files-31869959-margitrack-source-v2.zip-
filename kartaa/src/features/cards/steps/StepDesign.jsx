@@ -1,6 +1,7 @@
 import { Badge, Field, Input, Panel } from '../../../components/ui'
 import { Icon } from '../../../components/ui/Icons'
-import { FONTS, PALETTES, TEMPLATES, planOf } from '../../../config/app.config'
+import { FONTS, PALETTES, TEMPLATES, can } from '../../../config/app.config'
+import { useProLock } from '../../../components/ProLock'
 import { CardArtwork, CardScaler } from '../../../components/card/CardArtwork'
 import { useAuth } from '../../../state/AuthContext'
 import { slugify } from '../../../lib/slug'
@@ -8,7 +9,8 @@ import { APP } from '../../../config/app.config'
 
 export default function StepDesign({ draft, update, assets, slugError }) {
   const { user } = useAuth()
-  const allowed = planOf(user).limits.templates
+  const { requirePro } = useProLock()
+  const allowedPremium = can(user, 'premiumTemplates')
 
   return (
     <div className="space-y-5">
@@ -17,13 +19,13 @@ export default function StepDesign({ draft, update, assets, slugError }) {
         <p className="hint mt-0.5 mb-4">Le contenu reste le même : seul le niveau de finition change.</p>
         <div className="grid gap-4 sm:grid-cols-3">
           {TEMPLATES.map((template) => {
-            const locked = !allowed.includes(template.id)
+            const locked = template.pro && !allowedPremium
             const active = draft.template === template.id
             return (
               <button
                 key={template.id}
                 type="button"
-                onClick={() => !locked && update({ template: template.id, theme: { ...draft.theme, ...template.defaults, primary: draft.theme?.primary || template.defaults.primary } })}
+                onClick={() => (locked ? requirePro('premiumTemplates') : true) && !locked && update({ template: template.id, theme: { ...draft.theme, ...template.defaults, primary: draft.theme?.primary || template.defaults.primary } })}
                 className={`overflow-hidden rounded-3xl border-2 text-left transition-all ${
                   active ? 'border-brand-600 shadow-lift' : 'border-ink-100 hover:border-ink-300'
                 } ${locked ? 'opacity-70' : ''}`}
@@ -35,7 +37,7 @@ export default function StepDesign({ draft, update, assets, slugError }) {
                   {locked && (
                     <span className="absolute inset-0 grid place-items-center bg-ink-950/50 text-white">
                       <span className="flex items-center gap-1.5 rounded-full bg-gold-400 px-3 py-1.5 text-xs font-extrabold text-ink-900">
-                        <Icon name="crown" size={13} /> Offre {template.plan === 'vip' ? 'VIP' : 'Premium'}
+                        <Icon name="crown" size={13} /> Pro
                       </span>
                     </span>
                   )}

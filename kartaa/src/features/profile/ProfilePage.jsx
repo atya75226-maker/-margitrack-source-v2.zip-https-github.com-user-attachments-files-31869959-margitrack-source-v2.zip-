@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Avatar, Badge, Button, Field, Input, Modal, Panel, Progress, SectionTitle } from '../../components/ui'
 import { Icon } from '../../components/ui/Icons'
 import { useAuth } from '../../state/AuthContext'
 import { useData } from '../../state/DataContext'
 import { useToast } from '../../state/ToastContext'
-import { FEATURE_FLAGS, PLANS, PLAN_ORDER, planOf } from '../../config/app.config'
+import { FEATURE_FLAGS, isPro, PRO_PRICE } from '../../config/app.config'
+import { useTranslation, LANGUAGES } from '../../i18n'
 import { formatBytes, initialsOf } from '../../lib/format'
 
 export default function ProfilePage() {
@@ -20,8 +21,8 @@ export default function ProfilePage() {
     phone: user.phone,
   })
   const [saving, setSaving] = useState(false)
-  const [planModal, setPlanModal] = useState(null)
-  const plan = planOf(user)
+  const { t, price, language, setLanguage } = useTranslation()
+  const pro = isPro(user)
 
   const save = async () => {
     setSaving(true)
@@ -73,48 +74,45 @@ export default function ProfilePage() {
       <Panel>
         <SectionTitle
           icon="crown"
-          title="Mon offre"
-          subtitle="Les paiements ne sont pas encore activés : vous pouvez essayer chaque niveau."
-          action={<Badge tone={plan.id === 'free' ? 'neutral' : 'gold'}>{plan.name}</Badge>}
+          title={t('sub.title')}
+          action={
+            <Badge tone={pro ? 'gold' : 'neutral'} icon={pro ? 'crown' : null}>
+              {pro ? t('plan.pro') : t('plan.free')}
+            </Badge>
+          }
         />
-        <div className="grid gap-4 lg:grid-cols-3">
-          {PLAN_ORDER.map((id) => {
-            const item = PLANS[id]
-            const active = plan.id === id
-            return (
-              <div
-                key={id}
-                className={`flex flex-col rounded-3xl border-2 p-5 ${active ? 'border-brand-600 bg-brand-50/40' : 'border-ink-100'}`}
-              >
-                <div className="flex items-center justify-between">
-                  <p className="font-display text-base font-bold text-ink-900">{item.name}</p>
-                  {active && <Icon name="check" size={18} className="text-brand-600" />}
-                </div>
-                <p className="mt-1 flex items-baseline gap-1">
-                  <span className="font-display text-2xl font-extrabold text-ink-900">{item.price}</span>
-                  <span className="text-xs font-semibold text-ink-400">{item.currency || ''} {item.period}</span>
-                </p>
-                <ul className="mt-4 flex-1 space-y-2">
-                  {item.features.map((feature) => (
-                    <li key={feature} className="flex items-start gap-2 text-xs text-ink-600">
-                      <Icon name="check" size={13} className="mt-0.5 shrink-0 text-emerald-600" />
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
-                <Button
-                  className="mt-4"
-                  size="sm"
-                  full
-                  variant={active ? 'outline' : id === 'free' ? 'outline' : 'dark'}
-                  disabled={active}
-                  onClick={() => setPlanModal(item)}
-                >
-                  {active ? 'Offre actuelle' : `Passer en ${item.name}`}
-                </Button>
-              </div>
-            )
-          })}
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-ink-50 p-4">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-ink-800">
+              {pro ? t('sub.currentPro') : t('sub.currentFree')}
+            </p>
+            {!pro && (
+              <p className="hint mt-0.5">
+                {price(PRO_PRICE)} {t('plan.perMonth')} — {t('sub.upgradeIntro')}
+              </p>
+            )}
+          </div>
+          <Button as={Link} to="/app/abonnement" icon="crown" variant={pro ? 'outline' : 'primary'}>
+            {pro ? t('sub.manage') : t('sub.cta')}
+          </Button>
+        </div>
+      </Panel>
+
+      <Panel>
+        <SectionTitle icon="globe" title={t('lang.switch')} subtitle="Le prix reste en FCFA dans les deux langues." />
+        <div className="flex gap-2">
+          {LANGUAGES.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setLanguage(item.id)}
+              className={`flex-1 rounded-2xl border-2 px-4 py-3 text-sm font-bold transition-all ${
+                language === item.id ? 'border-brand-600 bg-brand-50 text-brand-700' : 'border-ink-100 text-ink-600'
+              }`}
+            >
+              {item.flag} {item.label}
+            </button>
+          ))}
         </div>
       </Panel>
 
@@ -160,39 +158,6 @@ export default function ProfilePage() {
         </div>
       </Panel>
 
-      <Modal
-        open={!!planModal}
-        onClose={() => setPlanModal(null)}
-        title={`Passer en ${planModal?.name || ''}`}
-        description="Le paiement n'est pas encore branché : l'offre est activée en mode démonstration."
-        size="sm"
-        footer={
-          <div className="flex gap-3">
-            <Button variant="outline" full onClick={() => setPlanModal(null)}>
-              Annuler
-            </Button>
-            <Button
-              full
-              onClick={async () => {
-                await updateUser({ plan: planModal.id })
-                toast.success(`Offre ${planModal.name} activée (démonstration).`)
-                setPlanModal(null)
-              }}
-            >
-              Activer
-            </Button>
-          </div>
-        }
-      >
-        <ul className="space-y-2">
-          {(planModal?.features || []).map((feature) => (
-            <li key={feature} className="flex items-start gap-2 text-sm text-ink-600">
-              <Icon name="check" size={15} className="mt-0.5 shrink-0 text-emerald-600" />
-              {feature}
-            </li>
-          ))}
-        </ul>
-      </Modal>
 
     </div>
   )

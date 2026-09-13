@@ -33,7 +33,7 @@ create table public.profiles (
   email       text not null default '',
   phone       text not null default '',
   avatar_url  text not null default '',
-  plan        text not null default 'free' check (plan in ('free', 'premium', 'vip')),
+  plan        text not null default 'free' check (plan in ('free', 'pro')),
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
@@ -98,15 +98,14 @@ create trigger on_auth_user_created after insert on auth.users
   for each row execute function public.handle_new_user();
 
 -- --------------------------------------------------------- limites par offre
+-- Une seule offre payante : Pro, 5 000 FCFA par mois.
 create or replace function public.plan_limits(p_plan text)
 returns table (max_cards integer, max_vaults integer, max_storage_bytes bigint)
 language sql immutable set search_path = '' as $$
   select
-    case p_plan when 'premium' then 5 when 'vip' then 2147483647 else 1 end,
-    case p_plan when 'premium' then 5 when 'vip' then 2147483647 else 1 end,
-    case p_plan when 'premium' then 5368709120::bigint
-                when 'vip'     then 21474836480::bigint
-                else 209715200::bigint end;
+    case p_plan when 'pro' then 2147483647 else 1 end,
+    case p_plan when 'pro' then 2147483647 else 1 end,
+    case p_plan when 'pro' then 21474836480::bigint else 209715200::bigint end;
 $$;
 
 create or replace function public.current_plan()
@@ -187,6 +186,71 @@ $$;
 create trigger cards_limit before insert on public.cards
   for each row execute function public.enforce_card_limit();
 
+-- ------------------------------------------------------- réseaux et liens
+-- Plusieurs comptes par plateforme : « TikTok 1 », « TikTok 2 »… sans limite.
+create table public.social_links (
+  id            uuid primary key default gen_random_uuid(),
+  card_id       uuid not null references public.cards (id) on delete cascade,
+  platform      text not null check (platform in (
+                  'whatsapp', 'facebook', 'instagram', 'tiktok', 'youtube',
+                  'linkedin', 'x', 'snapchat', 'telegram', 'website', 'other')),
+  title         text not null default '',
+  url           text not null check (length(trim(url)) > 0),
+  display_order integer not null default 0,
+  is_active     boolean not null default true,
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now()
+);
+
+create index social_links_card_idx on public.social_links (card_id, platform, display_order);
+
+create trigger social_links_touch before update on public.social_links
+  for each row execute function public.touch_updated_at();
+
+alter table public.social_links enable row level security;
+
+create policy "liens visibles par le propriétaire de la carte" on public.social_links
+  for select using (exists (select 1 from public.cards c
+    where c.id = social_links.card_id and c.user_id = (select auth.uid())));
+create policy "liens ajoutés par le propriétaire de la carte" on public.social_links
+  for insert with check (exists (select 1 from public.cards c
+    where c.id = social_links.card_id and c.user_id = (select auth.uid())));
+create policy "liens modifiables par le propriétaire de la carte" on public.social_links
+  for update using (exists (select 1 from public.cards c
+    where c.id = social_links.card_id and c.user_id = (select auth.uid())))
+  with check (exists (select 1 from public.cards c
+    where c.id = social_links.card_id and c.user_id = (select auth.uid())));
+create policy "liens supprimables par le propriétaire de la carte" on public.social_links
+  for delete using (exists (select 1 from public.cards c
+    where c.id = social_links.card_id and c.user_id = (select auth.uid())));
+
+-- Enregistre la liste complète d'une carte en une transaction : soit tout passe,
+-- soit rien ne change. Une coupure ne peut pas en perdre la moitié.
+create or replace function public.set_card_social_links(p_card_id uuid, p_links jsonb)
+returns jsonb language plpgsql security definer set search_path = '' as $$
+declare v_count integer;
+begin
+  if not exists (select 1 from public.cards where id = p_card_id and user_id = auth.uid()) then
+    raise exception 'Carte introuvable.' using errcode = 'no_data_found';
+  end if;
+
+  delete from public.social_links where card_id = p_card_id;
+
+  insert into public.social_links (card_id, platform, title, url, display_order, is_active)
+  select p_card_id,
+         l.valeur ->> 'platform',
+         coalesce(l.valeur ->> 'title', ''),
+         trim(l.valeur ->> 'url'),
+         (l.rang - 1)::integer,
+         coalesce((l.valeur ->> 'isActive')::boolean, true)
+  from jsonb_array_elements(coalesce(p_links, '[]'::jsonb)) with ordinality as l(valeur, rang)
+  where coalesce(trim(l.valeur ->> 'url'), '') <> '';
+
+  select count(*) into v_count from public.social_links where card_id = p_card_id;
+  return jsonb_build_object('ok', true, 'count', v_count);
+end;
+$$;
+
 -- Lecture publique du mini-site : une carte à la fois, sans l'identifiant du compte.
 create or replace function public.card_by_slug(p_slug text)
 returns jsonb language sql stable security definer set search_path = '' as $$
@@ -195,7 +259,14 @@ returns jsonb language sql stable security definer set search_path = '' as $$
     'profile', c.profile, 'socials', c.socials, 'about', c.about,
     'activities', c.activities, 'companies', c.companies, 'services', c.services,
     'gallery', c.gallery, 'scans', c.scans, 'createdAt', c.created_at,
-    'ownerPlan', p.plan)
+    'ownerPlan', p.plan,
+    'socialLinks', coalesce((
+      select jsonb_agg(jsonb_build_object(
+               'id', l.id, 'platform', l.platform, 'title', l.title,
+               'url', l.url, 'displayOrder', l.display_order)
+             order by l.display_order, l.created_at)
+      from public.social_links l
+      where l.card_id = c.id and l.is_active), '[]'::jsonb))
   from public.cards c
   join public.profiles p on p.id = c.user_id
   where lower(c.slug) = lower(p_slug);
@@ -657,6 +728,8 @@ $$;
 grant execute on function public.card_by_slug(text)             to anon, authenticated;
 grant execute on function public.register_card_scan(text, text) to anon, authenticated;
 grant execute on function public.slug_available(text, uuid)     to anon, authenticated;
+
+grant execute on function public.set_card_social_links(uuid, jsonb) to authenticated;
 
 grant execute on function public.vault_create(text, integer, text, text, jsonb, text, text, jsonb) to authenticated;
 grant execute on function public.vault_intro(uuid)                           to authenticated;

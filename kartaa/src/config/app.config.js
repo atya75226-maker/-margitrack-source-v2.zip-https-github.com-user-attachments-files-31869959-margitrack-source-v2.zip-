@@ -1,116 +1,126 @@
 /**
  * Configuration centrale du produit.
- * Changer le nom, le domaine ou les offres se fait uniquement ici.
+ * Changer le nom, le prix ou les offres se fait uniquement ici.
  */
 
 export const APP = {
   name: 'Kartaa',
   tagline: 'Votre identité. Votre carte. Votre QR Code.',
-  // Domaine public utilisé pour composer les liens des mini-sites : kartaa.app/jean
   publicDomain: typeof window !== 'undefined' ? window.location.host : 'kartaa.app',
   supportEmail: 'contact@kartaa.app',
 }
 
+/* ------------------------------------------------------------------- devise */
+
+/**
+ * Une seule devise pour toute l'application : le franc CFA.
+ * Aucune conversion, aucun taux de change, aucune détection par pays — le prix
+ * de référence et le prix affiché sont la même valeur.
+ */
+export const CURRENCY = {
+  code: 'XOF',
+  display: 'FCFA',
+}
+
+export const PRO_PRICE = 5000
+
+/** « 5 000 FCFA » en français, « 5,000 FCFA » en anglais. Jamais de $, € ou £. */
+export function formatPrice(amount = PRO_PRICE, language = 'fr') {
+  const separator = language === 'en' ? ',' : ' '
+  const grouped = String(amount).replace(/\B(?=(\d{3})+(?!\d))/g, separator)
+  return `${grouped} ${CURRENCY.display}`
+}
+
+/* ------------------------------------------------------------------- offres */
+
 export const PLANS = {
   free: {
     id: 'free',
-    name: 'Gratuit',
-    price: '0',
-    period: 'pour toujours',
-    tagline: 'Pour démarrer en 3 minutes.',
+    price: 0,
     limits: { cards: 1, vaults: 1, storageMb: 200, templates: ['standard'] },
-    features: [
-      '1 carte de visite numérique',
-      'QR Code personnel',
-      'Mini-site public',
-      'Designs standard',
-      '1 Coffre Sécurité — 200 Mo',
-    ],
   },
-  premium: {
-    id: 'premium',
-    name: 'Premium',
-    price: '9 900',
-    currency: 'FCFA',
-    period: '/ mois',
-    tagline: 'Pour les indépendants et les pros.',
-    highlight: true,
-    limits: { cards: 5, vaults: 5, storageMb: 5000, templates: ['standard', 'premium'] },
-    features: [
-      "Jusqu'à 5 cartes",
-      'Designs Premium + personnalisation avancée',
-      'Statistiques de scans détaillées',
-      'Entreprises, services et galerie illimités',
-      'Nom de domaine personnalisé',
-      '5 Go de Coffre Sécurité',
-    ],
-  },
-  vip: {
-    id: 'vip',
-    name: 'VIP',
-    price: '24 900',
-    currency: 'FCFA',
-    period: '/ mois',
-    tagline: 'Pour les marques et les équipes.',
-    limits: { cards: Infinity, vaults: Infinity, storageMb: 20000, templates: ['standard', 'premium', 'vip'] },
-    features: [
-      'Cartes et mini-sites illimités',
-      'Design VIP haut de gamme',
-      'Domaine personnalisé inclus',
-      'Suppression du branding Kartaa',
-      '20 Go de Coffre Sécurité',
-      'Support prioritaire',
-    ],
+  pro: {
+    id: 'pro',
+    price: PRO_PRICE,
+    limits: {
+      cards: Infinity,
+      vaults: Infinity,
+      storageMb: 20000,
+      templates: ['standard', 'premium', 'vip'],
+    },
   },
 }
 
-export const PLAN_ORDER = ['free', 'premium', 'vip']
+export const PLAN_ORDER = ['free', 'pro']
 
 export function planOf(user) {
   return PLANS[user?.plan] || PLANS.free
 }
 
+export function isPro(user) {
+  return planOf(user).id === 'pro'
+}
+
+/** Fonctionnalités réservées à l'abonnement Pro. */
 export function can(user, capability) {
-  const plan = planOf(user)
+  const pro = isPro(user)
   switch (capability) {
-    case 'customDomain': return plan.id !== 'free'
-    case 'advancedStats': return plan.id !== 'free'
-    case 'removeBranding': return plan.id === 'vip'
-    default: return true
+    case 'customDomain':
+    case 'advancedStats':
+    case 'removeBranding':
+    case 'premiumTemplates':
+    case 'multipleCards':
+    case 'multipleVaults':
+      return pro
+    default:
+      return true
   }
 }
 
+/* ------------------------------------------------- réseaux sociaux et liens */
+
+/**
+ * Chaque plateforme accepte autant de comptes que souhaité : la liste ci-dessous
+ * décrit seulement comment présenter et valider une entrée.
+ */
 export const SOCIAL_NETWORKS = [
-  { key: 'whatsapp', label: 'WhatsApp', placeholder: '+225 07 00 00 00 00', kind: 'phone', color: '#25D366' },
-  { key: 'facebook', label: 'Facebook', placeholder: 'https://facebook.com/…', kind: 'url', color: '#1877F2' },
-  { key: 'instagram', label: 'Instagram', placeholder: 'https://instagram.com/…', kind: 'url', color: '#E4405F' },
-  { key: 'tiktok', label: 'TikTok', placeholder: 'https://tiktok.com/@…', kind: 'url', color: '#111111' },
-  { key: 'linkedin', label: 'LinkedIn', placeholder: 'https://linkedin.com/in/…', kind: 'url', color: '#0A66C2' },
-  { key: 'youtube', label: 'YouTube', placeholder: 'https://youtube.com/@…', kind: 'url', color: '#FF0000' },
-  { key: 'x', label: 'X', placeholder: 'https://x.com/…', kind: 'url', color: '#111111' },
-  { key: 'website', label: 'Site web', placeholder: 'https://…', kind: 'url', color: '#6d28d9' },
+  { key: 'whatsapp',  label: 'WhatsApp',  kind: 'phone', color: '#25D366', placeholder: '+225 07 00 00 00 00', titlePlaceholder: 'Ligne professionnelle' },
+  { key: 'facebook',  label: 'Facebook',  kind: 'url',   color: '#1877F2', placeholder: 'https://facebook.com/…', titlePlaceholder: 'Page de l’entreprise' },
+  { key: 'instagram', label: 'Instagram', kind: 'url',   color: '#E4405F', placeholder: 'https://instagram.com/…', titlePlaceholder: 'Compte personnel' },
+  { key: 'tiktok',    label: 'TikTok',    kind: 'url',   color: '#111111', placeholder: 'https://tiktok.com/@…', titlePlaceholder: 'Compte principal' },
+  { key: 'youtube',   label: 'YouTube',   kind: 'url',   color: '#FF0000', placeholder: 'https://youtube.com/@…', titlePlaceholder: 'Ma chaîne principale' },
+  { key: 'linkedin',  label: 'LinkedIn',  kind: 'url',   color: '#0A66C2', placeholder: 'https://linkedin.com/in/…', titlePlaceholder: 'Profil professionnel' },
+  { key: 'x',         label: 'X',         kind: 'url',   color: '#111111', placeholder: 'https://x.com/…', titlePlaceholder: 'Compte principal' },
+  { key: 'snapchat',  label: 'Snapchat',  kind: 'url',   color: '#FFFC00', placeholder: 'https://snapchat.com/add/…', titlePlaceholder: 'Compte personnel' },
+  { key: 'telegram',  label: 'Telegram',  kind: 'url',   color: '#26A5E4', placeholder: 'https://t.me/…', titlePlaceholder: 'Canal public' },
+  { key: 'website',   label: 'Sites web', kind: 'url',   color: '#6d28d9', placeholder: 'https://…', titlePlaceholder: 'Mon entreprise', namedFirst: true },
+  { key: 'other',     label: 'Autres liens', kind: 'url', color: '#41486c', placeholder: 'https://…', titlePlaceholder: 'Mon catalogue PDF', namedFirst: true },
 ]
+
+export const NETWORK_BY_KEY = Object.fromEntries(SOCIAL_NETWORKS.map((item) => [item.key, item]))
+
+/* ----------------------------------------------------------------- modèles */
 
 export const TEMPLATES = [
   {
     id: 'standard',
     name: 'Carte Standard',
     description: 'Design clair et professionnel. Va droit au but.',
-    plan: 'free',
+    pro: false,
     defaults: { primary: '#6d28d9', accent: '#f5b229', font: 'sans', layout: 'left' },
   },
   {
     id: 'premium',
     name: 'Carte Premium',
     description: 'Dégradé élégant, plus de personnalisation.',
-    plan: 'premium',
+    pro: true,
     defaults: { primary: '#5b21b6', accent: '#f5b229', font: 'display', layout: 'center' },
   },
   {
     id: 'vip',
     name: 'Carte VIP',
     description: 'Finition sombre et dorée, haut de gamme.',
-    plan: 'vip',
+    pro: true,
     defaults: { primary: '#141728', accent: '#f5b229', font: 'serif', layout: 'left' },
   },
 ]
@@ -132,8 +142,8 @@ export const FONTS = [
 
 /** Fonctionnalités préparées mais non branchées (voir README). */
 export const FEATURE_FLAGS = {
-  payments: false,        // intégration d'un PSP (Stripe / Wave / Orange Money…)
-  physicalPrinting: false,// impression et livraison de cartes physiques
-  domainRegistrar: false, // connexion réelle à un registrar
-  nativeBiometrics: true, // WebAuthn si le navigateur/appareil le supporte
+  payments: false,         // prestataire compatible FCFA à connecter
+  physicalPrinting: false, // impression et livraison de cartes physiques
+  domainRegistrar: false,  // vérification réelle d'un domaine
+  nativeBiometrics: true,  // WebAuthn si l'appareil le propose
 }

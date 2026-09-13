@@ -13,7 +13,8 @@ import { useToast } from '../../state/ToastContext'
 import { useCardAssets } from '../../hooks/useCardAssets'
 import { repo } from '../../lib/storage'
 import { normalizeSlug, suggestSlug } from '../../lib/slug'
-import { TEMPLATES, planOf } from '../../config/app.config'
+import { TEMPLATES, can } from '../../config/app.config'
+import { ensureRows } from '../../lib/socialLinks'
 
 const STEPS = ['Informations', 'Réseaux', 'Présentation', 'Entreprises', 'Design']
 
@@ -35,7 +36,7 @@ function emptyCard(user) {
       city: '',
       country: '',
     },
-    socials: [],
+    socialLinks: ensureRows([]),
     about: '',
     activities: [],
     companies: [],
@@ -59,10 +60,15 @@ export default function CardWizardPage() {
 
   useEffect(() => {
     if (!cardId) return
-    repo.cards.get(cardId).then((card) => {
-      if (card) setDraft(card)
+    let cancelled = false
+    Promise.all([repo.cards.get(cardId), repo.cards.socialLinks(cardId)]).then(([card, links]) => {
+      if (cancelled) return
+      if (card) setDraft({ ...card, socialLinks: ensureRows(links) })
       setLoading(false)
     })
+    return () => {
+      cancelled = true
+    }
   }, [cardId])
 
   const assets = useCardAssets(draft)
@@ -112,13 +118,14 @@ export default function CardWizardPage() {
       setStep(STEPS.length - 1)
       return
     }
-    const allowed = planOf(user).limits.templates
-    const template = allowed.includes(draft.template) ? draft.template : 'standard'
+    // Les modèles Premium et VIP demandent l'abonnement Pro.
+    const template = draft.template !== 'standard' && !can(user, 'premiumTemplates') ? 'standard' : draft.template
 
     setSaving(true)
     try {
       const payload = { ...draft, slug, template }
       const card = cardId ? await repo.cards.update(cardId, payload) : await repo.cards.create(user.id, payload)
+      await repo.cards.saveSocialLinks(card.id, draft.socialLinks)
       toast.success(cardId ? 'Carte mise à jour.' : 'Votre carte est prête !')
       navigate(`/app/cartes/${card.id}`, { replace: true })
     } catch (error) {

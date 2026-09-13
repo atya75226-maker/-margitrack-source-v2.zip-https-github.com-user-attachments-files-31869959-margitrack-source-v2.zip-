@@ -9,7 +9,7 @@ import { toDataUrl } from '../../lib/storage'
 import { copyToClipboard } from '../../lib/download'
 import { ensureHttp, initialsOf, prettyUrl, telHref, whatsappHref } from '../../lib/format'
 import { publicUrl } from '../../lib/slug'
-import { SOCIAL_NETWORKS } from '../../config/app.config'
+import { groupByPlatform, linkHref, linkLabel, activeLinks } from '../../lib/socialLinks'
 import { useToast } from '../../state/ToastContext'
 
 /** Mini-site public : la page qu'ouvre le QR Code. Pensée d'abord pour le téléphone. */
@@ -69,8 +69,8 @@ export default function PublicProfilePage() {
   const p = card.profile || {}
   const theme = { primary: '#6d28d9', accent: '#f5b229', ...(card.theme || {}) }
   const fullName = [p.firstName, p.lastName].filter(Boolean).join(' ')
-  const socials = (card.socials || []).filter((social) => social.enabled && social.value)
-  const website = socials.find((social) => social.key === 'website')
+  const groups = groupByPlatform(card.socialLinks)
+  const website = activeLinks(card.socialLinks).find((link) => link.platform === 'website')
   const branded = card.ownerPlan !== 'vip'
 
   const addToContacts = async () => {
@@ -121,7 +121,14 @@ export default function PublicProfilePage() {
                 />
               )}
               {p.email && <ActionButton href={`mailto:${p.email}`} icon="mail" label="Envoyer un e-mail" value={p.email} />}
-              {website && <ActionButton href={ensureHttp(website.value)} icon="globe" label="Visiter mon site" value={prettyUrl(website.value)} />}
+              {website && (
+                <ActionButton
+                  href={ensureHttp(website.url)}
+                  icon="globe"
+                  label={website.title?.trim() || 'Visiter mon site'}
+                  value={prettyUrl(website.url)}
+                />
+              )}
             </div>
             <Button full size="lg" className="mt-3" icon="download" onClick={addToContacts} style={{ background: theme.primary }}>
               Ajouter aux contacts
@@ -154,30 +161,49 @@ export default function PublicProfilePage() {
           </Panel>
 
           {/* -------------------------------------------------------- réseaux */}
-          {socials.filter((social) => social.key !== 'website').length > 0 && (
-            <Panel className="!p-4">
-              <SectionLabel icon="share" text="Réseaux sociaux" />
-              <div className="grid grid-cols-4 gap-2.5">
-                {socials
-                  .filter((social) => social.key !== 'website')
-                  .map((social) => {
-                    const meta = SOCIAL_NETWORKS.find((item) => item.key === social.key)
-                    const href = social.key === 'whatsapp' ? whatsappHref(social.value) : ensureHttp(social.value)
-                    return (
-                      <a
-                        key={social.key}
-                        href={href}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex flex-col items-center gap-1.5 rounded-2xl border border-ink-100 py-3 transition-colors hover:border-ink-300"
+          {groups.length > 0 && (
+            <Panel className="!p-5">
+              <SectionLabel icon="share" text="Mes réseaux" />
+              <div className="space-y-4">
+                {groups.map(({ network, items }) => (
+                  <div key={network.key}>
+                    <div className="mb-2 flex items-center gap-2.5">
+                      <span
+                        className="grid h-8 w-8 shrink-0 place-items-center rounded-xl text-white"
+                        style={{ background: network.color }}
                       >
-                        <span className="grid h-10 w-10 place-items-center rounded-xl text-white" style={{ background: meta?.color || theme.primary }}>
-                          <SocialIcon network={social.key} size={19} />
+                        <SocialIcon network={network.key} size={16} />
+                      </span>
+                      <span className="text-sm font-bold text-ink-800">{network.label}</span>
+                      {items.length > 1 && (
+                        <span className="rounded-full bg-ink-100 px-2 py-0.5 text-[0.65rem] font-bold text-ink-500">
+                          {items.length}
                         </span>
-                        <span className="text-[0.68rem] font-bold text-ink-600">{meta?.label || social.key}</span>
-                      </a>
-                    )
-                  })}
+                      )}
+                    </div>
+                    <div className="space-y-1.5 pl-[2.6rem]">
+                      {items.map((link, index) => (
+                        <a
+                          key={link.id || link.url}
+                          href={linkHref(link)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex items-center gap-2 rounded-xl bg-ink-50 px-3.5 py-2.5 transition-colors hover:bg-ink-100"
+                        >
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm font-semibold text-ink-800">
+                              {linkLabel(link, index, items.length)}
+                            </span>
+                            <span className="block truncate text-xs text-ink-400">
+                              {network.key === 'whatsapp' ? link.url : prettyUrl(link.url)}
+                            </span>
+                          </span>
+                          <Icon name="chevronRight" size={16} className="shrink-0 text-ink-300" />
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
             </Panel>
           )}
