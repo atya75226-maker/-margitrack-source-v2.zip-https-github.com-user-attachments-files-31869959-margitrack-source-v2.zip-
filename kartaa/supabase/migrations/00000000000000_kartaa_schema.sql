@@ -32,6 +32,7 @@ create table public.profiles (
   last_name   text not null default '',
   email       text not null default '',
   phone       text not null default '',
+  avatar_url  text not null default '',
   plan        text not null default 'free' check (plan in ('free', 'premium', 'vip')),
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
@@ -51,19 +52,44 @@ create policy "profil visible par son propriétaire" on public.profiles
 create policy "profil modifiable par son propriétaire" on public.profiles
   for update using ((select auth.uid()) = id) with check ((select auth.uid()) = id);
 
--- Création automatique du profil à l'inscription
+-- Création automatique du profil à l'inscription.
+-- Les fournisseurs ne nomment pas les champs pareil : notre formulaire envoie
+-- first_name / last_name / phone, Google envoie given_name / family_name /
+-- full_name / picture. Sans cette normalisation, un compte Google arriverait
+-- avec un profil vide.
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = '' as $$
+declare
+  m         jsonb := coalesce(new.raw_user_meta_data, '{}'::jsonb);
+  v_complet text;
+  v_prenom  text;
+  v_nom     text;
 begin
-  insert into public.profiles (id, first_name, last_name, email, phone)
+  v_complet := trim(coalesce(nullif(m ->> 'full_name', ''), nullif(m ->> 'name', ''), ''));
+
+  v_prenom := coalesce(
+    nullif(m ->> 'first_name', ''),
+    nullif(m ->> 'given_name', ''),
+    nullif(split_part(v_complet, ' ', 1), ''),
+    '');
+
+  v_nom := coalesce(
+    nullif(m ->> 'last_name', ''),
+    nullif(m ->> 'family_name', ''),
+    nullif(trim(substr(v_complet, coalesce(nullif(strpos(v_complet, ' '), 0), length(v_complet) + 1))), ''),
+    '');
+
+  insert into public.profiles (id, first_name, last_name, email, phone, avatar_url)
   values (
-    new.id,
-    coalesce(new.raw_user_meta_data ->> 'first_name', ''),
-    coalesce(new.raw_user_meta_data ->> 'last_name', ''),
+    new.id, v_prenom, v_nom,
     coalesce(new.email, ''),
-    coalesce(new.raw_user_meta_data ->> 'phone', '')
-  )
-  on conflict (id) do nothing;
+    coalesce(nullif(m ->> 'phone', ''), coalesce(new.phone, '')),
+    coalesce(nullif(m ->> 'avatar_url', ''), nullif(m ->> 'picture', ''), ''))
+  on conflict (id) do update
+  set first_name = case when public.profiles.first_name = '' then excluded.first_name else public.profiles.first_name end,
+      last_name  = case when public.profiles.last_name  = '' then excluded.last_name  else public.profiles.last_name  end,
+      avatar_url = case when public.profiles.avatar_url = '' then excluded.avatar_url else public.profiles.avatar_url end;
+
   return new;
 end;
 $$;

@@ -38,7 +38,7 @@ export default function ProfilePage() {
   return (
     <div className="space-y-6">
       <header className="flex items-center gap-4">
-        <Avatar initials={initialsOf(user.firstName, user.lastName)} size={64} />
+        <Avatar src={user.avatarUrl} initials={initialsOf(user.firstName, user.lastName)} size={64} />
         <div className="min-w-0">
           <h1 className="truncate font-display text-2xl font-extrabold text-ink-900">
             {user.firstName} {user.lastName}

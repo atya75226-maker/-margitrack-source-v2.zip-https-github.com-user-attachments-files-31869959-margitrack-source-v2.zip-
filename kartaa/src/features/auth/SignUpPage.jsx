@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import AuthShell from './AuthShell'
+import AuthShell, { GoogleButton, Separator } from './AuthShell'
 import { Button, Field, Input, PasswordInput, Progress } from '../../components/ui'
 import { useAuth } from '../../state/AuthContext'
 import { useToast } from '../../state/ToastContext'
@@ -89,7 +89,12 @@ export default function SignUpPage() {
         </>
       }
     >
-      <form onSubmit={submit} className="space-y-4" noValidate>
+      <div className="space-y-4">
+        <GoogleButton next={nextRoute} />
+        <Separator>ou avec une adresse e-mail</Separator>
+      </div>
+
+      <form onSubmit={submit} className="mt-4 space-y-4" noValidate>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Prénom" required error={errors.firstName}>
             <Input value={form.firstName} onChange={set('firstName')} placeholder="Awa" autoComplete="given-name" />
@@ -120,7 +125,7 @@ export default function SignUpPage() {
           Créer mon compte
         </Button>
         <p className="hint text-center">
-          En créant un compte, vous acceptez de tester un prototype : vos données sont enregistrées sur cet appareil.
+          Vos cartes et vos coffres sont hébergés sur votre espace et vous suivent d'un appareil à l'autre.
         </p>
       </form>
     </AuthShell>

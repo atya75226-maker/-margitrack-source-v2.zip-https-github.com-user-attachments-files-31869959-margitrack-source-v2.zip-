@@ -31,5 +31,11 @@ export function readableError(error, fallback = "Une erreur est survenue.") {
   if (/User already registered/i.test(message)) return 'Un compte existe déjà avec cette adresse e-mail.'
   if (/Email not confirmed/i.test(message)) return "Confirmez votre adresse e-mail avant de vous connecter."
   if (/Password should be at least/i.test(message)) return 'Le mot de passe doit contenir au moins 8 caractères.'
+  if (/Unsupported provider|provider is not enabled/i.test(message)) {
+    return "La connexion avec Google n'est pas activée sur ce projet."
+  }
+  if (/redirect_uri_mismatch|requested path is invalid/i.test(message)) {
+    return "L'adresse de retour n'est pas autorisée dans les réglages d'authentification."
+  }
   return message || fallback
 }

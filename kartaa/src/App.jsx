@@ -7,6 +7,7 @@ import AppLayout from './router/AppLayout'
 import LandingPage from './features/landing/LandingPage'
 import SignInPage from './features/auth/SignInPage'
 import SignUpPage from './features/auth/SignUpPage'
+import AuthCallbackPage from './features/auth/AuthCallbackPage'
 import DashboardPage from './features/dashboard/DashboardPage'
 import CardsPage from './features/cards/CardsPage'
 import CardWizardPage from './features/cards/CardWizardPage'
@@ -42,6 +43,7 @@ export default function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/connexion" element={<SignInPage />} />
             <Route path="/inscription" element={<SignUpPage />} />
+            <Route path="/auth/callback" element={<AuthCallbackPage />} />
             <Route path="/c/:vaultId" element={<VaultAccessPage />} />
 
             <Route

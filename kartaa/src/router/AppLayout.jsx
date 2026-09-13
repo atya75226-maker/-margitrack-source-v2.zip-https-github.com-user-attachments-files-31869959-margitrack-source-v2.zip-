@@ -50,7 +50,7 @@ export default function AppLayout() {
           Créer
         </Button>
         <Link to="/app/profil" className="flex items-center gap-3 rounded-2xl p-2 hover:bg-ink-50">
-          <Avatar initials={initialsOf(user?.firstName, user?.lastName)} size={40} />
+          <Avatar src={user?.avatarUrl} initials={initialsOf(user?.firstName, user?.lastName)} size={40} />
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm font-bold text-ink-900">
               {user?.firstName} {user?.lastName}
@@ -69,7 +69,7 @@ export default function AppLayout() {
           <div className="flex items-center gap-2">
             {plan.id !== 'free' && <Badge tone="gold" icon="crown">{plan.name}</Badge>}
             <Link to="/app/profil">
-              <Avatar initials={initialsOf(user?.firstName, user?.lastName)} size={36} />
+              <Avatar src={user?.avatarUrl} initials={initialsOf(user?.firstName, user?.lastName)} size={36} />
             </Link>
           </div>
         </div>

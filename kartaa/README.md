@@ -17,7 +17,7 @@ stockage de fichiers et règles d'accès côté serveur.
 
 | Parcours | État |
 | --- | --- |
-| Création de compte et connexion | Supabase Auth |
+| Création de compte et connexion | Supabase Auth — e-mail + mot de passe, ou Google |
 | Assistant de création de carte en 5 étapes | fonctionnel |
 | Prévisualisation en direct, 3 modèles, couleurs et typographie | fonctionnel |
 | Génération du QR Code | fonctionnel (le QR pointe vers le mini-site, jamais vers un numéro) |
@@ -62,6 +62,10 @@ bas, pas le secret de cette clé.
 2. **Authentication → Sign In / Providers → Email** : si *Confirm email* est
    activé, chaque inscription attend un clic dans l'e-mail reçu. L'application
    gère les deux cas ; pour des tests plus rapides, désactivez l'option.
+3. **Connexion avec Google** : activez le fournisseur *Google* dans
+   *Sign In / Providers*, puis ajoutez `https://<votre-domaine>/auth/callback`
+   dans **Redirect URLs**. Sans cette entrée, Google renvoie vers l'adresse par
+   défaut du projet et la session ne s'ouvre pas.
 
 ---
 
@@ -69,6 +73,14 @@ bas, pas le secret de cette clé.
 
 Les règles vivent dans la base, pas dans le client : un navigateur modifié ne peut
 donc pas les contourner. Tout est dans `supabase/migrations/`.
+
+### Deux façons d'ouvrir un compte
+
+E-mail et mot de passe, ou Google. Les fournisseurs ne nomment pas les champs de
+la même façon — notre formulaire envoie `first_name`, Google envoie `given_name`
+et `full_name` — donc le déclencheur `handle_new_user()` normalise les deux avant
+de créer le profil, photo comprise. Un compte Google n'a pas de numéro de
+téléphone : il reste à renseigner dans l'assistant de carte, où il est requis.
 
 ### Les cartes sont publiques, l'annuaire ne l'est pas
 

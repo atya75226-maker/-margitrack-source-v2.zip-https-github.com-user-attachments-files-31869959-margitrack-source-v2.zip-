@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import AuthShell from './AuthShell'
+import AuthShell, { GoogleButton, Separator } from './AuthShell'
 import { Button, Field, Input, PasswordInput } from '../../components/ui'
 import { useAuth } from '../../state/AuthContext'
 import { useToast } from '../../state/ToastContext'
@@ -42,7 +42,12 @@ export default function SignInPage() {
         </>
       }
     >
-      <form onSubmit={submit} className="space-y-4" noValidate>
+      <div className="space-y-4">
+        <GoogleButton label="Se connecter avec Google" />
+        <Separator />
+      </div>
+
+      <form onSubmit={submit} className="mt-4 space-y-4" noValidate>
         <Field label="Adresse e-mail" required>
           <Input
             type="email"

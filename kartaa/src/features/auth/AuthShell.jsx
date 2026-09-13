@@ -1,5 +1,8 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Icon, Logo } from '../../components/ui/Icons'
+import { GoogleMark, Icon, Logo } from '../../components/ui/Icons'
+import { useAuth } from '../../state/AuthContext'
+import { useToast } from '../../state/ToastContext'
 
 const HIGHLIGHTS = [
   { icon: 'card', text: 'Une carte de visite numérique prête en quelques minutes' },
@@ -36,7 +39,7 @@ export default function AuthShell({ title, subtitle, children, footer }) {
           </ul>
         </div>
         <p className="relative text-xs text-white/40">
-          Prototype — vos données restent sur cet appareil tant qu'aucun serveur n'est connecté.
+          Les fichiers du Coffre Sécurité sont chiffrés sur votre appareil avant d'être envoyés.
         </p>
       </div>
 
@@ -51,6 +54,46 @@ export default function AuthShell({ title, subtitle, children, footer }) {
           {footer && <div className="mt-6 text-center text-sm text-ink-500">{footer}</div>}
         </div>
       </div>
+    </div>
+  )
+}
+
+/**
+ * « Continuer avec Google ». Le clic quitte l'application vers Google : le bouton
+ * reste donc en attente jusqu'à la redirection, sans état de succès à afficher.
+ */
+export function GoogleButton({ label = 'Continuer avec Google', next = '/app' }) {
+  const { signInWithGoogle } = useAuth()
+  const [busy, setBusy] = useState(false)
+  const toast = useToast()
+
+  return (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={async () => {
+        setBusy(true)
+        try {
+          await signInWithGoogle(next)
+        } catch (error) {
+          toast.error(error.message)
+          setBusy(false)
+        }
+      }}
+      className="flex h-[3.25rem] w-full items-center justify-center gap-3 rounded-2xl border border-ink-200 bg-white px-5 text-[0.95rem] font-semibold text-ink-800 transition-all hover:border-ink-300 hover:bg-ink-50 active:scale-[.99] disabled:opacity-70"
+    >
+      <GoogleMark size={20} />
+      {busy ? 'Ouverture de Google…' : label}
+    </button>
+  )
+}
+
+export function Separator({ children = 'ou' }) {
+  return (
+    <div className="flex items-center gap-3 py-1">
+      <span className="h-px flex-1 bg-ink-200" />
+      <span className="text-xs font-bold uppercase tracking-wide text-ink-400">{children}</span>
+      <span className="h-px flex-1 bg-ink-200" />
     </div>
   )
 }

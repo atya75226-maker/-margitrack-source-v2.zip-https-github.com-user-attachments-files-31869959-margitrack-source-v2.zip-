@@ -152,7 +152,7 @@ export default function VaultBrowser({ vault, vaultKey, onChange, readOnly = fal
         open={!!toDelete}
         onClose={() => setToDelete(null)}
         title={`Supprimer « ${toDelete?.name} » ?`}
-        description="Le fichier chiffré sera effacé de cet appareil."
+        description="Le fichier chiffré sera définitivement supprimé."
         confirmLabel="Supprimer"
         onConfirm={async () => {
           const updated = await removeFile(vault, toDelete.id)
@@ -296,7 +296,7 @@ function PreviewModal({ file, vault, vaultKey, onClose }) {
             <span className="text-sm">Déchiffrement…</span>
           </span>
         ) : !state.url ? (
-          <span className="p-10 text-center text-sm text-white/60">Ce fichier n'est pas disponible sur cet appareil.</span>
+          <span className="p-10 text-center text-sm text-white/60">Ce fichier n'a pas pu être récupéré.</span>
         ) : file.category === 'image' ? (
           <img src={state.url} alt={file.name} className="max-h-[60vh] w-full object-contain" />
         ) : file.category === 'video' ? (

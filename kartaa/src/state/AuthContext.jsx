@@ -21,12 +21,15 @@ export function AuthProvider({ children }) {
       return null
     }
     const profile = await repo.users.get(authUser.id).catch(() => null)
+    const meta = authUser.user_metadata || {}
+    const complet = (meta.full_name || meta.name || '').trim()
     const merged = profile || {
       id: authUser.id,
-      firstName: authUser.user_metadata?.first_name || '',
-      lastName: authUser.user_metadata?.last_name || '',
+      firstName: meta.first_name || meta.given_name || complet.split(' ')[0] || '',
+      lastName: meta.last_name || meta.family_name || complet.split(' ').slice(1).join(' ') || '',
       email: authUser.email || '',
-      phone: authUser.user_metadata?.phone || '',
+      phone: meta.phone || authUser.phone || '',
+      avatarUrl: meta.avatar_url || meta.picture || '',
       plan: 'free',
     }
     setUser(merged)
@@ -70,6 +73,22 @@ export function AuthProvider({ children }) {
     return { pendingConfirmation: false }
   }, [loadProfile])
 
+  /**
+   * Connexion par Google. La page quitte l'application vers Google, puis revient
+   * sur /auth/callback ; c'est le client Supabase qui récupère la session dans
+   * l'URL de retour (detectSessionInUrl).
+   */
+  const signInWithGoogle = useCallback(async (next = '/app') => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+        queryParams: { prompt: 'select_account' },
+      },
+    })
+    if (error) throw new Error(readableError(error, "La connexion avec Google n'a pas abouti."))
+  }, [])
+
   const signIn = useCallback(async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({
       email: email.trim().toLowerCase(),
@@ -93,8 +112,8 @@ export function AuthProvider({ children }) {
   }, [user])
 
   const value = useMemo(
-    () => ({ user, session, ready, signUp, signIn, signOut, updateUser, isAuthenticated: !!session }),
-    [user, session, ready, signUp, signIn, signOut, updateUser],
+    () => ({ user, session, ready, signUp, signIn, signInWithGoogle, signOut, updateUser, isAuthenticated: !!session }),
+    [user, session, ready, signUp, signIn, signInWithGoogle, signOut, updateUser],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

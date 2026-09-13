@@ -35,6 +35,7 @@ const toProfile = (row) => row && {
   lastName: row.last_name || '',
   email: row.email || '',
   phone: row.phone || '',
+  avatarUrl: row.avatar_url || '',
   plan: row.plan || 'free',
   createdAt: row.created_at,
 }
@@ -123,6 +124,7 @@ export const users = {
     if (patch.lastName !== undefined) row.last_name = patch.lastName
     if (patch.email !== undefined) row.email = patch.email
     if (patch.phone !== undefined) row.phone = patch.phone
+    if (patch.avatarUrl !== undefined) row.avatar_url = patch.avatarUrl
     if (patch.plan !== undefined) row.plan = patch.plan
 
     const { data, error } = await supabase.from('profiles').update(row).eq('id', id).select().single()
