@@ -15,6 +15,7 @@ import { useSubscription } from "./hooks/useSubscription";
 import { useStock } from "./hooks/useStock";
 import { usePermissions } from "./hooks/usePermissions";
 import { APP_PATH, SIGNUP_PATH, isAppRoute, isStandalone, navigate, useRoute } from "./lib/routes";
+import { NAV_ICONS } from "./components/ui/Icons";
 import { Dashboard } from "./components/Dashboard";
 import { ProductsTab } from "./components/ProductsTab";
 import { SalesTab } from "./components/SalesTab";
@@ -33,13 +34,13 @@ import { ReceiptModal } from "./components/ReceiptModal";
 // que ce à quoi l'utilisateur a droit — les politiques RLS restent la
 // véritable protection côté base.
 const NAV = [
-  { id: "dashboard", key: "nav_home", icon: "🏠", perm: "dashboard" },
-  { id: "sales", key: "nav_sales", icon: "🧾", perm: "sales" },
-  { id: "products", key: "nav_products", icon: "📦", perm: "products" },
-  { id: "stock", key: "nav_stock", icon: "🥤", perm: "stock" },
-  { id: "expenses", key: "nav_expenses", icon: "💸", perm: "expenses" },
-  { id: "assistant", key: "nav_assistant", icon: "✨", perm: "reports" },
-  { id: "settings", key: "nav_settings", icon: "⚙️", perm: "settings" },
+  { id: "dashboard", key: "nav_home", perm: "dashboard" },
+  { id: "sales", key: "nav_sales", perm: "sales" },
+  { id: "products", key: "nav_products", perm: "products" },
+  { id: "stock", key: "nav_stock", perm: "stock" },
+  { id: "expenses", key: "nav_expenses", perm: "expenses" },
+  { id: "assistant", key: "nav_assistant", perm: "reports" },
+  { id: "settings", key: "nav_settings", perm: "settings" },
 ];
 
 function AppContent() {
@@ -256,24 +257,44 @@ function AppContent() {
         />
       )}
 
+      {/* Icônes seules : avec leurs libellés, sept onglets ne tenaient pas sur
+          un écran de téléphone et le dernier était coupé. Une grille à
+          colonnes égales garantit que tous restent visibles et alignés, quel
+          que soit le nombre d'onglets auxquels l'utilisateur a droit. */}
       <nav
-        className="fixed bottom-0 left-0 right-0 flex justify-around py-2 z-10"
-        style={{ backgroundColor: palette.card, borderTop: `1px solid ${palette.line}` }}
+        className="fixed bottom-0 left-0 right-0 grid z-10"
+        style={{
+          gridTemplateColumns: `repeat(${visibleNav.length}, minmax(0, 1fr))`,
+          backgroundColor: palette.card,
+          borderTop: `1px solid ${palette.line}`,
+          paddingBottom: "env(safe-area-inset-bottom)",
+        }}
       >
-        {visibleNav.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => setTab(item.id)}
-            className="flex flex-col items-center gap-0.5 px-2 py-1 text-[11px] transition"
-            style={{
-              color: tab === item.id ? "#7C5CFF" : palette.muted,
-              fontWeight: tab === item.id ? 600 : 400,
-            }}
-          >
-            <span className="text-base">{item.icon}</span>
-            {t(item.key)}
-          </button>
-        ))}
+        {visibleNav.map((item) => {
+          const Icon = NAV_ICONS[item.id];
+          const active = tab === item.id;
+          const label = t(item.key);
+          return (
+            <button
+              key={item.id}
+              onClick={() => setTab(item.id)}
+              // Sans texte visible, le nom de l'onglet doit rester accessible
+              // aux lecteurs d'écran et s'afficher au survol.
+              aria-label={label}
+              title={label}
+              aria-current={active ? "page" : undefined}
+              className="relative flex items-center justify-center h-14 transition-colors"
+              style={{ color: active ? "#7C5CFF" : palette.muted }}
+            >
+              {/* Repère de l'onglet actif, puisqu'il n'y a plus de libellé. */}
+              <span
+                className="absolute top-0 h-0.5 w-8 rounded-full transition-opacity"
+                style={{ backgroundColor: "#7C5CFF", opacity: active ? 1 : 0 }}
+              />
+              <Icon size={23} strokeWidth={active ? 2.1 : 1.75} />
+            </button>
+          );
+        })}
       </nav>
     </div>
   );
