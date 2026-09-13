@@ -11,11 +11,47 @@ export function registerServiceWorker() {
   if (!("serviceWorker" in navigator)) return;
   if (!import.meta.env.PROD) return;
 
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch(() => {
-      // Un échec d'enregistrement ne doit pas empêcher l'application de
-      // fonctionner : elle marche simplement sans mode hors ligne.
+  // Une application installée continue de servir sa version en cache tant
+  // qu'un nouveau service worker n'a pas pris la main. Sans ce suivi, la
+  // seule façon de voir une mise à jour était de fermer complètement
+  // l'application — ce qu'aucun utilisateur ne devine.
+  const watchForUpdate = (registration) => {
+    if (registration.waiting) {
+      waitingWorker = registration.waiting;
+      notify();
+    }
+    registration.addEventListener("updatefound", () => {
+      const incoming = registration.installing;
+      if (!incoming) return;
+      incoming.addEventListener("statechange", () => {
+        // Un service worker « installed » alors qu'un autre contrôle déjà la
+        // page est une mise à jour en attente. Sans contrôleur, c'est la
+        // toute première installation : rien à signaler.
+        if (incoming.state === "installed" && navigator.serviceWorker.controller) {
+          waitingWorker = incoming;
+          notify();
+        }
+      });
     });
+  };
+
+  let reloading = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    // Déclenché uniquement après que l'utilisateur a accepté la mise à jour :
+    // le service worker n'active plus de lui-même.
+    if (reloading) return;
+    reloading = true;
+    window.location.reload();
+  });
+
+  window.addEventListener("load", () => {
+    navigator.serviceWorker
+      .register("/sw.js")
+      .then(watchForUpdate)
+      .catch(() => {
+        // Un échec d'enregistrement ne doit pas empêcher l'application de
+        // fonctionner : elle marche simplement sans mode hors ligne.
+      });
   });
 }
 
@@ -72,6 +108,7 @@ export function wasInstalledHere() {
 // ---------------------------------------------------------------------------
 let deferredPrompt = null;
 let installedNow = false;
+let waitingWorker = null;
 const listeners = new Set();
 
 const notify = () => listeners.forEach((listener) => listener());
@@ -166,6 +203,31 @@ export const MANUAL_STEPS = {
     "Confirmez",
   ],
 };
+
+/**
+ * Signale qu'une nouvelle version est prête et permet de l'appliquer.
+ *
+ * L'application ne se recharge jamais d'elle-même : cela ferait disparaître
+ * une saisie en cours. C'est l'utilisateur qui décide du moment.
+ */
+export function useAppUpdate() {
+  const [, bump] = useState(0);
+
+  useEffect(() => {
+    const listener = () => bump((n) => n + 1);
+    listeners.add(listener);
+    return () => { listeners.delete(listener); };
+  }, []);
+
+  const applyUpdate = useCallback(() => {
+    if (!waitingWorker) return;
+    // Le service worker prend alors la main, ce qui déclenche
+    // controllerchange, et la page se recharge sur la nouvelle version.
+    waitingWorker.postMessage("SKIP_WAITING");
+  }, []);
+
+  return { updateReady: Boolean(waitingWorker), applyUpdate };
+}
 
 /**
  * Expose la proposition d'installation partagée.

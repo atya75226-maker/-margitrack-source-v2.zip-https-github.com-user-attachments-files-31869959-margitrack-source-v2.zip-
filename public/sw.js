@@ -7,7 +7,7 @@
 // Aucune requete vers Supabase n'est interceptee : les donnees doivent
 // toujours venir du serveur, jamais d'un cache perime.
 
-const VERSION = "margitrack-v2";
+const VERSION = "margitrack-v3";
 const SHELL = `${VERSION}-shell`;
 const ASSETS = `${VERSION}-assets`;
 
@@ -48,7 +48,7 @@ async function precache() {
 }
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(precache().then(() => self.skipWaiting()));
+  event.waitUntil(precache());
 });
 
 self.addEventListener("activate", (event) => {

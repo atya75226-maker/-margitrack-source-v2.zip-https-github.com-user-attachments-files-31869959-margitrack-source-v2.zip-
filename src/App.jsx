@@ -18,7 +18,7 @@ import { APP_PATH, SIGNUP_PATH, isAppRoute, isStandalone, navigate, useRoute } f
 import { NAV_ICONS } from "./components/ui/Icons";
 import { Dashboard } from "./components/Dashboard";
 import { DailyBrief } from "./components/DailyBrief";
-import { InstallBanner, InstallCard } from "./components/InstallPrompts";
+import { InstallBanner, InstallCard, UpdateBanner } from "./components/InstallPrompts";
 import { InstallSheet } from "./components/InstallSheet";
 import { ProductsTab } from "./components/ProductsTab";
 import { SalesTab } from "./components/SalesTab";
@@ -204,6 +204,7 @@ function AppContent() {
       <main className="p-4 pb-24">
         {/* Notification d'installation : se referme comme n'importe quelle
             notification, et revient à la prochaine ouverture. */}
+        <UpdateBanner />
         <InstallBanner onOpen={() => setShowInstall(true)} />
 
         {tab === "dashboard" && can("dashboard") && (

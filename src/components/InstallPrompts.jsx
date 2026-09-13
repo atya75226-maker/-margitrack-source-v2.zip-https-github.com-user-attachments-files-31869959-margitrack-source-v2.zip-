@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from "react";
 import { usePreferences } from "../contexts/PreferencesContext";
-import { useInstallPrompt } from "../lib/pwa";
+import { useAppUpdate, useInstallPrompt } from "../lib/pwa";
 
 /**
  * Deux points d'entrée vers l'installation, à l'intérieur de l'application.
@@ -131,5 +131,48 @@ export function InstallCard({ onOpen }) {
       </div>
       <span className="text-lg shrink-0" style={{ color: "#7C5CFF" }}>→</span>
     </button>
+  );
+}
+
+/**
+ * Nouvelle version disponible.
+ *
+ * Une application installée sert sa version en cache jusqu'à ce qu'un
+ * nouveau service worker prenne la main. Sans cette invite, la seule façon
+ * de voir une correction était de fermer complètement l'application, ce que
+ * personne ne devine.
+ */
+export function UpdateBanner() {
+  const { palette } = usePreferences();
+  const { updateReady, applyUpdate } = useAppUpdate();
+  const [applying, setApplying] = useState(false);
+
+  if (!updateReady) return null;
+
+  return (
+    <div
+      className="rounded-2xl p-3 mb-3 flex items-center gap-3"
+      style={{
+        backgroundColor: "rgba(16,185,129,0.12)",
+        border: "1px solid rgba(16,185,129,0.35)",
+      }}
+    >
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold" style={{ color: palette.ink }}>
+          Nouvelle version disponible
+        </p>
+        <p className="text-xs" style={{ color: palette.muted }}>
+          Vos données en cours sont conservées.
+        </p>
+      </div>
+      <button
+        onClick={() => { setApplying(true); applyUpdate(); }}
+        disabled={applying}
+        className="shrink-0 rounded-full text-xs font-semibold text-white px-3.5 py-2 disabled:opacity-60"
+        style={{ backgroundColor: "#10B981" }}
+      >
+        {applying ? "Mise à jour…" : "Mettre à jour"}
+      </button>
+    </div>
   );
 }
