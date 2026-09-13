@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { usePreferences } from "../contexts/PreferencesContext";
 import { BASE_UNITS, PURCHASE_UNITS } from "../hooks/useStock";
 
@@ -10,9 +10,11 @@ const MOVEMENT_LABELS = {
   ajustement: "Ajustement",
 };
 
+const PAGE_SIZE = 20;
+
 /**
- * Panneau de détail d'un article de stock : fiche modifiable, produits reliés
- * et historique complet des entrées/sorties.
+ * Panneau de détail d'un article de stock : produits reliés, historique
+ * paginé, inventaire et fiche modifiable.
  *
  * Le bloc « produits reliés » est la pièce qui rend la déduction automatique
  * possible : sans lien product_stock_links, le déclencheur Supabase
@@ -20,16 +22,25 @@ const MOVEMENT_LABELS = {
  */
 export function StockItemDetail({ item, stock, products, canEdit }) {
   const { palette, formatMoney } = usePreferences();
-  const { links, addLink, removeLink, movementsFor, updateItem, deleteMovement } = stock;
+  const { links, addLink, removeLink, updateItem, deleteMovement, setStockLevel, fetchMovementPage } =
+    stock;
 
   const [section, setSection] = useState("liens");
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
 
   const [linkForm, setLinkForm] = useState({ productId: "", quantityPerSale: "1" });
-  // Annuler un mouvement supprime aussi la depense d'un achat : on demande
-  // une confirmation en deux temps plutot qu'un clic isole.
+  // Annuler un mouvement supprime aussi la dépense d'un achat : on demande
+  // une confirmation en deux temps plutôt qu'un clic isolé.
   const [confirmId, setConfirmId] = useState(null);
+
+  const inPurchaseAvailable = Number(item.units_per_purchase) > 1 && Boolean(item.purchase_unit);
+  const [count, setCount] = useState({
+    quantity: "",
+    inPurchaseUnit: inPurchaseAvailable,
+    unitCost: "",
+  });
+
   const [edit, setEdit] = useState({
     base_unit: item.base_unit,
     purchase_unit: item.purchase_unit ?? "",
@@ -45,7 +56,6 @@ export function StockItemDetail({ item, stock, products, canEdit }) {
     () => links.filter((l) => l.stock_item_id === item.id),
     [links, item.id]
   );
-  const history = useMemo(() => movementsFor(item.id), [movementsFor, item.id]);
 
   // Un produit déjà relié à cet article ne doit pas être proposé deux fois :
   // la base refuse le doublon (contrainte unique produit + article).
@@ -54,6 +64,48 @@ export function StockItemDetail({ item, stock, products, canEdit }) {
     [products, itemLinks]
   );
 
+  // ---- Historique paginé -------------------------------------------------
+  // Chargé à la demande, page par page, plutôt que depuis la fenêtre de
+  // 90 jours gardée en mémoire pour les écrans de synthèse : l'historique
+  // complet d'un article reste consultable, même ancien.
+  const [history, setHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyDone, setHistoryDone] = useState(false);
+  const [historyKey, setHistoryKey] = useState(0);
+
+  useEffect(() => {
+    if (section !== "historique") return undefined;
+    let cancelled = false;
+    setHistoryLoading(true);
+    fetchMovementPage(item.id, { limit: PAGE_SIZE })
+      .then((rows) => {
+        if (cancelled) return;
+        setHistory(rows);
+        setHistoryDone(rows.length < PAGE_SIZE);
+      })
+      .catch((err) => { if (!cancelled) setError(err.message); })
+      .finally(() => { if (!cancelled) setHistoryLoading(false); });
+    return () => { cancelled = true; };
+  }, [section, item.id, fetchMovementPage, historyKey]);
+
+  const loadMore = useCallback(async () => {
+    const last = history[history.length - 1];
+    setHistoryLoading(true);
+    try {
+      const rows = await fetchMovementPage(item.id, {
+        limit: PAGE_SIZE,
+        beforeSeq: last?.seq ?? null,
+      });
+      setHistory((current) => [...current, ...rows]);
+      setHistoryDone(rows.length < PAGE_SIZE);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [fetchMovementPage, history, item.id]);
+
+  // ---- Actions -----------------------------------------------------------
   const submitLink = async (e) => {
     e.preventDefault();
     setError(null);
@@ -76,6 +128,30 @@ export function StockItemDetail({ item, stock, products, canEdit }) {
     }
   };
 
+  const submitCount = async (e) => {
+    e.preventDefault();
+    setError(null);
+    if (count.quantity === "") {
+      setError("Indiquez la quantité comptée.");
+      return;
+    }
+    setBusy(true);
+    try {
+      await setStockLevel({
+        item,
+        quantity: count.quantity,
+        inPurchaseUnit: count.inPurchaseUnit,
+        unitCost: count.unitCost,
+      });
+      setCount({ quantity: "", inPurchaseUnit: inPurchaseAvailable, unitCost: "" });
+      setHistoryKey((k) => k + 1);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const submitEdit = async (e) => {
     e.preventDefault();
     setError(null);
@@ -85,8 +161,7 @@ export function StockItemDetail({ item, stock, products, canEdit }) {
         base_unit: edit.base_unit,
         purchase_unit: edit.purchase_unit || null,
         units_per_purchase: Number(edit.units_per_purchase) || 1,
-        unit_price:
-          edit.unit_price === "" ? null : Number(edit.unit_price),
+        unit_price: edit.unit_price === "" ? null : Number(edit.unit_price),
         low_stock_threshold: Number(edit.low_stock_threshold) || 0,
         supplier: edit.supplier || null,
       });
@@ -98,11 +173,36 @@ export function StockItemDetail({ item, stock, products, canEdit }) {
     }
   };
 
+  const cancelMovement = async (id) => {
+    setError(null);
+    try {
+      await deleteMovement(id);
+      setHistoryKey((k) => k + 1);
+    } catch (err) {
+      // deleteMovement signale aussi le cas « mouvement annulé mais dépense
+      // conservée » : on rafraîchit dans tous les cas.
+      setError(err.message);
+      setHistoryKey((k) => k + 1);
+    } finally {
+      setConfirmId(null);
+    }
+  };
+
   const tabs = [
     { id: "liens", label: `Ventes liées (${itemLinks.length})` },
-    { id: "historique", label: `Historique (${history.length})` },
+    { id: "historique", label: "Historique" },
+    ...(canEdit ? [{ id: "inventaire", label: "Inventaire" }] : []),
     ...(canEdit ? [{ id: "fiche", label: "Modifier" }] : []),
   ];
+
+  // Aperçu de l'écart, pour que l'utilisateur voie ce qui sera enregistré.
+  const countPreview = useMemo(() => {
+    if (count.quantity === "") return null;
+    const factor = count.inPurchaseUnit ? Number(item.units_per_purchase) || 1 : 1;
+    const target = Number(count.quantity) * factor;
+    if (!Number.isFinite(target) || target < 0) return null;
+    return { target, delta: target - (Number(item.quantity) || 0) };
+  }, [count, item.quantity, item.units_per_purchase]);
 
   return (
     <div className="mt-3 pt-3 space-y-3" style={{ borderTop: `1px solid ${palette.line}` }}>
@@ -198,7 +298,7 @@ export function StockItemDetail({ item, stock, products, canEdit }) {
                   Relier
                 </button>
               </div>
-              {Number(item.units_per_purchase) > 1 && (
+              {inPurchaseAvailable && (
                 <p className="text-[11px]" style={{ color: palette.muted }}>
                   Rappel : 1 {item.purchase_unit} = {Number(item.units_per_purchase)}{" "}
                   {item.base_unit}. Pour un produit vendu au {item.purchase_unit}, saisissez{" "}
@@ -225,16 +325,7 @@ export function StockItemDetail({ item, stock, products, canEdit }) {
                       <span className="block mt-0.5">
                         <button
                           type="button"
-                          onClick={async () => {
-                            setError(null);
-                            try {
-                              await deleteMovement(m.id);
-                            } catch (err) {
-                              setError(err.message);
-                            } finally {
-                              setConfirmId(null);
-                            }
-                          }}
+                          onClick={() => cancelMovement(m.id)}
                           className="text-rose-500 font-semibold"
                         >
                           Confirmer l'annulation
@@ -279,12 +370,96 @@ export function StockItemDetail({ item, stock, products, canEdit }) {
               </div>
             );
           })}
-          {history.length === 0 && (
+
+          {history.length === 0 && !historyLoading && (
             <p className="text-xs" style={{ color: palette.muted }}>
-              Aucun mouvement sur les 90 derniers jours.
+              Aucun mouvement enregistré sur cet article.
+            </p>
+          )}
+
+          {historyLoading && (
+            <p className="text-xs" style={{ color: palette.muted }}>Chargement…</p>
+          )}
+
+          {!historyDone && !historyLoading && history.length > 0 && (
+            <button
+              type="button"
+              onClick={loadMore}
+              className="w-full rounded-lg border text-xs font-medium py-2 mt-1"
+              style={{ borderColor: palette.line, color: palette.ink }}
+            >
+              Charger les mouvements plus anciens
+            </button>
+          )}
+
+          {historyDone && history.length >= PAGE_SIZE && (
+            <p className="text-[11px] text-center pt-1" style={{ color: palette.muted }}>
+              Début de l'historique.
             </p>
           )}
         </div>
+      )}
+
+      {section === "inventaire" && canEdit && (
+        <form onSubmit={submitCount} className="space-y-2">
+          <p className="text-[11px]" style={{ color: palette.muted }}>
+            Comptez ce que vous avez réellement en réserve. L'écart avec le stock
+            enregistré sera corrigé. Aucune dépense n'est créée : cette
+            marchandise a déjà été payée.
+          </p>
+
+          <div className="flex gap-2">
+            <input
+              value={count.quantity}
+              onChange={(e) => setCount((c) => ({ ...c, quantity: e.target.value }))}
+              type="text"
+              inputMode="decimal"
+              placeholder="J'ai actuellement…"
+              className="flex-1 rounded-lg border px-2.5 py-2 text-sm"
+              style={input}
+            />
+            <select
+              value={count.inPurchaseUnit ? "purchase" : "base"}
+              onChange={(e) => setCount((c) => ({ ...c, inPurchaseUnit: e.target.value === "purchase" }))}
+              className="rounded-lg border px-2.5 py-2 text-sm"
+              style={input}
+            >
+              <option value="base">{item.base_unit}</option>
+              {inPurchaseAvailable && <option value="purchase">{item.purchase_unit}</option>}
+            </select>
+          </div>
+
+          <input
+            value={count.unitCost}
+            onChange={(e) => setCount((c) => ({ ...c, unitCost: e.target.value }))}
+            type="text"
+            inputMode="decimal"
+            placeholder={`Coût d'achat par ${count.inPurchaseUnit ? item.purchase_unit : item.base_unit} (facultatif)`}
+            className="w-full rounded-lg border px-2.5 py-2 text-sm"
+            style={input}
+          />
+
+          {countPreview && (
+            <p className="text-[11px]" style={{ color: palette.muted }}>
+              Stock enregistré : {Number(item.quantity).toLocaleString("fr-FR")} {item.base_unit} →{" "}
+              {countPreview.target.toLocaleString("fr-FR")} {item.base_unit} (
+              <span style={{ color: countPreview.delta >= 0 ? "#10B981" : "#F43F5E" }}>
+                {countPreview.delta >= 0 ? "+" : ""}
+                {countPreview.delta.toLocaleString("fr-FR")}
+              </span>
+              )
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={busy}
+            className="w-full rounded-lg text-white text-xs font-semibold py-2 disabled:opacity-50"
+            style={{ backgroundColor: "#7C5CFF" }}
+          >
+            {busy ? "Enregistrement..." : "Enregistrer l'inventaire"}
+          </button>
+        </form>
       )}
 
       {section === "fiche" && canEdit && (

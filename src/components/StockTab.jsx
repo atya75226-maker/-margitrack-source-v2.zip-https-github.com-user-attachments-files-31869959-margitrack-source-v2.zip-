@@ -18,12 +18,16 @@ const emptyItem = {
   unitPrice: "",
   lowStockThreshold: "",
   supplier: "",
+  // Stock deja detenu au moment de creer la fiche.
+  initialQuantity: "",
+  initialInPurchaseUnit: true,
+  initialUnitCost: "",
 };
 
 export function StockTab({ stock, products = [], canEdit }) {
   const { palette, formatMoney } = usePreferences();
-  const { items, movements, links, stats, loading, addItem, deleteItem, addMovement, recordPurchase } =
-    stock;
+  const { items, movements, links, stats, loading, addItem, deleteItem, addMovement, recordPurchase,
+    setStockLevel } = stock;
 
   const [tab, setTab] = useState("boisson");
   const [form, setForm] = useState(emptyItem);
@@ -59,7 +63,18 @@ export function StockTab({ stock, products = [], canEdit }) {
     }
     setSaving(true);
     try {
-      await addItem({ ...form, name: form.name.trim(), kind: tab });
+      const created = await addItem({ ...form, name: form.name.trim(), kind: tab });
+      // Le stock deja detenu est enregistre comme un inventaire, pas comme un
+      // achat : il a ete paye avant, en faire une depense le compterait deux fois.
+      const startingQty = Number(form.initialQuantity);
+      if (created && startingQty > 0) {
+        await setStockLevel({
+          item: created,
+          quantity: startingQty,
+          inPurchaseUnit: form.initialInPurchaseUnit,
+          unitCost: form.initialUnitCost,
+        });
+      }
       setForm(emptyItem);
       setShowForm(false);
     } catch (err) {
@@ -239,6 +254,49 @@ export function StockTab({ stock, products = [], canEdit }) {
               className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
               style={input}
             />
+          </div>
+
+          <div className="rounded-xl p-3 space-y-2" style={{ backgroundColor: palette.elevated }}>
+            <p className="text-xs font-medium" style={{ color: palette.ink }}>
+              Stock déjà en réserve
+            </p>
+            <div className="flex gap-2">
+              <input
+                value={form.initialQuantity}
+                onChange={(e) => setForm((f) => ({ ...f, initialQuantity: e.target.value }))}
+                type="text"
+                inputMode="decimal"
+                placeholder={`J'ai déjà… (ex : 100)`}
+                className="flex-1 rounded-xl border px-3 py-2 text-sm"
+                style={input}
+              />
+              <select
+                value={form.initialInPurchaseUnit ? "purchase" : "base"}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, initialInPurchaseUnit: e.target.value === "purchase" }))
+                }
+                className="rounded-xl border px-3 py-2 text-sm"
+                style={input}
+              >
+                <option value="base">{form.baseUnit}</option>
+                {Number(form.unitsPerPurchase) > 1 && (
+                  <option value="purchase">{form.purchaseUnit}</option>
+                )}
+              </select>
+            </div>
+            <input
+              value={form.initialUnitCost}
+              onChange={(e) => setForm((f) => ({ ...f, initialUnitCost: e.target.value }))}
+              type="text"
+              inputMode="decimal"
+              placeholder={`Coût d'achat par ${form.initialInPurchaseUnit ? form.purchaseUnit : form.baseUnit} (facultatif)`}
+              className="w-full rounded-xl border px-3 py-2 text-sm"
+              style={input}
+            />
+            <p className="text-[11px]" style={{ color: palette.muted }}>
+              Laissez vide si vous partez de zéro. Aucune dépense n'est créée :
+              cette marchandise a déjà été payée.
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-2">

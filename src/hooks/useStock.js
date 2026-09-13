@@ -92,7 +92,7 @@ export function useStock(restaurantId) {
 
   const addItem = useCallback(
     async (payload) => {
-      const { error: err } = await supabase.from("stock_items").insert({
+      const { data, error: err } = await supabase.from("stock_items").insert({
         restaurant_id: restaurantId,
         name: payload.name,
         kind: payload.kind,
@@ -103,9 +103,12 @@ export function useStock(restaurantId) {
         unit_price: payload.unitPrice === "" || payload.unitPrice == null ? null : Number(payload.unitPrice),
         low_stock_threshold: Number(payload.lowStockThreshold) || 0,
         supplier: payload.supplier || null,
-      });
+      })
+        .select()
+        .single();
       if (err) throw new Error(err.message);
       await load();
+      return data;
     },
     [restaurantId, load]
   );
@@ -169,6 +172,70 @@ export function useStock(restaurantId) {
     },
     [restaurantId, items, load]
   );
+
+  // Inventaire : l'utilisateur declare ce qu'il a REELLEMENT en rayon
+  // ("j'ai 100 sacs de riz"). On enregistre l'ecart avec le stock connu sous
+  // forme d'ajustement. Ce n'est pas un achat : aucune depense n'est creee,
+  // car cette marchandise a ete payee avant, voire ailleurs.
+  //
+  // L'article est passe en entier plutot que par son identifiant : au moment
+  // de declarer le stock initial d'un article qui vient d'etre cree, il n'est
+  // pas encore present dans la liste chargee.
+  const setStockLevel = useCallback(
+    async ({ item, quantity, inPurchaseUnit, unitCost, date, note }) => {
+      if (!item) throw new Error("Article de stock introuvable.");
+
+      const factor = inPurchaseUnit ? Number(item.units_per_purchase) || 1 : 1;
+      const target = Number(quantity) * factor;
+      if (!Number.isFinite(target) || target < 0) {
+        throw new Error("Quantité invalide.");
+      }
+
+      const current = Number(item.quantity) || 0;
+      const delta = target - current;
+      if (delta === 0) return;
+
+      // Le cout saisi porte sur l'unite choisie : ramene a l'unite de base
+      // pour alimenter la moyenne ponderee comme le ferait un achat.
+      const costBase =
+        unitCost === "" || unitCost == null ? null : Number(unitCost) / factor;
+
+      const { error: err } = await supabase.from("stock_movements").insert({
+        restaurant_id: restaurantId,
+        stock_item_id: item.id,
+        kind: "ajustement",
+        quantity: delta,
+        unit_cost: delta > 0 ? costBase : null,
+        note:
+          note ||
+          `Inventaire : ${Number(quantity).toLocaleString("fr-FR")} ${
+            inPurchaseUnit ? item.purchase_unit : item.base_unit
+          } comptés`,
+        movement_date: date || new Date().toISOString().slice(0, 10),
+      });
+      if (err) throw new Error(err.message);
+      await load();
+    },
+    [restaurantId, load]
+  );
+
+  // Historique d'un article, page par page. La pagination est par curseur sur
+  // seq (index dedie) : elle reste constante quel que soit le nombre de
+  // mouvements deja parcourus, et ne depend pas de la fenetre de 90 jours
+  // chargee pour les ecrans de synthese.
+  const fetchMovementPage = useCallback(async (itemId, { limit = 20, beforeSeq = null } = {}) => {
+    let query = supabase
+      .from("stock_movements")
+      .select("*")
+      .eq("stock_item_id", itemId)
+      .order("seq", { ascending: false })
+      .limit(limit);
+    if (beforeSeq != null) query = query.lt("seq", beforeSeq);
+
+    const { data, error: err } = await query;
+    if (err) throw new Error(err.message);
+    return data ?? [];
+  }, []);
 
   // Achat = un mouvement d'entrée + UNE dépense, liés entre eux.
   // La dépense reste la seule écriture monétaire : pas de double comptage.
@@ -425,6 +492,8 @@ export function useStock(restaurantId) {
     updateItem,
     deleteItem,
     addMovement,
+    setStockLevel,
+    fetchMovementPage,
     deleteMovement,
     recordPurchase,
     addLink,
