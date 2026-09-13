@@ -59,5 +59,16 @@
         }
       ]
     }
+  ],
+  "prefer_related_applications": false,
+  "related_applications": [
+    {
+      "platform": "webapp",
+      "url": "https://biztrack-saas-rho.vercel.app/manifest.webmanifest"
+    },
+    {
+      "platform": "webapp",
+      "url": "https://margitrack-app.vercel.app/manifest.webmanifest"
+    }
   ]
 }

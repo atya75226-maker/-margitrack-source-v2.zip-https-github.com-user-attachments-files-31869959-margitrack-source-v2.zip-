@@ -95,6 +95,26 @@ if (typeof window !== "undefined") {
     remember(INSTALLED_KEY, "1");
     notify();
   });
+
+  // Le navigateur sait si l'application est installee sur l'appareil, meme
+  // lorsqu'elle l'a ete par quelqu'un d'autre, dans une autre session, ou
+  // avant que nous ne tenions cette memoire. Sans cette interrogation, la
+  // personne suivante voyait une marche a suivre inutile pour installer
+  // quelque chose qui etait deja la.
+  if (typeof navigator !== "undefined" && navigator.getInstalledRelatedApps) {
+    navigator
+      .getInstalledRelatedApps()
+      .then((apps) => {
+        if (apps && apps.length > 0) {
+          installedNow = true;
+          remember(INSTALLED_KEY, "1");
+          notify();
+        }
+      })
+      .catch(() => {
+        // Navigateur sans cette capacite : on s'en tient aux autres indices.
+      });
+  }
 }
 
 /**

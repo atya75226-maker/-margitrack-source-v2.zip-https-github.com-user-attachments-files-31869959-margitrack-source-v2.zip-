@@ -18,8 +18,12 @@ import { useInstallPrompt } from "../lib/pwa";
  */
 export function InstallSheet({ onClose, onContinue }) {
   const { canInstall, installed, promptInstall, platform, manualSteps } = useInstallPrompt();
+  // Les etapes manuelles sont montrees d'emblee quand le navigateur ne
+  // propose pas de bouton : les cacher derriere un clic supplementaire ne
+  // faisait que retarder la seule chose utile a lire.
   const [showSteps, setShowSteps] = useState(false);
   const [done, setDone] = useState(false);
+  const manualOnly = !canInstall && !installed;
 
   const install = async () => {
     const accepted = await promptInstall();
@@ -109,25 +113,32 @@ export function InstallSheet({ onClose, onContinue }) {
             </button>
           )}
 
-          {!done && !installed && !canInstall && !showSteps && (
-            <button
-              onClick={() => setShowSteps(true)}
-              className="w-full rounded-full py-3 text-sm font-semibold text-white"
-              style={{ backgroundColor: COLOR.violet }}
-            >
-              Comment installer sur {platform.label}
-            </button>
-          )}
-
-          {showSteps && !done && !installed && (
+          {!done && (manualOnly || showSteps) && (
             <div
               className="rounded-2xl p-4 text-sm"
               style={{ backgroundColor: COLOR.elevated, color: COLOR.ink }}
             >
-              <p className="font-medium mb-2">Sur {platform.label} :</p>
-              <ol className="space-y-1.5 list-decimal list-inside" style={{ color: COLOR.muted }}>
-                {manualSteps.map((step) => (
-                  <li key={step}>{step}</li>
+              {manualOnly && (
+                <p className="text-xs mb-3" style={{ color: COLOR.muted }}>
+                  {platform.label} ne propose pas de bouton d'installation sur
+                  cette page. Deux raisons possibles : l'application est déjà
+                  installée sur ce téléphone, ou une installation a déjà été
+                  refusée ici. Dans les deux cas, le menu du navigateur permet
+                  de l'ajouter en trois gestes.
+                </p>
+              )}
+              <p className="font-semibold mb-3">Sur {platform.label} :</p>
+              <ol className="space-y-3">
+                {manualSteps.map((step, i) => (
+                  <li key={step} className="flex items-start gap-3">
+                    <span
+                      className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
+                      style={{ backgroundColor: COLOR.violet }}
+                    >
+                      {i + 1}
+                    </span>
+                    <span className="leading-snug">{step}</span>
+                  </li>
                 ))}
               </ol>
             </div>
