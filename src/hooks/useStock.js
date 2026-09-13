@@ -222,6 +222,48 @@ export function useStock(restaurantId) {
     [restaurantId, items, addMovement, load]
   );
 
+  // Annule un mouvement saisi par erreur. Le stock est recredite et le cout
+  // moyen recalcule par la base. Un achat porte sa depense : on la retire
+  // aussi, sinon il resterait une sortie d'argent sans contrepartie.
+  const deleteMovement = useCallback(
+    async (id) => {
+      const movement = movements.find((m) => m.id === id);
+      if (!movement) throw new Error("Mouvement introuvable.");
+      if (movement.sale_id) {
+        throw new Error(
+          "Ce mouvement provient d'une vente. Supprimez la vente dans l'onglet Ventes : le stock sera recredite automatiquement."
+        );
+      }
+
+      const { error: err } = await supabase.from("stock_movements").delete().eq("id", id);
+      if (err) throw new Error(err.message);
+
+      // La suppression de la depense peut etre refusee par RLS : un
+      // responsable de stock n'a pas le droit "expenses". Postgres renvoie
+      // alors zero ligne supprimee, sans erreur. On le detecte pour ne pas
+      // laisser croire que tout a ete annule.
+      let orphanExpense = false;
+      if (movement.expense_id) {
+        const { data, error: expErr } = await supabase
+          .from("expenses")
+          .delete()
+          .eq("id", movement.expense_id)
+          .select("id");
+        if (expErr) throw new Error(expErr.message);
+        orphanExpense = !data || data.length === 0;
+      }
+
+      await load();
+
+      if (orphanExpense) {
+        throw new Error(
+          "Le mouvement de stock a bien ete annule, mais la depense liee n'a pas pu etre supprimee : votre compte n'a pas acces aux depenses. Demandez au proprietaire de la retirer dans l'onglet Depenses."
+        );
+      }
+    },
+    [movements, load]
+  );
+
   // Relie un produit du menu a un article de stock. quantityPerSale est
   // exprime en unite de base : vendre 1 "Coca 33cl" sort 1 bouteille,
   // vendre 1 "Casier Coca" en sort 12.
@@ -383,6 +425,7 @@ export function useStock(restaurantId) {
     updateItem,
     deleteItem,
     addMovement,
+    deleteMovement,
     recordPurchase,
     addLink,
     removeLink,

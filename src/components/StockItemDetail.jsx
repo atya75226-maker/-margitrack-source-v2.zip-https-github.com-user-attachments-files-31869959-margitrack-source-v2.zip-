@@ -20,13 +20,16 @@ const MOVEMENT_LABELS = {
  */
 export function StockItemDetail({ item, stock, products, canEdit }) {
   const { palette, formatMoney } = usePreferences();
-  const { links, addLink, removeLink, movementsFor, updateItem } = stock;
+  const { links, addLink, removeLink, movementsFor, updateItem, deleteMovement } = stock;
 
   const [section, setSection] = useState("liens");
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
 
   const [linkForm, setLinkForm] = useState({ productId: "", quantityPerSale: "1" });
+  // Annuler un mouvement supprime aussi la depense d'un achat : on demande
+  // une confirmation en deux temps plutot qu'un clic isole.
+  const [confirmId, setConfirmId] = useState(null);
   const [edit, setEdit] = useState({
     base_unit: item.base_unit,
     purchase_unit: item.purchase_unit ?? "",
@@ -211,11 +214,51 @@ export function StockItemDetail({ item, stock, products, canEdit }) {
         <div className="space-y-1.5">
           {history.map((m) => {
             const positive = Number(m.quantity) > 0;
+            const fromSale = Boolean(m.sale_id);
             return (
               <div key={m.id} className="flex items-start justify-between gap-2 text-xs">
                 <span className="min-w-0" style={{ color: palette.muted }}>
                   {m.movement_date} · {MOVEMENT_LABELS[m.kind] ?? m.kind}
                   {m.note ? <span className="block truncate">{m.note}</span> : null}
+                  {canEdit && !fromSale && (
+                    confirmId === m.id ? (
+                      <span className="block mt-0.5">
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            setError(null);
+                            try {
+                              await deleteMovement(m.id);
+                            } catch (err) {
+                              setError(err.message);
+                            } finally {
+                              setConfirmId(null);
+                            }
+                          }}
+                          className="text-rose-500 font-semibold"
+                        >
+                          Confirmer l'annulation
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmId(null)}
+                          className="ml-3"
+                          style={{ color: palette.muted }}
+                        >
+                          Non
+                        </button>
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => { setConfirmId(m.id); setError(null); }}
+                        className="block mt-0.5"
+                        style={{ color: palette.muted, textDecoration: "underline" }}
+                      >
+                        {m.kind === "achat" ? "Annuler cet achat et sa dépense" : "Annuler ce mouvement"}
+                      </button>
+                    )
+                  )}
                 </span>
                 <span className="shrink-0 text-right">
                   <span className="font-semibold" style={{ color: positive ? "#10B981" : "#F43F5E" }}>
@@ -225,6 +268,11 @@ export function StockItemDetail({ item, stock, products, canEdit }) {
                   {m.unit_cost != null && (
                     <span className="block" style={{ color: palette.muted }}>
                       {formatMoney(Math.abs(Number(m.quantity)) * Number(m.unit_cost))}
+                    </span>
+                  )}
+                  {fromSale && (
+                    <span className="block" style={{ color: palette.muted }}>
+                      issu d'une vente
                     </span>
                   )}
                 </span>
