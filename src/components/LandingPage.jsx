@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { COLOR } from "../lib/theme";
 import { useLegal } from "../contexts/LegalContext";
 import { useInstallPrompt } from "../lib/pwa";
+import { InstallSheet } from "./InstallSheet";
 
 const FEATURES = [
   { icon: "📦", title: "Produits", text: "Ajoutez vos produits et leurs prix en quelques secondes, sans matériel spécial." },
@@ -48,22 +49,15 @@ function SectionTitle({ eyebrow, title, subtitle }) {
 
 export function LandingPage({ onStart, onLogin }) {
   const { openPrivacy, openTerms } = useLegal();
-  const { canInstall, promptInstall, iosHint } = useInstallPrompt();
+  const { installed } = useInstallPrompt();
+  const [showInstall, setShowInstall] = useState(false);
 
-  // Le site vitrine sert aussi à installer l'application : « Commencer
-  // gratuitement » propose donc l'installation avant d'ouvrir la création de
-  // compte. Si le navigateur ne la propose pas (Safari, prompt déjà utilisé),
-  // on enchaîne directement, l'application reste utilisable dans l'onglet.
-  const handleStart = async () => {
-    if (canInstall) {
-      try {
-        await promptInstall();
-      } catch {
-        // Un refus d'installation ne doit pas bloquer l'inscription.
-      }
-    }
-    onStart();
-  };
+  // « Commencer gratuitement » ouvre l'écran d'installation plutôt que de
+  // déclencher la proposition du navigateur en aveugle : celle-ci n'existe
+  // pas partout, et quand elle manque il ne se passait rien de visible.
+  // L'écran, lui, propose toujours une voie — bouton natif, marche à suivre
+  // manuelle, ou simplement continuer sans installer.
+  const handleStart = () => setShowInstall(true);
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: COLOR.bg }}>
@@ -108,14 +102,17 @@ export function LandingPage({ onStart, onLogin }) {
         </div>
         <p className="text-xs text-gray-500 mt-4">7 jours d'essai gratuit — sans carte bancaire, sans engagement.</p>
 
-        {canInstall && (
+        {/* Toujours proposé, y compris quand le navigateur n'émet aucune
+            proposition : l'écran d'installation sait alors expliquer la
+            marche à suivre. Seul le cas « déjà installée » le masque. */}
+        {!installed && (
           <div className="mt-6 inline-flex flex-col items-center gap-2">
             <button
-              onClick={promptInstall}
+              onClick={() => setShowInstall(true)}
               className="rounded-full text-sm font-semibold px-6 py-3 border"
               style={{ borderColor: COLOR.violet, color: COLOR.ink }}
             >
-              📲 Installer Margitrack sur mon téléphone
+              Installer Margitrack sur mon téléphone
             </button>
             <span className="text-xs text-gray-500">
               L'application s'ouvre ensuite directement sur votre espace, sans passer par cette page.
@@ -123,10 +120,9 @@ export function LandingPage({ onStart, onLogin }) {
           </div>
         )}
 
-        {iosHint && (
-          <p className="text-xs text-gray-500 mt-6 max-w-sm mx-auto">
-            Sur iPhone : appuyez sur <strong className="text-gray-300">Partager</strong>, puis
-            <strong className="text-gray-300"> Sur l'écran d'accueil</strong> pour installer Margitrack.
+        {installed && (
+          <p className="text-xs text-gray-500 mt-6">
+            Margitrack est déjà installé sur cet appareil — ouvrez-le depuis votre écran d'accueil.
           </p>
         )}
       </Section>
@@ -250,6 +246,13 @@ export function LandingPage({ onStart, onLogin }) {
           <p className="text-xs text-gray-500">© {new Date().getFullYear()} Margitrack. Tous droits réservés.</p>
         </div>
       </footer>
+
+      {showInstall && (
+        <InstallSheet
+          onClose={() => setShowInstall(false)}
+          onContinue={() => { setShowInstall(false); onStart(); }}
+        />
+      )}
     </div>
   );
 }
