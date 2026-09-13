@@ -6,12 +6,16 @@
   "lang": "fr",
   "dir": "ltr",
   "start_url": "/app",
-  "scope": "/app",
+  "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0B0D17",
   "theme_color": "#2E1868",
-  "categories": ["business", "productivity", "finance"],
+  "categories": [
+    "business",
+    "productivity",
+    "finance"
+  ],
   "icons": [
     {
       "src": "/icons/icon-192.png",
@@ -37,13 +41,23 @@
       "name": "Stock",
       "short_name": "Stock",
       "url": "/app?tab=stock",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "Ventes",
       "short_name": "Ventes",
       "url": "/app?tab=sales",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 }

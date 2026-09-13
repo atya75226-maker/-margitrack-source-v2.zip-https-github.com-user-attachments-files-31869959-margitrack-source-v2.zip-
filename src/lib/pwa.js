@@ -30,6 +30,14 @@ function remember(key, value) {
   }
 }
 
+function forget(key) {
+  try {
+    window.localStorage.removeItem(key);
+  } catch {
+    // Sans stockage, il n'y avait rien à oublier.
+  }
+}
+
 function recall(key) {
   try {
     return window.localStorage.getItem(key);
@@ -41,14 +49,52 @@ function recall(key) {
 /**
  * L'application a-t-elle déjà été installée depuis ce navigateur ?
  *
- * Une fois installée, Chrome cesse définitivement d'émettre
- * `beforeinstallprompt` sur cet appareil. Sans mémoire de notre côté, on ne
- * pourrait pas distinguer « impossible à installer » de « déjà installée »,
- * et on afficherait un bouton mort à la personne suivante qui ouvre le site
- * sur ce téléphone.
+ * Une fois installée, Chrome cesse d'émettre `beforeinstallprompt` sur cet
+ * appareil. Sans mémoire de notre côté, impossible de distinguer
+ * « installation indisponible » de « déjà installée », et la personne
+ * suivante verrait un bouton mort.
  */
 export function wasInstalledHere() {
   return recall(INSTALLED_KEY) === "1";
+}
+
+// ---------------------------------------------------------------------------
+// Capture de la proposition d'installation, au niveau du module.
+//
+// `beforeinstallprompt` n'est émis QU'UNE FOIS par chargement de page, et tôt
+// — souvent avant qu'un composant ne soit monté. Un écouteur posé dans un
+// composant le manque donc, et deux composants qui écoutent chacun de leur
+// côté ne peuvent pas tous les deux le recevoir : le premier monté le capte,
+// les autres n'ont jamais rien.
+//
+// L'événement est donc capté ici, dès l'import du module, et partagé. Tout
+// composant peut alors le rejouer, quel que soit le moment où il apparaît.
+// ---------------------------------------------------------------------------
+let deferredPrompt = null;
+let installedNow = false;
+const listeners = new Set();
+
+const notify = () => listeners.forEach((listener) => listener());
+
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeinstallprompt", (event) => {
+    // Sans preventDefault, Chrome affiche sa propre bannière et l'événement
+    // ne peut plus être rejoué au moment choisi.
+    event.preventDefault();
+    deferredPrompt = event;
+    // Le navigateur ne propose l'installation que si l'application n'est pas
+    // installée : une mémoire contraire est périmée (application désinstallée).
+    installedNow = false;
+    forget(INSTALLED_KEY);
+    notify();
+  });
+
+  window.addEventListener("appinstalled", () => {
+    deferredPrompt = null;
+    installedNow = true;
+    remember(INSTALLED_KEY, "1");
+    notify();
+  });
 }
 
 /**
@@ -102,55 +148,40 @@ export const MANUAL_STEPS = {
 };
 
 /**
- * Expose la proposition d'installation du navigateur.
+ * Expose la proposition d'installation partagée.
  *
- * `beforeinstallprompt` n'existe que sur les navigateurs Chromium, et même
- * là il est capricieux : il ne se déclenche plus une fois l'application
- * installée, ni pendant plusieurs semaines après un refus. On ne peut donc
- * pas faire dépendre de lui la seule voie d'installation — d'où la marche à
- * suivre manuelle, toujours disponible.
+ * Plusieurs composants peuvent l'utiliser simultanément : ils lisent tous le
+ * même événement capté au niveau du module, et sont prévenus dès qu'il
+ * arrive — y compris s'ils sont montés après lui.
  */
 export function useInstallPrompt() {
-  const [deferred, setDeferred] = useState(null);
-  const [installed, setInstalled] = useState(() => isStandalone() || wasInstalledHere());
+  const [, bump] = useState(0);
 
   useEffect(() => {
-    const onPrompt = (event) => {
-      // Sans preventDefault, Chrome affiche sa propre bannière et l'événement
-      // ne peut plus être rejoué au moment choisi.
-      event.preventDefault();
-      setDeferred(event);
-    };
-    const onInstalled = () => {
-      setDeferred(null);
-      setInstalled(true);
-      remember(INSTALLED_KEY, "1");
-    };
-
-    window.addEventListener("beforeinstallprompt", onPrompt);
-    window.addEventListener("appinstalled", onInstalled);
-    return () => {
-      window.removeEventListener("beforeinstallprompt", onPrompt);
-      window.removeEventListener("appinstalled", onInstalled);
-    };
+    const listener = () => bump((n) => n + 1);
+    listeners.add(listener);
+    return () => { listeners.delete(listener); };
   }, []);
 
   const promptInstall = useCallback(async () => {
-    if (!deferred) return false;
-    deferred.prompt();
-    const { outcome } = await deferred.userChoice;
-    // L'événement n'est utilisable qu'une fois.
-    setDeferred(null);
-    return outcome === "accepted";
-  }, [deferred]);
+    const event = deferredPrompt;
+    if (!event) return false;
+    // L'événement n'est utilisable qu'une fois : on le retire avant de
+    // l'ouvrir, pour qu'un double appui ne le rejoue pas.
+    deferredPrompt = null;
+    notify();
 
+    event.prompt();
+    const { outcome } = await event.userChoice;
+    return outcome === "accepted";
+  }, []);
+
+  const installed = installedNow || isStandalone() || wasInstalledHere();
   const platform = detectPlatform();
 
   return {
     // Proposition native disponible : un seul geste suffit.
-    canInstall: Boolean(deferred) && !installed,
-    // Déjà installée sur cet appareil, ou installée par quelqu'un d'autre
-    // depuis ce même navigateur.
+    canInstall: Boolean(deferredPrompt) && !installed,
     installed,
     promptInstall,
     platform,
