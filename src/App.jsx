@@ -17,6 +17,7 @@ import { usePermissions } from "./hooks/usePermissions";
 import { APP_PATH, SIGNUP_PATH, isAppRoute, isStandalone, navigate, useRoute } from "./lib/routes";
 import { NAV_ICONS } from "./components/ui/Icons";
 import { Dashboard } from "./components/Dashboard";
+import { DailyBrief } from "./components/DailyBrief";
 import { ProductsTab } from "./components/ProductsTab";
 import { SalesTab } from "./components/SalesTab";
 import { ExpensesTab } from "./components/ExpensesTab";
@@ -199,7 +200,12 @@ function AppContent() {
 
       <main className="p-4 pb-24">
         {tab === "dashboard" && can("dashboard") && (
-          <Dashboard products={products} sales={sales} expenses={expenses} stock={stock} />
+          <>
+            {/* Le résumé de la veille ouvre la journée, puis s'efface une fois
+                lu : l'accueil doit rester tourné vers l'activité en cours. */}
+            <DailyBrief restaurantId={restaurantId} />
+            <Dashboard products={products} sales={sales} expenses={expenses} stock={stock} />
+          </>
         )}
         {tab === "products" && can("products") && (
           <ProductsTab products={products} onAdd={addProduct} onDelete={deleteProduct} canEdit={canEditCatalog} />
