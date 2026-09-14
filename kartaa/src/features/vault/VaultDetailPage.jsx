@@ -78,8 +78,8 @@ export default function VaultDetailPage() {
         </header>
         <VaultUnlock
           vault={vault}
-          onUnlocked={(key, fresh) => {
-            vaultSession.unlock(vault.id, key)
+          onUnlocked={({ key, token }, fresh) => {
+            vaultSession.unlock(vault.id, key, token)
             setVaultKey(key)
             if (fresh) setVault(fresh)
           }}

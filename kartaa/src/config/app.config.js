@@ -12,7 +12,27 @@
  * coincé sur cette préproduction — et la session de l'utilisateur, liée à une
  * seule adresse, ne suivrait pas.
  */
-const ORIGINE_PUBLIQUE = import.meta.env.VITE_PUBLIC_ORIGIN || 'https://kartaa-eight.vercel.app'
+const ORIGINE_PAR_DEFAUT = 'https://kartaa-eight.vercel.app'
+
+/**
+ * Une adresse locale dans un QR Code le rend inutilisable : le téléphone qui le
+ * scanne cherche alors un serveur sur *son* appareil et affiche « site
+ * introuvable ». On refuse donc localhost même s'il est configuré, plutôt que
+ * de produire des codes morts.
+ */
+function origineUtilisable(valeur) {
+  if (!valeur) return null
+  try {
+    const { protocol, hostname } = new URL(valeur)
+    if (!/^https?:$/.test(protocol)) return null
+    if (/^(localhost|127\.|0\.0\.0\.0|\[?::1)/i.test(hostname)) return null
+    return valeur.replace(/\/+$/, '')
+  } catch {
+    return null
+  }
+}
+
+const ORIGINE_PUBLIQUE = origineUtilisable(import.meta.env.VITE_PUBLIC_ORIGIN) || ORIGINE_PAR_DEFAUT
 
 export const APP = {
   name: 'Kartaa',

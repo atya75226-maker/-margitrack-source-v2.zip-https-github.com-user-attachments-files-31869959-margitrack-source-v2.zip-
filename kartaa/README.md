@@ -202,12 +202,40 @@ récupération, les fichiers sont définitivement illisibles. Personne — ni vo
 Supabase, ni nous — ne peut les récupérer. C'est le prix du chiffrement de bout en
 bout, et c'est volontaire.
 
-### Un coffre n'est pas un lien de partage
+### Deux authentifications qu'il ne faut pas confondre
 
-Scanner le QR Code d'un coffre mène à son écran de déverrouillage, mais il faut
-**être connecté au compte propriétaire** avant de pouvoir saisir le mot de passe.
-Un coffre est un espace personnel : le partage avec des tiers n'est pas
-implémenté, et les règles d'accès le refusent.
+| | Ce qu'elle protège | Comment on la franchit |
+| --- | --- | --- |
+| **Compte** | La gestion des cartes, des coffres, des réglages | E-mail ou Google |
+| **Mot de passe du coffre** | Le contenu d'un coffre | Le mot de passe, ou le code de récupération |
+
+Scanner le QR Code d'un coffre mène à son écran de déverrouillage **sans
+demander de compte**. C'est le mot de passe du coffre, et lui seul, qui ouvre le
+contenu : obliger le visiteur à créer un compte rendrait le QR Code inutile.
+
+Ce que le QR Code transporte : un identifiant, rien d'autre. Ni fichier, ni mot
+de passe, ni clé.
+
+Ce qu'un visiteur obtient **avant** le mot de passe : les sels de dérivation,
+publics par nature, le nombre de tentatives restantes et l'état du verrou. Pas
+le nom du coffre, pas le nombre de fichiers, pas la clé chiffrée.
+
+Ce qu'il obtient **après** : un jeton de session de 256 bits, valable trente
+minutes, dont le serveur ne garde que l'empreinte. Ce jeton donne la liste des
+fichiers puis, un par un, des URL signées d'une minute — produites par la
+fonction Edge `vault-file`, qui revérifie le jeton avant de signer quoi que ce
+soit. Le bucket `vault-files` reste privé de bout en bout, et les fichiers
+restent chiffrés jusque dans le navigateur.
+
+Le propriétaire connecté garde son chemin d'origine : les règles d'accès le
+reconnaissent, il signe ses URL lui-même.
+
+### Ce que « mot de passe oublié » fait depuis un QR Code
+
+Le code de récupération tient lieu de preuve, exactement comme le mot de passe :
+il permet de choisir un nouveau mot de passe et d'ouvrir le coffre dans la
+foulée, sans compte. Un nouveau code de récupération est émis au passage,
+l'ancien cesse de valoir.
 
 ### Biométrie
 
@@ -290,7 +318,9 @@ documentées dans le schéma.
 | `/app/scanner` | Scanner de QR Codes |
 | `/app/statistiques`, `/app/profil` | Statistiques et profil |
 | `/app/abonnement` | **Page unique d'abonnement** — tous les chemins y mènent |
-| `/c/:vaultId` | **Cible du QR Code d'un coffre** — déverrouillage |
+| `/coffre/:vaultId` | **Cible du QR Code d'un coffre** — déverrouillage, sans compte |
+| `/vault/:vaultId`, `/c/:vaultId` | Mêmes écrans — alias, et adresse des QR Codes déjà imprimés |
+| `/diagnostic` | Diagnostic de la persistance de session sur l'appareil |
 | `/:slug` | **Cible du QR Code d'une carte** — mini-site public |
 
 ---
@@ -316,6 +346,19 @@ nécessaire pour qu'un QR Code scanné depuis un téléphone ouvre le mini-site 
 qu'un écran de connexion à l'hébergeur. Les zones privées de l'application — le
 tableau de bord et les coffres — restent protégées par l'authentification décrite
 plus haut.
+
+### Vérification de la session et de la navigation (navigateur réel)
+
+```bash
+npm run build && npm run preview -- --port 4173
+npm run test:session
+```
+
+Le serveur d'authentification est volontairement coupé pendant le test. Sont
+vérifiés : l'actualisation d'une page, le retour sur le site, la navigation puis
+actualisation, la déconnexion volontaire, le repli sur les cookies quand le
+stockage local est refusé, et le fait que la page d'un coffre ne réclame jamais
+de compte.
 
 ### Vérification du chiffrement (hors ligne)
 

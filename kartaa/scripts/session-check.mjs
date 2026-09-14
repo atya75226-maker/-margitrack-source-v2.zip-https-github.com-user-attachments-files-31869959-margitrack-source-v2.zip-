@@ -45,18 +45,23 @@ function verifier(nom, condition, detail = '') {
 
 const browser = await chromium.launch()
 
-/** Onglet neuf, session préchargée, serveur d'authentification injoignable. */
+/**
+ * Onglet neuf, session préchargée, serveur d'authentification injoignable.
+ *
+ * La session est déposée par storageState, et non par un script d'injection :
+ * un script d'injection se rejouerait à chaque navigation et réécrirait la
+ * session juste après l'avoir effacée, ce qui rendrait le test de déconnexion
+ * impossible à faire échouer.
+ */
 async function ouvrir(seed, { width = 412, height = 915 } = {}) {
-  const context = await browser.newContext({ viewport: { width, height } })
+  const context = await browser.newContext({
+    viewport: { width, height },
+    storageState: seed
+      ? { cookies: [], origins: [{ origin: BASE, localStorage: [{ name: KEY, value: JSON.stringify(seed) }] }] }
+      : undefined,
+  })
   await context.route('**://*.supabase.co/**', (route) => route.abort('failed'))
   const page = await context.newPage()
-  await page.addInitScript(
-    ([key, valeur]) => {
-      if (valeur) window.localStorage.setItem(key, valeur)
-      else window.localStorage.removeItem(key)
-    },
-    [KEY, seed ? JSON.stringify(seed) : null],
-  )
   return { page, context }
 }
 
@@ -80,15 +85,23 @@ console.log('\nJeton périmé, réseau coupé — la session ne doit pas être p
   await context.close()
 }
 
-console.log('\nCoffre scanné, jeton périmé — ni déconnexion, ni document')
+console.log('\nCoffre scanné sans réseau — ni déconnexion, ni document')
 {
-  const { page, context } = await ouvrir(sessionRangee({ expiresInSeconds: -3600 }))
-  await page.goto(`${BASE}/c/22222222-2222-2222-2222-222222222222`, { waitUntil: 'domcontentloaded' })
-  await page.waitForTimeout(4500)
-  const texte = await page.innerText('body')
-  verifier('la reconnexion est annoncée', /Reconnexion/i.test(texte), `→ ${texte.slice(0, 90)}`)
-  verifier('aucun fichier n\'est montré', !/Accès autorisé/i.test(texte))
-  await context.close()
+  // Le coffre ne dépend plus du compte : la page ne doit donc jamais réclamer
+  // une connexion, et ne doit pas non plus prétendre que le coffre n'existe pas
+  // alors que c'est le réseau qui manque.
+  for (const prefixe of ['coffre', 'vault', 'c']) {
+    const { page, context } = await ouvrir(null)
+    await page.goto(`${BASE}/${prefixe}/22222222-2222-2222-2222-222222222222`, { waitUntil: 'domcontentloaded' })
+    await page.waitForTimeout(3000)
+    const texte = await page.innerText('body')
+    verifier(`/${prefixe}/ : aucune connexion réclamée`, !/Se connecter|Mot de passe oublié/i.test(texte),
+      `→ ${texte.slice(0, 90)}`)
+    verifier(`/${prefixe}/ : panne de réseau annoncée, pas une absence de coffre`,
+      /pas joignable|réessayer/i.test(texte), `→ ${texte.slice(0, 90)}`)
+    verifier(`/${prefixe}/ : aucun fichier montré`, !/Accès autorisé/i.test(texte))
+    await context.close()
+  }
 }
 
 console.log('\nJeton encore valable, réseau coupé — ouverture immédiate')
@@ -148,6 +161,59 @@ console.log('\nStockage local refusé — les cookies prennent le relais')
   await page.waitForTimeout(2000)
   const apres = await page.innerText('body')
   verifier('elle survit aussi au rechargement', /tableau de bord/i.test(apres), `→ ${apres.slice(0, 90)}`)
+  await context.close()
+}
+
+console.log('\nLes quatre cas demandés')
+{
+  const { page, context } = await ouvrir(sessionRangee({ expiresInSeconds: 1800 }))
+
+  // Test 1 — connexion puis actualisation de la page.
+  await page.goto(`${BASE}/app`, { waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(1500)
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(1500)
+  verifier('1. actualisation : toujours dans l\'application',
+    /tableau de bord/i.test(await page.innerText('body')) && new URL(page.url()).pathname === '/app',
+    `→ ${page.url()}`)
+
+  // Test 2 — retour sur le site après fermeture : un onglet neuf, même stockage.
+  const onglet = await context.newPage()
+  await onglet.goto(BASE, { waitUntil: 'domcontentloaded' })
+  await onglet.waitForTimeout(1800)
+  verifier('2. retour sur l\'adresse du site : pas de page vitrine',
+    new URL(onglet.url()).pathname === '/app', `→ ${onglet.url()}`)
+  verifier('2. le tableau de bord est bien affiché', /tableau de bord/i.test(await onglet.innerText('body')))
+
+  // Test 3 — navigation dans plusieurs pages puis actualisation.
+  await page.goto(`${BASE}/app/coffres`, { waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(1200)
+  await page.goto(`${BASE}/app/statistiques`, { waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(1200)
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(1500)
+  verifier('3. actualisation en cours de navigation : aucune redirection',
+    new URL(page.url()).pathname === '/app/statistiques', `→ ${page.url()}`)
+
+  // La page de connexion n'a plus lieu d'être quand la session est ouverte.
+  await page.goto(`${BASE}/connexion`, { waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(1200)
+  verifier('/connexion renvoie vers l\'application',
+    new URL(page.url()).pathname === '/app', `→ ${page.url()}`)
+
+  // Test 4 — déconnexion volontaire : le stockage est vidé, comme le fait
+  // signOut(). Là, et seulement là, le retour à l'accueil est normal.
+  await page.goto(`${BASE}/app`, { waitUntil: 'domcontentloaded' })
+  await page.evaluate(() => window.localStorage.clear())
+  await page.goto(`${BASE}/app`, { waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(1800)
+  verifier('4. déconnexion volontaire : retour à la connexion',
+    new URL(page.url()).pathname === '/connexion', `→ ${page.url()}`)
+
+  await page.goto(BASE, { waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(1500)
+  verifier('4. la page vitrine redevient accessible une fois déconnecté',
+    new URL(page.url()).pathname === '/' && /Kartaa/i.test(await page.innerText('body')), `→ ${page.url()}`)
   await context.close()
 }
 

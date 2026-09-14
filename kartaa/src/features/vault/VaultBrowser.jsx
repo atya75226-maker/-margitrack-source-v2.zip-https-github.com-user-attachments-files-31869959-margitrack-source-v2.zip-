@@ -9,7 +9,7 @@ import { useToast } from '../../state/ToastContext'
 const CATEGORY_ICON = { image: 'image', video: 'video', audio: 'video', pdf: 'file', document: 'file' }
 
 /** Explorateur de fichiers d'un coffre déverrouillé. */
-export default function VaultBrowser({ vault, vaultKey, onChange, readOnly = false, quotaBytes }) {
+export default function VaultBrowser({ vault, vaultKey, token = null, onChange, readOnly = false, quotaBytes }) {
   const [folderId, setFolderId] = useState(null)
   const [uploading, setUploading] = useState(null)
   const [preview, setPreview] = useState(null)
@@ -106,6 +106,7 @@ export default function VaultBrowser({ vault, vaultKey, onChange, readOnly = fal
               file={file}
               vault={vault}
               vaultKey={vaultKey}
+              token={token}
               onOpen={() => setPreview(file)}
               onDelete={readOnly ? null : () => setToDelete(file)}
             />
@@ -121,7 +122,7 @@ export default function VaultBrowser({ vault, vaultKey, onChange, readOnly = fal
         </Panel>
       )}
 
-      <PreviewModal file={preview} vault={vault} vaultKey={vaultKey} onClose={() => setPreview(null)} />
+      <PreviewModal file={preview} vault={vault} vaultKey={vaultKey} token={token} onClose={() => setPreview(null)} />
 
       <Modal
         open={folderModal}
@@ -186,14 +187,14 @@ function FolderChip({ active, label, icon, count, onClick, onRemove }) {
 }
 
 /** Vignette : les images sont déchiffrées en mémoire, uniquement pour l'affichage. */
-function FileCard({ file, vault, vaultKey, onOpen, onDelete }) {
+function FileCard({ file, vault, vaultKey, token, onOpen, onDelete }) {
   const [thumb, setThumb] = useState(null)
 
   useEffect(() => {
     let url = null
     let cancelled = false
     if (file.category === 'image' && file.size < 12 * 1024 * 1024) {
-      openFile(vault, vaultKey, file.id, { log: false })
+      openFile(vault, vaultKey, file.id, { log: false, token })
         .then((result) => {
           if (cancelled) {
             URL.revokeObjectURL(result.url)
@@ -239,7 +240,7 @@ function FileCard({ file, vault, vaultKey, onOpen, onDelete }) {
   )
 }
 
-function PreviewModal({ file, vault, vaultKey, onClose }) {
+function PreviewModal({ file, vault, vaultKey, token, onClose }) {
   const [state, setState] = useState({ loading: true, url: null, bytes: null })
   const toast = useToast()
 
@@ -248,7 +249,7 @@ function PreviewModal({ file, vault, vaultKey, onClose }) {
     let cancelled = false
     if (!file) return undefined
     setState({ loading: true, url: null, bytes: null })
-    openFile(vault, vaultKey, file.id)
+    openFile(vault, vaultKey, file.id, { token })
       .then((result) => {
         if (cancelled) {
           URL.revokeObjectURL(result.url)

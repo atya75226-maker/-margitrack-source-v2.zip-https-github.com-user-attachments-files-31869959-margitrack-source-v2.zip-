@@ -6,12 +6,13 @@ import { lockStatus, unlockWithBiometrics, unlockWithPassword, resetPasswordWith
 import { normalizeRecoveryCode, passwordStrength, STRENGTH_LABELS } from '../../lib/crypto'
 import { useToast } from '../../state/ToastContext'
 import { repo } from '../../lib/storage'
+import * as vaultPublic from '../../lib/vaultPublic'
 
 /**
  * Écran de déverrouillage. Tant qu'il n'a pas rendu la clé du coffre,
  * aucun fichier n'est déchiffré ni même consultable.
  */
-export default function VaultUnlock({ vault: initialVault, onUnlocked, standalone = false }) {
+export default function VaultUnlock({ vault: initialVault, onUnlocked, standalone = false, publicAccess = false }) {
   const [vault, setVault] = useState(initialVault)
   const [mode, setMode] = useState('password')
   const [password, setPassword] = useState('')
@@ -29,10 +30,16 @@ export default function VaultUnlock({ vault: initialVault, onUnlocked, standalon
     return () => clearInterval(timer)
   }, [status.locked])
 
+  /**
+   * Relit l'état du coffre après chaque tentative — nombre d'essais restants et
+   * verrou en cours. Un visiteur venu par le QR Code n'a aucun droit sur la
+   * table : pour lui, seul vault_intro répond, et il ne livre ni le nom du
+   * coffre ni son contenu.
+   */
   const refresh = async () => {
-    const fresh = await repo.vaults.get(vault.id)
-    if (fresh) setVault(fresh)
-    return fresh || vault
+    const fresh = publicAccess ? await vaultPublic.intro(vault.id) : await repo.vaults.get(vault.id)
+    if (fresh) setVault({ ...vault, ...fresh })
+    return fresh ? { ...vault, ...fresh } : vault
   }
 
   const submitPassword = async (event) => {
@@ -40,9 +47,9 @@ export default function VaultUnlock({ vault: initialVault, onUnlocked, standalon
     setBusy(true)
     setError(null)
     try {
-      const key = await unlockWithPassword(vault, password)
+      const ouverture = await unlockWithPassword(vault, password)
       setPassword('')
-      onUnlocked(key, await refresh())
+      onUnlocked(ouverture, await refresh())
     } catch (err) {
       setError(err.message)
       await refresh()
@@ -55,8 +62,8 @@ export default function VaultUnlock({ vault: initialVault, onUnlocked, standalon
     setBusy(true)
     setError(null)
     try {
-      const key = await unlockWithBiometrics(vault)
-      onUnlocked(key, await refresh())
+      const ouverture = await unlockWithBiometrics(vault)
+      onUnlocked(ouverture, await refresh())
     } catch (err) {
       setError(err.message || 'Authentification biométrique refusée.')
       await refresh()
@@ -66,7 +73,13 @@ export default function VaultUnlock({ vault: initialVault, onUnlocked, standalon
   }
 
   if (mode === 'recovery') {
-    return <RecoveryFlow vault={vault} onCancel={() => setMode('password')} onDone={async (key) => onUnlocked(key, await refresh())} />
+    return (
+      <RecoveryFlow
+        vault={vault}
+        onCancel={() => setMode('password')}
+        onDone={async (ouverture) => onUnlocked(ouverture, await refresh())}
+      />
+    )
   }
 
   const remaining = Math.ceil(status.remainingMs / 1000)
@@ -85,8 +98,14 @@ export default function VaultUnlock({ vault: initialVault, onUnlocked, standalon
             <Icon name="lock" size={30} />
           </span>
           <p className="relative text-xs font-extrabold uppercase tracking-[.2em] text-gold-400">Coffre Sécurité</p>
-          <h1 className="relative mt-2 font-display text-2xl font-extrabold">{vault.name}</h1>
-          <p className="relative mt-1.5 text-sm text-white/60">Ce coffre est protégé.</p>
+          <h1 className="relative mt-2 font-display text-2xl font-extrabold">
+            {vault.name || 'Coffre protégé'}
+          </h1>
+          <p className="relative mt-1.5 text-sm text-white/60">
+            {vault.name
+              ? 'Ce coffre est protégé.'
+              : 'Saisissez le mot de passe pour accéder à son contenu.'}
+          </p>
         </div>
 
         <div className="space-y-4 p-5 sm:p-6">
@@ -157,10 +176,10 @@ function RecoveryFlow({ vault, onCancel, onDone }) {
   if (result) {
     return (
       <RecoveryCodeScreen
-        vaultName={vault.name}
+        vaultName={vault.name || 'Votre coffre'}
         code={result.recoveryCode}
         doneLabel="Ouvrir mon coffre"
-        onDone={() => onDone(result.vaultKey)}
+        onDone={() => onDone({ key: result.vaultKey, token: result.token })}
       />
     )
   }
