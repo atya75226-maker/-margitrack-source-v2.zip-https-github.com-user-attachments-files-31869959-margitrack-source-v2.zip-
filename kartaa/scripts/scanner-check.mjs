@@ -9,7 +9,7 @@
  * numéro devient appelable, le reste s'affiche en texte.
  */
 // Vérifie la chaîne complète : QR généré → décodé par jsQR → interprété par l'application.
-globalThis.window = { location: { origin: 'https://kartaa-eight.vercel.app' } }
+globalThis.window = { location: { origin: 'https://kartaa-eight.vercel.app', hostname: 'kartaa-eight.vercel.app' } }
 
 const QRCode = (await import('qrcode')).default
 const jsQR = (await import('jsqr')).default
@@ -49,6 +49,23 @@ for (const [intitule, contenu, typeAttendu, routeAttendue] of cas) {
     verifier(`${intitule} : ouvre ${routeAttendue}`, lecture.route === routeAttendue, `obtenu « ${lecture.route} »`)
   }
 }
+
+// Un QR Code fabriqué sur une autre adresse de déploiement doit rester interne :
+// c'est ce qui empêchait d'ouvrir un coffre depuis le domaine de production.
+const autreDomaine = 'https://kartaa-git-claude-digital-card-e659f9-atya75226-8842s-projects.vercel.app/c/88f7b65d'
+const lectureAutreDomaine = interpretScan(autreDomaine)
+verifier('coffre scanné depuis un autre domaine Kartaa : reconnu', lectureAutreDomaine.kind === 'vault',
+  `obtenu « ${lectureAutreDomaine.kind} »`)
+verifier("coffre scanné depuis un autre domaine : ouvert sur le domaine courant",
+  lectureAutreDomaine.route === '/c/88f7b65d', `obtenu « ${lectureAutreDomaine.route} »`)
+
+const carteAutreDomaine = interpretScan('https://kartaa-git-abc-projects.vercel.app/aziz')
+verifier('carte scannée depuis un autre domaine Kartaa : reconnue', carteAutreDomaine.kind === 'card')
+
+// Un site qui n'est pas Kartaa ne doit surtout pas être traité comme interne
+const siteTiers = interpretScan('https://kartaa-eight.exemple.com/c/abc')
+verifier('domaine imitant Kartaa : traité comme extérieur', siteTiers.kind === 'url',
+  `obtenu « ${siteTiers.kind} »`)
 
 // Une vCard exportée par Kartaa doit être reconnue comme un contact
 const vcard = 'BEGIN:VCARD\r\nVERSION:3.0\r\nFN:Awa Traoré\r\nTEL;TYPE=CELL:+225070012\r\nEND:VCARD'

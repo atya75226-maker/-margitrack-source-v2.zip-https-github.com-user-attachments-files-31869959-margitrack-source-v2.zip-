@@ -52,7 +52,14 @@ export default function VaultAccessPage() {
           <p className="mt-1.5 text-sm leading-relaxed text-ink-500">
             Ce coffre est protégé. Connectez-vous à votre compte, puis saisissez le mot de passe du coffre.
           </p>
-          <Button as={Link} to="/connexion" full className="mt-5" iconRight="arrowRight">
+          <Button
+            as={Link}
+            to="/connexion"
+            state={{ from: `/c/${vaultId}` }}
+            full
+            className="mt-5"
+            iconRight="arrowRight"
+          >
             Se connecter
           </Button>
         </Panel>

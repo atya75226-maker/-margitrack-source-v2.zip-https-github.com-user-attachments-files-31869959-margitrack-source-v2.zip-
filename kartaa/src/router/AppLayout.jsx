@@ -17,8 +17,12 @@ const NAV = [
   { to: '/app/profil', label: 'Profil', icon: 'user' },
 ]
 
-/** Les quatre entrées qui encadrent le scanner, en bas de l'écran mobile. */
-const NAV_MOBILE = NAV.filter((item) => item.to !== '/app/scanner' && item.to !== '/app/profil')
+/**
+ * La barre du bas porte toutes les entrées, plus le bouton « Créer » qui était
+ * auparavant dans l'entête : tout est accessible du pouce, rien en haut.
+ * Le scanner reste au centre exact des sept emplacements.
+ */
+const NAV_MOBILE = [NAV[0], NAV[1], { action: 'create', label: 'Créer', icon: 'plus' }, NAV[2], NAV[3], NAV[4], NAV[5]]
 
 export default function AppLayout() {
   const { user } = useAuth()
@@ -74,14 +78,6 @@ export default function AppLayout() {
           </Link>
           <div className="flex items-center gap-2">
             {pro && <Badge tone="gold" icon="crown">{t('plan.pro')}</Badge>}
-            <button
-              type="button"
-              onClick={() => setCreateOpen(true)}
-              className="grid h-9 w-9 place-items-center rounded-xl bg-brand-600 text-white shadow-soft transition-transform active:scale-95"
-              aria-label="Créer"
-            >
-              <Icon name="plus" size={19} />
-            </button>
             <Link to="/app/profil">
               <Avatar src={user?.avatarUrl} initials={initialsOf(user?.firstName, user?.lastName)} size={36} />
             </Link>
@@ -98,24 +94,14 @@ export default function AppLayout() {
 
       {/* --------------------------------------------- navigation mobile */}
       <nav className="safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-ink-100 bg-white/95 backdrop-blur lg:hidden">
-        <div className="mx-auto grid max-w-lg grid-cols-5 items-center px-2 pb-2 pt-2.5">
-          {NAV_MOBILE.slice(0, 2).map((item) => (
-            <MobileLink key={item.to} item={item} />
-          ))}
-          <NavLink
-            to="/app/scanner"
-            className={({ isActive }) =>
-              `mx-auto -mt-6 grid h-14 w-14 place-items-center rounded-2xl text-white shadow-lift transition-transform active:scale-95 ${
-                isActive ? 'bg-ink-900 ring-4 ring-brand-100' : 'bg-brand-600'
-              }`
-            }
-            aria-label="Scanner un QR Code"
-          >
-            <Icon name="scan" size={26} />
-          </NavLink>
-          {NAV_MOBILE.slice(2, 4).map((item) => (
-            <MobileLink key={item.to} item={item} />
-          ))}
+        <div className="mx-auto grid max-w-lg grid-cols-7 items-center px-0.5 pb-2 pt-2.5">
+          {NAV_MOBILE.map((item) =>
+            item.action === 'create' ? (
+              <MobileAction key="create" item={item} onClick={() => setCreateOpen(true)} />
+            ) : (
+              <MobileLink key={item.to} item={item} scanner={item.to === '/app/scanner'} />
+            ),
+          )}
         </div>
       </nav>
 
@@ -152,7 +138,7 @@ export default function AppLayout() {
  * Le nom reste porté par aria-label et title — indispensable pour les lecteurs
  * d'écran, puisque plus rien ne l'écrit à l'écran.
  */
-function MobileLink({ item }) {
+function MobileLink({ item, scanner = false }) {
   return (
     <NavLink
       to={item.to}
@@ -167,12 +153,45 @@ function MobileLink({ item }) {
     >
       {({ isActive }) => (
         <>
-          <Icon name={item.icon} size={26} strokeWidth={isActive ? 2.2 : 1.7} />
+          {scanner ? (
+            // Le scanner reste reconnaissable au premier coup d'œil, sans dépasser
+            // de la barre : toutes les icônes tiennent désormais sur la même ligne.
+            <span
+              className={`grid h-10 w-10 place-items-center rounded-2xl text-white transition-colors ${
+                isActive ? 'bg-ink-900' : 'bg-brand-600'
+              }`}
+            >
+              <Icon name={item.icon} size={21} strokeWidth={1.9} />
+            </span>
+          ) : (
+            <Icon name={item.icon} size={23} strokeWidth={isActive ? 2.2 : 1.7} />
+          )}
           {/* Un point remplace le libellé pour signaler l'onglet ouvert. */}
           <span className={`h-1.5 w-1.5 rounded-full transition-colors ${isActive ? 'bg-brand-600' : 'bg-transparent'}`} />
         </>
       )}
     </NavLink>
+  )
+}
+
+/**
+ * Bouton « Créer » de la barre du bas : même gabarit que les onglets, mais il
+ * ouvre la fenêtre de création au lieu de naviguer.
+ */
+function MobileAction({ item, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={item.label}
+      title={item.label}
+      className="flex flex-col items-center gap-1.5 rounded-xl py-1 text-ink-400 transition-colors active:text-brand-700"
+    >
+      <span className="grid h-10 w-10 place-items-center rounded-2xl border border-ink-200 text-ink-600 transition-transform active:scale-95">
+        <Icon name={item.icon} size={21} strokeWidth={2} />
+      </span>
+      <span className="h-1.5 w-1.5 rounded-full bg-transparent" />
+    </button>
   )
 }
 

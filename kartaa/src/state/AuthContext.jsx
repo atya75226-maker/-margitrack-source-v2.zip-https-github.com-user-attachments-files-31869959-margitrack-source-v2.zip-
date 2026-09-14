@@ -6,6 +6,25 @@ import { lockAll } from '../lib/vaultSession'
 const AuthContext = createContext(null)
 
 /**
+ * Profil provisoire déduit du jeton, sans aucun appel réseau.
+ * Les fournisseurs ne nomment pas les champs de la même façon : notre formulaire
+ * envoie first_name, Google envoie given_name ou un nom complet.
+ */
+function userFromSession(authUser) {
+  const meta = authUser.user_metadata || {}
+  const complet = (meta.full_name || meta.name || '').trim()
+  return {
+    id: authUser.id,
+    firstName: meta.first_name || meta.given_name || complet.split(' ')[0] || '',
+    lastName: meta.last_name || meta.family_name || complet.split(' ').slice(1).join(' ') || '',
+    email: authUser.email || '',
+    phone: meta.phone || authUser.phone || '',
+    avatarUrl: meta.avatar_url || meta.picture || '',
+    plan: 'free',
+  }
+}
+
+/**
  * Authentification déléguée à Supabase Auth : mots de passe hachés côté serveur,
  * jetons rafraîchis automatiquement. Le profil (prénom, nom, téléphone, offre) vit
  * dans la table `profiles`, créée par déclencheur à l'inscription.
@@ -39,17 +58,29 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let active = true
 
-    supabase.auth.getSession().then(async ({ data }) => {
+    supabase.auth.getSession().then(({ data }) => {
       if (!active) return
       setSession(data.session)
-      await loadProfile(data.session?.user)
+      if (data.session?.user) setUser(userFromSession(data.session.user))
+      // L'application s'ouvre dès que la session est connue : le profil complet
+      // arrive ensuite, sans retenir l'affichage si le réseau est lent.
       setReady(true)
+      loadProfile(data.session?.user)
     })
 
-    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
+    // Ce rappel s'exécute en tenant le verrou d'authentification de Supabase :
+    // toute requête lancée ici redemanderait la session et attendrait ce même
+    // verrou, ce qui bloque l'application et finit par la faire passer pour
+    // déconnectée. On enregistre donc la session immédiatement, et on charge le
+    // profil une fois sorti de la pile d'appel.
+    const { data: listener } = supabase.auth.onAuthStateChange((evenement, nextSession) => {
       setSession(nextSession)
-      await loadProfile(nextSession?.user)
       setReady(true)
+      if (nextSession?.user) setUser(userFromSession(nextSession.user))
+      if (evenement === 'TOKEN_REFRESHED') return // même utilisateur : rien à recharger
+      setTimeout(() => {
+        if (active) loadProfile(nextSession?.user)
+      }, 0)
     })
 
     return () => {

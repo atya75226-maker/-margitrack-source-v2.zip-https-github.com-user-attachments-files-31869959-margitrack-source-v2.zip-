@@ -20,12 +20,14 @@ export function normalizeSlug(value, firstName, lastName) {
   return clean.length >= 2 ? clean : suggestSlug(firstName, lastName)
 }
 
+import { APP } from '../config/app.config'
+
+/** Adresse du mini-site. Toujours sur le domaine de référence, jamais celui du navigateur. */
 export function publicUrl(slug) {
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://kartaa.app'
-  return `${origin}/${slug}`
+  return `${APP.publicOrigin}/${slug}`
 }
 
+/** Adresse de déverrouillage d'un coffre, visée par son QR Code. */
 export function vaultUrl(vaultId) {
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://kartaa.app'
-  return `${origin}/c/${vaultId}`
+  return `${APP.publicOrigin}/c/${vaultId}`
 }

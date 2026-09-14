@@ -74,6 +74,18 @@ export async function decodeFile(file) {
 /* ------------------------------------------------------------ interprétation */
 
 /**
+ * Reconnaît une adresse Kartaa, quel que soit le domaine de déploiement.
+ * Un QR Code créé sur une préproduction reste un lien Kartaa : on l'ouvre sur
+ * le domaine courant, là où la session de l'utilisateur existe.
+ */
+const DOMAINES_KARTAA = /^kartaa[\w-]*\.vercel\.app$/i
+
+export function isKartaaHost(hostname = '') {
+  if (typeof window !== 'undefined' && hostname === window.location.hostname) return true
+  return DOMAINES_KARTAA.test(hostname)
+}
+
+/**
  * Que faire du contenu lu ?
  *  - une carte Kartaa  → on ouvre le mini-site sans quitter l'application
  *  - un coffre Kartaa  → on ouvre son écran de déverrouillage
@@ -98,7 +110,9 @@ export function interpretScan(raw) {
     return { kind: 'text', value }
   }
 
-  const interne = typeof window !== 'undefined' && url.origin === window.location.origin
+  // Un QR Code créé sur un autre domaine de déploiement reste un lien Kartaa :
+  // on l'ouvre ici, sur le domaine courant, pour que la session serve.
+  const interne = isKartaaHost(url.hostname)
   const segments = url.pathname.split('/').filter(Boolean)
 
   if (interne && segments.length === 2 && segments[0] === 'c') {

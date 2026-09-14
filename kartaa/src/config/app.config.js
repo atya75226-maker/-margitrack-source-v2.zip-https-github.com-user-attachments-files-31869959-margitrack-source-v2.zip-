@@ -3,12 +3,25 @@
  * Changer le nom, le prix ou les offres se fait uniquement ici.
  */
 
+/**
+ * Adresse publique de référence.
+ *
+ * Un QR Code est imprimé, partagé, collé sur une vitrine : il doit pointer vers
+ * une adresse qui ne bouge pas. S'il enregistrait l'adresse du navigateur au
+ * moment de sa création, un code fabriqué depuis une préproduction resterait
+ * coincé sur cette préproduction — et la session de l'utilisateur, liée à une
+ * seule adresse, ne suivrait pas.
+ */
+const ORIGINE_PUBLIQUE = import.meta.env.VITE_PUBLIC_ORIGIN || 'https://kartaa-eight.vercel.app'
+
 export const APP = {
   name: 'Kartaa',
   tagline: 'Votre identité. Votre carte. Votre QR Code.',
-  publicDomain: typeof window !== 'undefined' ? window.location.host : 'kartaa.app',
+  publicOrigin: ORIGINE_PUBLIQUE,
+  publicDomain: ORIGINE_PUBLIQUE.replace(/^https?:\/\//, ''),
   supportEmail: 'contact@kartaa.app',
 }
+
 
 /* ------------------------------------------------------------------- devise */
 

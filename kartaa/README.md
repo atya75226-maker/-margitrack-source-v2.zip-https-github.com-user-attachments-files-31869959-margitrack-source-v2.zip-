@@ -49,7 +49,14 @@ npm run dev      # http://localhost:5174
 ```
 
 Aucune configuration n'est nécessaire : `src/lib/supabaseClient.js` contient les
-coordonnées du projet Supabase de production comme valeurs par défaut. Pour
+coordonnées du projet Supabase de production comme valeurs par défaut.
+
+Une troisième variable, `VITE_PUBLIC_ORIGIN`, fixe l'adresse inscrite dans les
+QR Codes. Elle vaut par défaut le domaine de production. **Ne la laissez pas
+suivre l'adresse du navigateur** : un QR Code est imprimé et partagé, il doit
+pointer vers une adresse stable — sinon un code fabriqué depuis une
+préproduction y reste coincé, et la session de l'utilisateur, liée à un seul
+domaine, ne suit pas. Pour
 brancher un autre projet, copiez `.env.example` vers `.env` et renseignez
 `VITE_SUPABASE_URL` et `VITE_SUPABASE_PUBLISHABLE_KEY`.
 
@@ -91,6 +98,15 @@ formulaire d'afficher un premier champ par plateforme sans obliger à le remplir
 Sur la carte, une icône par plateforme, sans doublon. Sur le mini-site, les liens
 sont groupés par plateforme avec le nom donné par l'utilisateur — « Compte
 personnel », « Ma boutique » — chacun cliquable.
+
+### Une adresse de référence pour les QR Codes
+
+Les liens des QR Codes ne sont pas construits avec l'adresse du navigateur mais
+avec `APP.publicOrigin`. À la lecture, le scanner reconnaît une adresse Kartaa
+sur **n'importe quel domaine de déploiement** et l'ouvre sur le domaine courant,
+là où la session existe. Sans cela, un coffre créé sur une préproduction renvoyait
+vers cette préproduction, où l'utilisateur n'est pas connecté : l'écran demandait
+de se connecter au lieu du mot de passe du coffre.
 
 ### Le scanner
 
