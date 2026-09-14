@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { GoogleMark, Icon, Logo } from '../../components/ui/Icons'
 import { useAuth } from '../../state/AuthContext'
 import { useToast } from '../../state/ToastContext'
+import { isInAppBrowser } from '../../lib/browserEnv'
+import { APP } from '../../config/app.config'
 
 const HIGHLIGHTS = [
   { icon: 'card', text: 'Une carte de visite numérique prête en quelques minutes' },
@@ -50,6 +52,7 @@ export default function AuthShell({ title, subtitle, children, footer }) {
           </Link>
           <h1 className="font-display text-2xl font-extrabold text-ink-900 sm:text-3xl">{title}</h1>
           {subtitle && <p className="mt-2 text-sm leading-relaxed text-ink-500">{subtitle}</p>}
+          <InAppBrowserNotice />
           <div className="mt-8">{children}</div>
           {footer && <div className="mt-6 text-center text-sm text-ink-500">{footer}</div>}
         </div>
@@ -94,6 +97,25 @@ export function Separator({ children = 'ou' }) {
       <span className="h-px flex-1 bg-ink-200" />
       <span className="text-xs font-bold uppercase tracking-wide text-ink-400">{children}</span>
       <span className="h-px flex-1 bg-ink-200" />
+    </div>
+  )
+}
+
+/**
+ * Avertissement affiché dans les navigateurs intégrés à Facebook, WhatsApp et
+ * consorts : ils effacent souvent leur stockage en se fermant, ce qui oblige à
+ * se reconnecter à chaque visite. Le message n'apparaît que là où il est vrai.
+ */
+function InAppBrowserNotice() {
+  if (!isInAppBrowser()) return null
+  return (
+    <div className="mt-6 flex gap-3 rounded-2xl border border-gold-200 bg-gold-50/70 p-3.5">
+      <Icon name="alert" size={18} className="mt-0.5 shrink-0 text-gold-600" />
+      <p className="text-xs leading-relaxed text-ink-600">
+        Vous ouvrez Kartaa dans la fenêtre d'une autre application. Elle efface souvent la session en se
+        fermant : vous devrez vous reconnecter à chaque visite. Ouvrez plutôt {APP.publicDomain} dans Chrome
+        ou Safari, puis ajoutez le site à votre écran d'accueil.
+      </p>
     </div>
   )
 }

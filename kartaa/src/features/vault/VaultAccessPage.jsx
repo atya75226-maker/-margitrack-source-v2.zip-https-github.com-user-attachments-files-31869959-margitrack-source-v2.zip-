@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Button, Panel, Spinner } from '../../components/ui'
 import { Icon, Logo } from '../../components/ui/Icons'
+import Reconnecting from '../../components/Reconnecting'
 import VaultUnlock from './VaultUnlock'
 import VaultBrowser from './VaultBrowser'
 import { repo } from '../../lib/storage'
@@ -14,7 +15,7 @@ import * as vaultSession from '../../lib/vaultSession'
  */
 export default function VaultAccessPage() {
   const { vaultId } = useParams()
-  const { user, ready, isAuthenticated } = useAuth()
+  const { user, ready, isAuthenticated, reconnecting } = useAuth()
   const [vault, setVault] = useState(null)
   const [vaultKey, setVaultKey] = useState(() => vaultSession.getKey(vaultId))
   const [loading, setLoading] = useState(true)
@@ -38,6 +39,10 @@ export default function VaultAccessPage() {
       </div>
     )
   }
+
+  // Réseau coupé au moment du scan : la session est intacte, on attend plutôt que
+  // de réclamer une reconnexion qui n'a pas lieu d'être.
+  if (!isAuthenticated && reconnecting) return <Reconnecting />
 
   // Un coffre n'est pas un lien public : le QR Code mène ici, mais il faut d'abord
   // être connecté au compte propriétaire, puis fournir le mot de passe du coffre.

@@ -22,6 +22,34 @@ export const supabase = createClient(url, key, {
   },
 })
 
+/**
+ * Clé sous laquelle le client range la session — la même que celle qu'il calcule
+ * lui-même à partir de la référence du projet.
+ */
+export const AUTH_STORAGE_KEY = `sb-${new URL(url).hostname.split('.')[0]}-auth-token`
+
+/**
+ * Session telle qu'elle est rangée dans le navigateur, sans passer par le client.
+ *
+ * Elle sert à distinguer deux situations que `getSession()` renvoie de la même
+ * façon — une session absente et une session bien présente dont le rafraîchissement
+ * vient d'échouer faute de réseau. Sans cette lecture, une coupure de connexion
+ * renverrait la personne sur l'écran de connexion alors que ses jetons sont intacts.
+ *
+ * Des jetons encore rangés valent donc « à retenter » : le client les efface
+ * lui-même dès que le serveur les refuse pour de bon.
+ */
+export function readStoredSession() {
+  try {
+    const brut = window.localStorage.getItem(AUTH_STORAGE_KEY)
+    if (!brut) return null
+    const session = JSON.parse(brut)
+    return session?.refresh_token ? session : null
+  } catch {
+    return null
+  }
+}
+
 /** Transforme une erreur PostgREST en message affichable. */
 export function readableError(error, fallback = "Une erreur est survenue.") {
   if (!error) return fallback

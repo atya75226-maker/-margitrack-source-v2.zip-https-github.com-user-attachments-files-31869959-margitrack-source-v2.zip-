@@ -5,6 +5,7 @@ import { ToastProvider } from './state/ToastContext'
 import { LanguageProvider } from './i18n'
 import { ProLockProvider } from './components/ProLock'
 import { Toaster, Spinner } from './components/ui'
+import Reconnecting from './components/Reconnecting'
 import AppLayout from './router/AppLayout'
 import LandingPage from './features/landing/LandingPage'
 import SignInPage from './features/auth/SignInPage'
@@ -25,7 +26,7 @@ import SubscriptionPage from './features/profile/SubscriptionPage'
 import PublicProfilePage from './features/public/PublicProfilePage'
 
 function RequireAuth({ children }) {
-  const { isAuthenticated, ready } = useAuth()
+  const { isAuthenticated, ready, reconnecting } = useAuth()
   const location = useLocation()
   if (!ready) {
     return (
@@ -34,6 +35,10 @@ function RequireAuth({ children }) {
       </div>
     )
   }
+  // Des jetons attendent dans le navigateur mais le serveur ne répond pas :
+  // c'est une panne de réseau, pas une déconnexion. On ne réclame pas le mot
+  // de passe pour quelque chose qui va revenir tout seul.
+  if (!isAuthenticated && reconnecting) return <Reconnecting />
   if (!isAuthenticated) return <Navigate to="/connexion" state={{ from: location.pathname }} replace />
   return children
 }

@@ -18,11 +18,11 @@ const NAV = [
 ]
 
 /**
- * La barre du bas porte toutes les entrées, plus le bouton « Créer » qui était
- * auparavant dans l'entête : tout est accessible du pouce, rien en haut.
- * Le scanner reste au centre exact des sept emplacements.
+ * Barre du bas : les entrées principales plus le bouton « Créer ».
+ * Le profil n'y figure pas — la photo de compte, en haut à droite, y mène déjà,
+ * et le répéter en bas prenait une place utile aux six autres icônes.
  */
-const NAV_MOBILE = [NAV[0], NAV[1], { action: 'create', label: 'Créer', icon: 'plus' }, NAV[2], NAV[3], NAV[4], NAV[5]]
+const NAV_MOBILE = [NAV[0], NAV[1], { action: 'create', label: 'Créer', icon: 'plus' }, NAV[2], NAV[3], NAV[4]]
 
 export default function AppLayout() {
   const { user } = useAuth()
@@ -94,7 +94,7 @@ export default function AppLayout() {
 
       {/* --------------------------------------------- navigation mobile */}
       <nav className="safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-ink-100 bg-white/95 backdrop-blur lg:hidden">
-        <div className="mx-auto grid max-w-lg grid-cols-7 items-center px-0.5 pb-2 pt-2.5">
+        <div className="mx-auto grid max-w-lg grid-cols-6 items-center px-0.5 pb-2 pt-2.5">
           {NAV_MOBILE.map((item) =>
             item.action === 'create' ? (
               <MobileAction key="create" item={item} onClick={() => setCreateOpen(true)} />
