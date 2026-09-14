@@ -98,7 +98,7 @@ export default function AppLayout() {
 
       {/* --------------------------------------------- navigation mobile */}
       <nav className="safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-ink-100 bg-white/95 backdrop-blur lg:hidden">
-        <div className="mx-auto grid max-w-lg grid-cols-5 items-end px-2 pb-1.5 pt-2">
+        <div className="mx-auto grid max-w-lg grid-cols-5 items-center px-2 pb-2 pt-2.5">
           {NAV_MOBILE.slice(0, 2).map((item) => (
             <MobileLink key={item.to} item={item} />
           ))}
@@ -147,21 +147,29 @@ export default function AppLayout() {
   )
 }
 
+/**
+ * Onglet de la barre du bas : l'icône seule, sans libellé.
+ * Le nom reste porté par aria-label et title — indispensable pour les lecteurs
+ * d'écran, puisque plus rien ne l'écrit à l'écran.
+ */
 function MobileLink({ item }) {
   return (
     <NavLink
       to={item.to}
       end={item.end}
+      aria-label={item.label}
+      title={item.label}
       className={({ isActive }) =>
-        `flex flex-col items-center gap-1 rounded-xl py-1.5 text-[0.68rem] font-bold transition-colors ${
+        `flex flex-col items-center gap-1.5 rounded-xl py-1 transition-colors ${
           isActive ? 'text-brand-700' : 'text-ink-400'
         }`
       }
     >
       {({ isActive }) => (
         <>
-          <Icon name={item.icon} size={21} strokeWidth={isActive ? 2.2 : 1.75} />
-          <span className="truncate">{item.label}</span>
+          <Icon name={item.icon} size={26} strokeWidth={isActive ? 2.2 : 1.7} />
+          {/* Un point remplace le libellé pour signaler l'onglet ouvert. */}
+          <span className={`h-1.5 w-1.5 rounded-full transition-colors ${isActive ? 'bg-brand-600' : 'bg-transparent'}`} />
         </>
       )}
     </NavLink>
