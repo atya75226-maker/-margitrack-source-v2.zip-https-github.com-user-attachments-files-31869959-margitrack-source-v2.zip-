@@ -18,6 +18,7 @@ import {
   toBase64, randomBytes, ephemeralUrl, KDF_ITERATIONS,
 } from './crypto'
 import { supabase, readableError } from './supabaseClient'
+import * as vaultPublic from './vaultPublic'
 import { repo, notifyChange } from './storage'
 import * as webauthn from './webauthn'
 
@@ -55,6 +56,10 @@ function statusError(status) {
     }
     case 'recovery':
       return new VaultError('Code de récupération invalide.')
+    case 'not_found':
+      return new VaultError('Ce coffre n\'existe plus.')
+    case 'session':
+      return new VaultError('Session du coffre expirée. Saisissez à nouveau le mot de passe.')
     case 'biometric_disabled':
       return new VaultError("La biométrie n'est pas activée sur ce coffre.")
     default:
@@ -62,11 +67,15 @@ function statusError(status) {
   }
 }
 
-/** Appelle une fonction d'ouverture et renvoie la clé chiffrée, ou lève l'erreur adaptée. */
-async function openRpc(name, params, fallback) {
+/**
+ * Appelle une fonction d'ouverture et renvoie son statut complet : la clé
+ * chiffrée et, depuis l'ouverture sans compte, le jeton de session qui
+ * autorisera la lecture des fichiers.
+ */
+async function openStatus(name, params, fallback) {
   const status = await rpc(name, params, fallback)
   if (!status?.ok) throw statusError(status)
-  return status.wrap
+  return status
 }
 
 /* -------------------------------------------------------------- création */
@@ -117,15 +126,17 @@ export function lockStatus(vault) {
 }
 
 async function intro(vaultId) {
-  return rpc('vault_intro', { p_vault_id: vaultId }, 'Coffre introuvable.')
+  const info = await vaultPublic.intro(vaultId)
+  if (!info) throw new VaultError('Coffre introuvable.')
+  return info
 }
 
 export async function unlockWithPassword(vault, password) {
   const info = await intro(vault.id)
   const { wrappingKey, verifier } = await deriveVaultMaterial(password, info.passwordSalt, info.kdfIterations)
-  const wrap = await openRpc('vault_open', { p_vault_id: vault.id, p_verifier: verifier }, 'Ouverture impossible.')
+  const status = await openStatus('vault_open', { p_vault_id: vault.id, p_verifier: verifier }, 'Ouverture impossible.')
   try {
-    return await openWrappedKey(wrap, wrappingKey)
+    return { key: await openWrappedKey(status.wrap, wrappingKey), token: status.token }
   } catch {
     throw new VaultError("La clé du coffre n'a pas pu être déchiffrée.")
   }
@@ -135,9 +146,9 @@ export async function unlockWithRecoveryCode(vault, code) {
   const info = await intro(vault.id)
   const normalized = normalizeRecoveryCode(code)
   const { wrappingKey, verifier } = await deriveVaultMaterial(normalized, info.recoverySalt, info.kdfIterations)
-  const wrap = await openRpc('vault_open_recovery', { p_vault_id: vault.id, p_verifier: verifier }, 'Ouverture impossible.')
+  const status = await openStatus('vault_open_recovery', { p_vault_id: vault.id, p_verifier: verifier }, 'Ouverture impossible.')
   try {
-    return await openWrappedKey(wrap, wrappingKey)
+    return { key: await openWrappedKey(status.wrap, wrappingKey), token: status.token }
   } catch {
     throw new VaultError('Code de récupération invalide.')
   }
@@ -153,10 +164,11 @@ export async function unlockWithBiometrics(vault) {
     throw new VaultError("Cet appareil n'est pas enrôlé pour ce coffre. Utilisez votre mot de passe.")
   }
 
-  const wrap = await openRpc('vault_open_biometric', { p_vault_id: vault.id }, 'Déverrouillage biométrique impossible.')
+  const status = await openStatus('vault_open_biometric', { p_vault_id: vault.id }, 'Déverrouillage biométrique impossible.')
+  const wrap = status.wrap
   try {
     const { wrappingKey } = await deriveVaultMaterial(secret, wrap.salt, wrap.iterations || KDF_ITERATIONS)
-    return await openWrappedKey(wrap, wrappingKey)
+    return { key: await openWrappedKey(wrap, wrappingKey), token: status.token || null }
   } catch {
     throw new VaultError('Déverrouillage biométrique impossible sur cet appareil.')
   }
@@ -197,10 +209,10 @@ export async function resetPasswordWithRecovery(vault, code, newPassword) {
   const { wrappingKey, verifier } = await deriveVaultMaterial(normalized, info.recoverySalt, info.kdfIterations)
 
   // On récupère d'abord la clé du coffre : sans elle, impossible de la ré-envelopper.
-  const currentWrap = await openRpc('vault_open_recovery', { p_vault_id: vault.id, p_verifier: verifier }, 'Ouverture impossible.')
+  const ouverture = await openStatus('vault_open_recovery', { p_vault_id: vault.id, p_verifier: verifier }, 'Ouverture impossible.')
   let vaultKey
   try {
-    vaultKey = await openWrappedKey(currentWrap, wrappingKey)
+    vaultKey = await openWrappedKey(ouverture.wrap, wrappingKey)
   } catch {
     throw new VaultError('Code de récupération invalide.')
   }
@@ -222,7 +234,11 @@ export async function resetPasswordWithRecovery(vault, code, newPassword) {
   if (!status?.ok) throw statusError(status)
 
   notifyChange()
-  return { vault: await repo.vaults.get(vault.id), recoveryCode, vaultKey }
+  // Le coffre n'est rechargé depuis la table que pour son propriétaire : un
+  // visiteur venu par le QR Code n'y a pas accès, et n'en a pas besoin — le
+  // jeton fraîchement émis lui ouvre le contenu.
+  const rafraichi = info.isOwner ? await repo.vaults.get(vault.id) : null
+  return { vault: rafraichi, recoveryCode, vaultKey, token: status.token }
 }
 
 /** Change le mot de passe depuis un coffre déverrouillé. */
@@ -298,28 +314,55 @@ export async function addFile(vault, vaultKey, file, folderId = null) {
   return repo.vaults.get(vault.id)
 }
 
-/** Télécharge le fichier chiffré par URL signée, puis le déchiffre en mémoire. */
-export async function openFile(vault, vaultKey, fileId, { log = true } = {}) {
+/**
+ * Télécharge le fichier chiffré par URL signée, puis le déchiffre en mémoire.
+ *
+ * Deux chemins, selon qui regarde :
+ *  - le propriétaire connecté signe l'URL lui-même, les règles du bucket le
+ *    reconnaissent ;
+ *  - une personne venue par le QR Code n'a pas de compte : elle présente son
+ *    jeton de session à la fonction Edge, qui revérifie puis signe.
+ *
+ * Dans les deux cas le bucket reste privé, l'URL expire en une minute, et le
+ * déchiffrement a lieu ici, dans le navigateur, avec la clé dérivée du mot de
+ * passe. Le serveur ne voit jamais le contenu en clair.
+ */
+export async function openFile(vault, vaultKey, fileId, { log = true, token = null } = {}) {
   const file = (vault.files || []).find((item) => item.id === fileId)
   if (!file) throw new VaultError('Fichier introuvable.')
 
-  const { data: signed, error } = await supabase.storage
-    .from(BUCKET)
-    .createSignedUrl(file.storagePath, 60)
-  if (error || !signed?.signedUrl) throw new VaultError('Contenu indisponible.')
+  let url = null
+  let iv = file.iv
 
-  const response = await fetch(signed.signedUrl)
+  if (file.storagePath) {
+    const { data: signed, error } = await supabase.storage
+      .from(BUCKET)
+      .createSignedUrl(file.storagePath, 60)
+    if (error || !signed?.signedUrl) throw new VaultError('Contenu indisponible.')
+    url = signed.signedUrl
+  } else {
+    if (!token) throw new VaultError('Session du coffre expirée. Saisissez à nouveau le mot de passe.')
+    const signee = await vaultPublic.signedFileUrl(token, fileId)
+    url = signee.url
+    iv = signee.iv || iv
+  }
+
+  const response = await fetch(url)
   if (!response.ok) throw new VaultError('Contenu indisponible.')
   const cipher = await response.arrayBuffer()
 
   let plain
   try {
-    plain = await decryptBytes(vaultKey, file.iv, cipher)
+    plain = await decryptBytes(vaultKey, iv, cipher)
   } catch {
     throw new VaultError('Ce fichier ne peut pas être déchiffré avec cette clé.')
   }
 
-  if (log) await repo.vaults.appendLog(vault.id, { action: 'file.opened', result: 'ok', file: file.name })
+  // Le journal du coffre n'est écrit ici que pour le propriétaire ; pour un
+  // visiteur, c'est vault_session_file() qui l'a déjà fait côté serveur.
+  if (log && file.storagePath) {
+    await repo.vaults.appendLog(vault.id, { action: 'file.opened', result: 'ok', file: file.name })
+  }
   return { file, bytes: plain, url: ephemeralUrl(plain, file.mime) }
 }
 

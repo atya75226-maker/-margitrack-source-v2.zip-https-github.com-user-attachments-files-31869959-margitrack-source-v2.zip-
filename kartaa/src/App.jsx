@@ -26,16 +26,48 @@ import SubscriptionPage from './features/profile/SubscriptionPage'
 import PublicProfilePage from './features/public/PublicProfilePage'
 import DiagnosticPage from './features/diagnostic/DiagnosticPage'
 
+/**
+ * Écran d'attente affiché tant que la session n'est pas tranchée.
+ *
+ * Rien ne doit être décidé avant : ni redirection vers la connexion, ni
+ * affichage de la page vitrine. « Session en cours de lecture » et « aucune
+ * session » sont deux états distincts, et les confondre revient à déconnecter
+ * quelqu'un qui ne l'est pas.
+ */
+function Patientez() {
+  return (
+    <div className="grid min-h-screen place-items-center bg-ink-50 text-brand-600">
+      <Spinner size={28} />
+    </div>
+  )
+}
+
+/**
+ * Page vitrine pour les visiteurs, tableau de bord pour les personnes déjà
+ * connectées. Sans cette bascule, revenir sur l'adresse du site affichait la
+ * vitrine et son bouton « Se connecter » — ce qui se lit comme une déconnexion,
+ * alors que la session était intacte.
+ */
+function AccueilOuApplication() {
+  const { isAuthenticated, ready } = useAuth()
+  if (!ready) return <Patientez />
+  if (isAuthenticated) return <Navigate to="/app" replace />
+  return <LandingPage />
+}
+
+/** Les écrans de connexion n'ont plus lieu d'être une fois la session ouverte. */
+function SiDeconnecte({ children }) {
+  const { isAuthenticated, ready } = useAuth()
+  const location = useLocation()
+  if (!ready) return <Patientez />
+  if (isAuthenticated) return <Navigate to={location.state?.from || '/app'} replace />
+  return children
+}
+
 function RequireAuth({ children }) {
   const { isAuthenticated, ready, reconnecting } = useAuth()
   const location = useLocation()
-  if (!ready) {
-    return (
-      <div className="grid min-h-screen place-items-center text-brand-600">
-        <Spinner size={28} />
-      </div>
-    )
-  }
+  if (!ready) return <Patientez />
   // Des jetons attendent dans le navigateur mais le serveur ne répond pas :
   // c'est une panne de réseau, pas une déconnexion. On ne réclame pas le mot
   // de passe pour quelque chose qui va revenir tout seul.
@@ -52,10 +84,15 @@ export default function App() {
           <DataProvider>
             <ProLockProvider>
           <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/connexion" element={<SignInPage />} />
-            <Route path="/inscription" element={<SignUpPage />} />
+            <Route path="/" element={<AccueilOuApplication />} />
+            <Route path="/connexion" element={<SiDeconnecte><SignInPage /></SiDeconnecte>} />
+            <Route path="/inscription" element={<SiDeconnecte><SignUpPage /></SiDeconnecte>} />
             <Route path="/auth/callback" element={<AuthCallbackPage />} />
+            {/* Trois adresses pour un même écran : /coffre est celle des QR Codes
+                d'aujourd'hui, /c celle des codes déjà imprimés, /vault un alias
+                lisible. Aucune ne demande de compte. */}
+            <Route path="/coffre/:vaultId" element={<VaultAccessPage />} />
+            <Route path="/vault/:vaultId" element={<VaultAccessPage />} />
             <Route path="/c/:vaultId" element={<VaultAccessPage />} />
             <Route path="/diagnostic" element={<DiagnosticPage />} />
 

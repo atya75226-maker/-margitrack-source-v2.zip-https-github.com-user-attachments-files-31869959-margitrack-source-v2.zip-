@@ -33,7 +33,9 @@ console.log('\nScanner de QR Codes\n')
 
 const cas = [
   ['carte Kartaa',        'https://kartaa-eight.vercel.app/aziz',                 'card',     '/aziz'],
-  ['coffre Kartaa',       'https://kartaa-eight.vercel.app/c/88f7b65d-ee2f',      'vault',    '/c/88f7b65d-ee2f'],
+  ['coffre Kartaa',       'https://kartaa-eight.vercel.app/coffre/88f7b65d-ee2f', 'vault',    '/coffre/88f7b65d-ee2f'],
+  ['coffre, ancien QR',   'https://kartaa-eight.vercel.app/c/88f7b65d-ee2f',      'vault',    '/c/88f7b65d-ee2f'],
+  ['coffre, alias vault', 'https://kartaa-eight.vercel.app/vault/88f7b65d-ee2f',  'vault',    '/vault/88f7b65d-ee2f'],
   ['page interne',        'https://kartaa-eight.vercel.app/app/cartes',           'internal', '/app/cartes'],
   ['site extérieur',      'https://www.orange.ci/offres',                          'url',      null],
   ['numéro de téléphone', '+225 07 00 12 34 56',                                   'phone',    null],
