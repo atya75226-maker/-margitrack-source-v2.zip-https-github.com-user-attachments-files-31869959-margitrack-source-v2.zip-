@@ -1,0 +1,21 @@
+name: Kartaa CI
+
+on:
+  push:
+    paths: ['kartaa/**', '.github/workflows/kartaa.yml']
+  pull_request:
+    paths: ['kartaa/**', '.github/workflows/kartaa.yml']
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: kartaa
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install
+      - run: npm run build
