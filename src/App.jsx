@@ -17,6 +17,9 @@ import { usePermissions } from "./hooks/usePermissions";
 import { APP_PATH, SIGNUP_PATH, isAppRoute, isStandalone, navigate, useRoute } from "./lib/routes";
 import { NAV_ICONS } from "./components/ui/Icons";
 import { Dashboard } from "./components/Dashboard";
+import { DailyBrief } from "./components/DailyBrief";
+import { InstallBanner, InstallCard, UpdateBanner } from "./components/InstallPrompts";
+import { InstallSheet } from "./components/InstallSheet";
 import { ProductsTab } from "./components/ProductsTab";
 import { SalesTab } from "./components/SalesTab";
 import { ExpensesTab } from "./components/ExpensesTab";
@@ -44,6 +47,7 @@ const NAV = [
 ];
 
 function AppContent() {
+  const [showInstall, setShowInstall] = useState(false);
   const [showSubscription, setShowSubscription] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
@@ -198,8 +202,19 @@ function AppContent() {
       </header>
 
       <main className="p-4 pb-24">
+        {/* Notification d'installation : se referme comme n'importe quelle
+            notification, et revient à la prochaine ouverture. */}
+        <UpdateBanner />
+        <InstallBanner onOpen={() => setShowInstall(true)} />
+
         {tab === "dashboard" && can("dashboard") && (
-          <Dashboard products={products} sales={sales} expenses={expenses} stock={stock} />
+          <>
+            {/* Le résumé de la veille ouvre la journée, puis s'efface une fois
+                lu : l'accueil doit rester tourné vers l'activité en cours. */}
+            <DailyBrief restaurantId={restaurantId} />
+            <InstallCard onOpen={() => setShowInstall(true)} />
+            <Dashboard products={products} sales={sales} expenses={expenses} stock={stock} />
+          </>
         )}
         {tab === "products" && can("products") && (
           <ProductsTab products={products} onAdd={addProduct} onDelete={deleteProduct} canEdit={canEditCatalog} />
@@ -243,6 +258,13 @@ function AppContent() {
           />
         )}
       </main>
+
+      {showInstall && (
+        <InstallSheet
+          onClose={() => setShowInstall(false)}
+          onContinue={() => setShowInstall(false)}
+        />
+      )}
 
       {tab !== "assistant" && can("reports") && <FloatingAssistant restaurantId={restaurantId} />}
 
