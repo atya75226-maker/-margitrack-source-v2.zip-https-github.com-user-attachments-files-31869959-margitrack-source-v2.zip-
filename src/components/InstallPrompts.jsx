@@ -5,10 +5,13 @@ import { useAppUpdate, useInstallPrompt } from "../lib/pwa";
 /**
  * Deux points d'entrée vers l'installation, à l'intérieur de l'application.
  *
- * Une PWA s'installe une fois par appareil, jamais par compte : lorsqu'une
- * personne l'a installée, il n'y a plus rien à installer pour la suivante.
- * Ces composants s'effacent donc dans ce cas plutôt que d'afficher un bouton
- * qui ne peut rien faire.
+ * L'installation passe par la proposition du navigateur lui-même : un appui,
+ * et l'icône est sur l'écran d'accueil. Aucun écran intermédiaire.
+ *
+ * Quand le navigateur n'émet pas cette proposition — application déjà
+ * installée sur l'appareil, ou navigateur qui ne la prend pas en charge, tel
+ * Safari sur iPhone — ces composants s'effacent : un bouton qui n'installe
+ * rien, ou une marche à suivre à lire, vaut moins que rien du tout.
  */
 
 const DISMISS_KEY = "margitrack:install-banner-dismissed";
@@ -36,9 +39,9 @@ function rememberDismissal() {
  * Notification d'installation, affichée en haut de l'application. Se referme
  * comme n'importe quelle notification, et revient à la prochaine ouverture.
  */
-export function InstallBanner({ onOpen }) {
+export function InstallBanner() {
   const { palette } = usePreferences();
-  const { installed } = useInstallPrompt();
+  const { canInstall, promptInstall } = useInstallPrompt();
   const [hidden, setHidden] = useState(dismissedThisSession);
 
   const dismiss = useCallback(() => {
@@ -46,7 +49,7 @@ export function InstallBanner({ onOpen }) {
     setHidden(true);
   }, []);
 
-  if (installed || hidden) return null;
+  if (!canInstall || hidden) return null;
 
   return (
     <div
@@ -68,7 +71,7 @@ export function InstallBanner({ onOpen }) {
       </div>
 
       <button
-        onClick={onOpen}
+        onClick={promptInstall}
         className="shrink-0 rounded-full text-xs font-semibold text-white px-3.5 py-2"
         style={{ backgroundColor: "#7C5CFF" }}
       >
@@ -89,12 +92,12 @@ export function InstallBanner({ onOpen }) {
 
 /**
  * Accès permanent à l'installation depuis l'accueil : contrairement à la
- * notification, il ne se masque jamais tant que l'application n'est pas
- * installée. Chaque compte y a donc toujours accès.
+ * notification, il ne se masque jamais tant que le navigateur propose
+ * l'installation. Chaque compte y a donc toujours accès.
  */
-export function InstallCard({ onOpen }) {
+export function InstallCard() {
   const { palette } = usePreferences();
-  const { installed, platform } = useInstallPrompt();
+  const { canInstall, installed, promptInstall, platform } = useInstallPrompt();
 
   if (installed) {
     return (
@@ -114,9 +117,13 @@ export function InstallCard({ onOpen }) {
     );
   }
 
+  // Ni installable ni installée : le navigateur ne sait pas le faire (iPhone,
+  // par exemple). Rien à afficher — l'ajout se fait alors par son menu.
+  if (!canInstall) return null;
+
   return (
     <button
-      onClick={onOpen}
+      onClick={promptInstall}
       className="w-full rounded-2xl p-4 mb-3 flex items-center gap-3 text-left"
       style={{ backgroundColor: palette.card, border: `1px solid ${palette.line}` }}
     >
