@@ -69,7 +69,14 @@ console.log('\nJeton périmé, réseau coupé — la session ne doit pas être p
   verifier("l'écran de reconnexion s'affiche", /Reconnexion/i.test(texte), `→ ${texte.slice(0, 90)}`)
   verifier("le mot de passe n'est pas réclamé", !/Mot de passe oublié/i.test(texte))
   verifier("l'adresse reste celle demandée", new URL(page.url()).pathname === '/app', `→ ${page.url()}`)
-  verifier("l'explication et le bouton finissent par apparaître", /réseau qui manque/i.test(texte))
+
+  // L'explication n'arrive qu'après douze secondes : une reprise réussie est
+  // bien plus rapide, et annoncer une panne plus tôt pousse à recharger la
+  // page — ce qui fait justement perdre le jeton en cours de renouvellement.
+  await page.waitForTimeout(9000)
+  const tardif = await page.innerText('body')
+  verifier("l'explication finit par apparaître", /réseau qui manque/i.test(tardif))
+  verifier('le bouton ne recharge pas la page', /Réessayer maintenant/i.test(tardif))
   await context.close()
 }
 
@@ -103,6 +110,44 @@ console.log('\nJeton encore valable, réseau coupé — ouverture immédiate')
   const creerEnHaut = await entete.locator('[aria-label="Créer"]').count()
   verifier('plus aucun bouton « Créer » dans l\'entête', creerEnHaut === 0)
   verifier('la photo de compte reste en haut', (await entete.locator('a[href="/app/profil"]').count()) > 0)
+  await context.close()
+}
+
+console.log('\nStockage local refusé — les cookies prennent le relais')
+{
+  // Reproduit un WebView Android dont le stockage DOM est désactivé : c'est la
+  // configuration qui faisait perdre la session au moindre rechargement.
+  const context = await browser.newContext({ viewport: { width: 412, height: 915 } })
+  await context.route('**://*.supabase.co/**', (route) => route.abort('failed'))
+  const page = await context.newPage()
+  await page.addInitScript(() => {
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      get() { throw new DOMException('storage is disabled', 'SecurityError') },
+    })
+  })
+  await page.addInitScript(
+    ([key, valeur]) => {
+      document.cookie = `${key}=${encodeURIComponent(valeur)}; path=/; max-age=31536000; SameSite=Lax`
+    },
+    [KEY, JSON.stringify(sessionRangee({ expiresInSeconds: 1800 }))],
+  )
+
+  await page.goto(`${BASE}/diagnostic`, { waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(1500)
+  const diagnostic = await page.innerText('body')
+  verifier('le repli cookies est annoncé', /cookies \(repli\)/.test(diagnostic), `→ ${diagnostic.slice(0, 120)}`)
+  verifier('les jetons sont retrouvés', /Jetons présents sur l'appareil\s*oui/.test(diagnostic.replace(/\n/g, ' ')))
+
+  await page.goto(`${BASE}/app`, { waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(2000)
+  const app = await page.innerText('body')
+  verifier('la session survit sans stockage local', /tableau de bord/i.test(app), `→ ${app.slice(0, 90)}`)
+
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(2000)
+  const apres = await page.innerText('body')
+  verifier('elle survit aussi au rechargement', /tableau de bord/i.test(apres), `→ ${apres.slice(0, 90)}`)
   await context.close()
 }
 

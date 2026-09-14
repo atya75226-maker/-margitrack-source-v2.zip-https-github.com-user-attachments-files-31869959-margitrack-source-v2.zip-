@@ -24,6 +24,7 @@ import ScannerPage from './features/scanner/ScannerPage'
 import ProfilePage from './features/profile/ProfilePage'
 import SubscriptionPage from './features/profile/SubscriptionPage'
 import PublicProfilePage from './features/public/PublicProfilePage'
+import DiagnosticPage from './features/diagnostic/DiagnosticPage'
 
 function RequireAuth({ children }) {
   const { isAuthenticated, ready, reconnecting } = useAuth()
@@ -56,6 +57,7 @@ export default function App() {
             <Route path="/inscription" element={<SignUpPage />} />
             <Route path="/auth/callback" element={<AuthCallbackPage />} />
             <Route path="/c/:vaultId" element={<VaultAccessPage />} />
+            <Route path="/diagnostic" element={<DiagnosticPage />} />
 
             <Route
               path="/app"

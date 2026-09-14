@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { authStorage } from './authStorage'
 
 /**
  * Connexion au projet Supabase.
@@ -19,6 +20,10 @@ export const supabase = createClient(url, key, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
+    // Rangement maison : localStorage quand il fonctionne, cookies sinon.
+    // Sans ce repli, les navigateurs qui refusent le stockage DOM perdent la
+    // session au moindre rechargement de page (voir lib/authStorage.js).
+    storage: authStorage,
   },
 })
 
@@ -41,7 +46,7 @@ export const AUTH_STORAGE_KEY = `sb-${new URL(url).hostname.split('.')[0]}-auth-
  */
 export function readStoredSession() {
   try {
-    const brut = window.localStorage.getItem(AUTH_STORAGE_KEY)
+    const brut = authStorage.getItem(AUTH_STORAGE_KEY)
     if (!brut) return null
     const session = JSON.parse(brut)
     return session?.refresh_token ? session : null

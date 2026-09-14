@@ -1,21 +1,24 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button, Panel, Spinner } from './ui'
+import { useAuth } from '../state/AuthContext'
 
 /**
- * Écran affiché quand des jetons valides attendent dans le navigateur mais que le
+ * Écran affiché quand des jetons valides attendent sur l'appareil mais que le
  * serveur d'authentification n'a pas encore répondu.
  *
- * C'est le cas d'un réseau lent ou coupé au retour sur le site. Renvoyer vers
- * l'écran de connexion serait un mensonge — la session existe toujours — et
- * obligerait à ressaisir un mot de passe pour rien.
+ * Deux précautions y tiennent lieu de règle :
  *
- * Les premières secondes ne montrent qu'une attente : un renouvellement de jeton
- * réussi tient souvent en moins d'une seconde, et annoncer une panne à ce
- * moment-là inquiéterait pour rien. L'explication et le bouton n'arrivent que si
- * l'attente dure.
+ *  - ne rien proposer pendant les premières secondes. Un renouvellement de
+ *    jeton réussi tient souvent en moins d'une seconde, et annoncer une panne
+ *    à ce moment-là inquiète pour rien.
+ *  - ne jamais recharger la page pour réessayer. Le serveur remplace le jeton
+ *    de rafraîchissement à chaque renouvellement ; recharger pendant l'appel
+ *    fait perdre le jeton qu'il vient d'émettre, et cette fois la déconnexion
+ *    est définitive. Le bouton relance donc la reprise sur place.
  */
-export default function Reconnecting({ delaiAvantExplication = 4000 }) {
+export default function Reconnecting({ delaiAvantExplication = 12000 }) {
+  const { retryAuth } = useAuth()
   const [longue, setLongue] = useState(false)
 
   useEffect(() => {
@@ -33,14 +36,14 @@ export default function Reconnecting({ delaiAvantExplication = 4000 }) {
         {longue && (
           <>
             <p className="mt-1.5 text-sm leading-relaxed text-ink-500">
-              Vous êtes toujours connecté : c'est le réseau qui manque. Vérifiez votre connexion,
-              la reprise est automatique.
+              Vous êtes toujours connecté : c'est le réseau qui manque. La reprise est automatique —
+              évitez de recharger la page, cela interrompt la reconnexion en cours.
             </p>
-            <Button full className="mt-5" icon="refresh" onClick={() => window.location.reload()}>
+            <Button full className="mt-5" icon="refresh" onClick={retryAuth}>
               Réessayer maintenant
             </Button>
-            <Link to="/connexion" className="mt-3 block text-xs font-semibold text-ink-400 hover:text-ink-600">
-              Se connecter avec un autre compte
+            <Link to="/diagnostic" className="mt-3 block text-xs font-semibold text-ink-400 hover:text-ink-600">
+              Diagnostic de connexion
             </Link>
           </>
         )}

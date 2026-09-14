@@ -46,6 +46,10 @@ export function AuthProvider({ children }) {
   // serveur d'authentification est injoignable : ce n'est pas une déconnexion.
   const [reconnecting, setReconnecting] = useState(false)
   const reconnectTimer = useRef(null)
+  // Permet au bouton « Réessayer » de relancer la reprise sans recharger la page :
+  // un rechargement en plein renouvellement de jeton fait perdre le jeton tournant
+  // que le serveur vient d'émettre, et déconnecte alors pour de bon.
+  const relancerRef = useRef(() => {})
 
   const loadProfile = useCallback(async (authUser) => {
     if (!authUser) {
@@ -143,6 +147,7 @@ export function AuthProvider({ children }) {
       clearTimeout(reconnectTimer.current)
       reprendre()
     }
+    relancerRef.current = () => reprendre()
     window.addEventListener('online', relancer)
     document.addEventListener('visibilitychange', relancer)
 
@@ -176,6 +181,9 @@ export function AuthProvider({ children }) {
       listener.subscription.unsubscribe()
     }
   }, [loadProfile])
+
+  /** Relance la reprise de session à la demande, sans recharger la page. */
+  const retryAuth = useCallback(() => relancerRef.current(), [])
 
   const signUp = useCallback(async ({ firstName, lastName, email, phone, password }) => {
     const { data, error } = await supabase.auth.signUp({
@@ -234,11 +242,11 @@ export function AuthProvider({ children }) {
 
   const value = useMemo(
     () => ({
-      user, session, ready, reconnecting,
+      user, session, ready, reconnecting, retryAuth,
       signUp, signIn, signInWithGoogle, signOut, updateUser,
       isAuthenticated: !!session,
     }),
-    [user, session, ready, reconnecting, signUp, signIn, signInWithGoogle, signOut, updateUser],
+    [user, session, ready, reconnecting, retryAuth, signUp, signIn, signInWithGoogle, signOut, updateUser],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
