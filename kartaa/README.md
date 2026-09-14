@@ -30,6 +30,7 @@ stockage de fichiers et règles d'accès côté serveur.
 | QR Code du coffre → écran de déverrouillage | fonctionnel |
 | Statistiques (scans, stockage, classement) | fonctionnel |
 | Réseaux et liens | **plusieurs comptes par plateforme**, nommés, réordonnables |
+| Scanner de QR Codes | universel, au centre de la barre de navigation |
 | Offre unique Pro — 5 000 FCFA / mois | limites **appliquées en base**, pas seulement dans l'interface |
 | Langues français / anglais | détection navigateur + choix manuel ; le prix reste en FCFA |
 | Quotas de stockage | appliqués par déclencheur ; le plan Supabase lui-même plafonne l'espace total du projet (1 Go sur l'offre gratuite) |
@@ -90,6 +91,23 @@ formulaire d'afficher un premier champ par plateforme sans obliger à le remplir
 Sur la carte, une icône par plateforme, sans doublon. Sur le mini-site, les liens
 sont groupés par plateforme avec le nom donné par l'utilisateur — « Compte
 personnel », « Ma boutique » — chacun cliquable.
+
+### Le scanner
+
+Le bouton central de la barre de navigation ouvre un scanner qui lit **n'importe
+quel** QR Code, pas seulement ceux de Kartaa. Deux moteurs : `BarcodeDetector`
+quand le navigateur l'a (Chrome sur Android), sinon `jsQR` chargé à la demande —
+ce qui couvre Safari sans alourdir le reste de l'application.
+
+Le contenu lu décide de la suite : une carte Kartaa ouvre son mini-site sans
+quitter l'application, un coffre ouvre son écran de déverrouillage, un site
+extérieur est proposé à l'ouverture, un numéro devient appelable, et tout autre
+texte reste copiable. Si la caméra est refusée ou absente, on peut ouvrir une
+photo du QR Code. Les derniers scans sont conservés sur l'appareil.
+
+La création de carte et de coffre, qui occupait ce bouton central, a été
+déplacée dans l'en-tête mobile — elle reste accessible partout ailleurs depuis
+le tableau de bord et les listes.
 
 ### Une seule offre payante
 
@@ -253,6 +271,7 @@ documentées dans le schéma.
 | `/app` | Tableau de bord |
 | `/app/cartes`, `/app/cartes/nouvelle`, `/app/cartes/:id` | Cartes |
 | `/app/coffres`, `/app/coffres/nouveau`, `/app/coffres/:id` | Coffres |
+| `/app/scanner` | Scanner de QR Codes |
 | `/app/statistiques`, `/app/profil` | Statistiques et profil |
 | `/app/abonnement` | **Page unique d'abonnement** — tous les chemins y mènent |
 | `/c/:vaultId` | **Cible du QR Code d'un coffre** — déverrouillage |
@@ -293,6 +312,16 @@ mot de passe ne déchiffre rien, le vérificateur détenu par le serveur ne perm
 pas d'ouvrir le coffre, un chiffré modifié est rejeté, le code de récupération
 ouvre le même coffre, et une réinitialisation laisse les fichiers déjà chiffrés
 lisibles. C'est le test à relancer après toute modification du chiffrement.
+
+### Vérification du scanner (hors ligne)
+
+```bash
+npm run test:scanner
+```
+
+Génère de vrais QR Codes, les relit avec le moteur du navigateur et vérifie
+l'aiguillage : carte, coffre, page interne, site extérieur, numéro, texte libre
+et fiche contact.
 
 ### Test de bout en bout
 

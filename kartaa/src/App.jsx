@@ -19,6 +19,7 @@ import VaultCreatePage from './features/vault/VaultCreatePage'
 import VaultDetailPage from './features/vault/VaultDetailPage'
 import VaultAccessPage from './features/vault/VaultAccessPage'
 import StatsPage from './features/stats/StatsPage'
+import ScannerPage from './features/scanner/ScannerPage'
 import ProfilePage from './features/profile/ProfilePage'
 import SubscriptionPage from './features/profile/SubscriptionPage'
 import PublicProfilePage from './features/public/PublicProfilePage'
@@ -67,6 +68,7 @@ export default function App() {
               <Route path="coffres" element={<VaultsPage />} />
               <Route path="coffres/nouveau" element={<VaultCreatePage />} />
               <Route path="coffres/:vaultId" element={<VaultDetailPage />} />
+              <Route path="scanner" element={<ScannerPage />} />
               <Route path="statistiques" element={<StatsPage />} />
               <Route path="profil" element={<ProfilePage />} />
               <Route path="abonnement" element={<SubscriptionPage />} />

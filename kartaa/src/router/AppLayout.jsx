@@ -11,10 +11,14 @@ import { initialsOf } from '../lib/format'
 const NAV = [
   { to: '/app', label: 'Accueil', icon: 'home', end: true },
   { to: '/app/cartes', label: 'Mes cartes', icon: 'card' },
+  { to: '/app/scanner', label: 'Scanner', icon: 'scan' },
   { to: '/app/coffres', label: 'Mes coffres', icon: 'vault' },
   { to: '/app/statistiques', label: 'Statistiques', icon: 'chart' },
   { to: '/app/profil', label: 'Profil', icon: 'user' },
 ]
+
+/** Les quatre entrées qui encadrent le scanner, en bas de l'écran mobile. */
+const NAV_MOBILE = NAV.filter((item) => item.to !== '/app/scanner' && item.to !== '/app/profil')
 
 export default function AppLayout() {
   const { user } = useAuth()
@@ -70,6 +74,14 @@ export default function AppLayout() {
           </Link>
           <div className="flex items-center gap-2">
             {pro && <Badge tone="gold" icon="crown">{t('plan.pro')}</Badge>}
+            <button
+              type="button"
+              onClick={() => setCreateOpen(true)}
+              className="grid h-9 w-9 place-items-center rounded-xl bg-brand-600 text-white shadow-soft transition-transform active:scale-95"
+              aria-label="Créer"
+            >
+              <Icon name="plus" size={19} />
+            </button>
             <Link to="/app/profil">
               <Avatar src={user?.avatarUrl} initials={initialsOf(user?.firstName, user?.lastName)} size={36} />
             </Link>
@@ -87,18 +99,21 @@ export default function AppLayout() {
       {/* --------------------------------------------- navigation mobile */}
       <nav className="safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-ink-100 bg-white/95 backdrop-blur lg:hidden">
         <div className="mx-auto grid max-w-lg grid-cols-5 items-end px-2 pb-1.5 pt-2">
-          {NAV.slice(0, 2).map((item) => (
+          {NAV_MOBILE.slice(0, 2).map((item) => (
             <MobileLink key={item.to} item={item} />
           ))}
-          <button
-            type="button"
-            onClick={() => setCreateOpen(true)}
-            className="mx-auto -mt-6 grid h-14 w-14 place-items-center rounded-2xl bg-brand-600 text-white shadow-lift transition-transform active:scale-95"
-            aria-label="Créer"
+          <NavLink
+            to="/app/scanner"
+            className={({ isActive }) =>
+              `mx-auto -mt-6 grid h-14 w-14 place-items-center rounded-2xl text-white shadow-lift transition-transform active:scale-95 ${
+                isActive ? 'bg-ink-900 ring-4 ring-brand-100' : 'bg-brand-600'
+              }`
+            }
+            aria-label="Scanner un QR Code"
           >
-            <Icon name="plus" size={26} />
-          </button>
-          {NAV.slice(2, 4).map((item) => (
+            <Icon name="scan" size={26} />
+          </NavLink>
+          {NAV_MOBILE.slice(2, 4).map((item) => (
             <MobileLink key={item.to} item={item} />
           ))}
         </div>

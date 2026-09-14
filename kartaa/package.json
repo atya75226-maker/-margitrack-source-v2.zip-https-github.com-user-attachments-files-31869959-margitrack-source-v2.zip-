@@ -9,12 +9,14 @@
     "preview": "vite preview",
     "lint": "eslint src scripts",
     "test:crypto": "node scripts/crypto-check.mjs",
+    "test:scanner": "node scripts/scanner-check.mjs",
     "test:e2e": "node scripts/e2e-smoke.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",
     "html-to-image": "^1.11.11",
     "jspdf": "^2.5.1",
+    "jsqr": "^1.4.0",
     "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -22,9 +24,10 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.19",
     "eslint": "^9.11.0",
     "globals": "^15.9.0",
-    "autoprefixer": "^10.4.19",
+    "pngjs": "^7.0.0",
     "postcss": "^8.4.39",
     "tailwindcss": "^3.4.4",
     "vite": "^5.3.1"
