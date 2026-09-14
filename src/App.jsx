@@ -19,7 +19,6 @@ import { NAV_ICONS } from "./components/ui/Icons";
 import { Dashboard } from "./components/Dashboard";
 import { DailyBrief } from "./components/DailyBrief";
 import { InstallBanner, InstallCard, UpdateBanner } from "./components/InstallPrompts";
-import { InstallSheet } from "./components/InstallSheet";
 import { ProductsTab } from "./components/ProductsTab";
 import { SalesTab } from "./components/SalesTab";
 import { ExpensesTab } from "./components/ExpensesTab";
@@ -47,7 +46,6 @@ const NAV = [
 ];
 
 function AppContent() {
-  const [showInstall, setShowInstall] = useState(false);
   const [showSubscription, setShowSubscription] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
@@ -205,14 +203,14 @@ function AppContent() {
         {/* Notification d'installation : se referme comme n'importe quelle
             notification, et revient à la prochaine ouverture. */}
         <UpdateBanner />
-        <InstallBanner onOpen={() => setShowInstall(true)} />
+        <InstallBanner />
 
         {tab === "dashboard" && can("dashboard") && (
           <>
             {/* Le résumé de la veille ouvre la journée, puis s'efface une fois
                 lu : l'accueil doit rester tourné vers l'activité en cours. */}
             <DailyBrief restaurantId={restaurantId} />
-            <InstallCard onOpen={() => setShowInstall(true)} />
+            <InstallCard />
             <Dashboard products={products} sales={sales} expenses={expenses} stock={stock} />
           </>
         )}
@@ -258,13 +256,6 @@ function AppContent() {
           />
         )}
       </main>
-
-      {showInstall && (
-        <InstallSheet
-          onClose={() => setShowInstall(false)}
-          onContinue={() => setShowInstall(false)}
-        />
-      )}
 
       {tab !== "assistant" && can("reports") && <FloatingAssistant restaurantId={restaurantId} />}
 

@@ -170,40 +170,6 @@ export function detectPlatform() {
   return { id: "desktop", label: "votre navigateur" };
 }
 
-/** Marche à suivre manuelle, quand le navigateur ne propose rien. */
-export const MANUAL_STEPS = {
-  ios: [
-    "Appuyez sur le bouton Partager, en bas de Safari",
-    "Faites défiler et choisissez « Sur l'écran d'accueil »",
-    "Appuyez sur « Ajouter »",
-  ],
-  android: [
-    "Appuyez sur le menu ⋮ en haut à droite",
-    "Choisissez « Installer l'application » ou « Ajouter à l'écran d'accueil »",
-    "Confirmez avec « Installer »",
-  ],
-  samsung: [
-    "Appuyez sur le menu ☰ en bas à droite",
-    "Choisissez « Ajouter la page à », puis « Écran d'accueil »",
-    "Confirmez avec « Ajouter »",
-  ],
-  firefox: [
-    "Appuyez sur le menu ⋮",
-    "Choisissez « Installer » ou « Ajouter à l'écran d'accueil »",
-    "Confirmez",
-  ],
-  desktop: [
-    "Cliquez sur l'icône d'installation à droite de la barre d'adresse",
-    "Ou ouvrez le menu ⋮ puis « Installer Margitrack »",
-    "Confirmez avec « Installer »",
-  ],
-  other: [
-    "Ouvrez le menu de votre navigateur",
-    "Cherchez « Installer l'application » ou « Ajouter à l'écran d'accueil »",
-    "Confirmez",
-  ],
-};
-
 /**
  * Signale qu'une nouvelle version est prête et permet de l'appliquer.
  *
@@ -267,7 +233,6 @@ export function useInstallPrompt() {
     installed,
     promptInstall,
     platform,
-    manualSteps: MANUAL_STEPS[platform.id] ?? MANUAL_STEPS.other,
     iosHint: platform.id === "ios" && !installed,
   };
 }
