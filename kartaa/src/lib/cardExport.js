@@ -15,23 +15,36 @@ async function render(node, format) {
   return format === 'jpg' ? toJpeg(node, { ...options, quality: 0.95 }) : toPng(node, options)
 }
 
-function fileNameOf(card, extension) {
+const SUFFIXE_FACE = { front: 'recto', back: 'verso' }
+
+function fileNameOf(card, extension, side = null) {
   const p = card.profile || {}
   const base = [p.firstName, p.lastName].filter(Boolean).join('-').toLowerCase() || card.slug || 'carte'
-  return `carte-${base}.${extension}`
+  const face = side ? `-${SUFFIXE_FACE[side] || side}` : ''
+  return `carte-${base}${face}.${extension}`
 }
 
 /**
- * Exporte la carte. `nodes` contient le recto et (facultatif) le verso :
- * le PDF reprend les deux faces, le PNG/JPG exporte le recto.
+ * Exporte la carte.
+ *
+ * `nodes` contient les deux faces, rendues hors écran à leur taille réelle.
+ * `side` dit laquelle exporter en image — c'est la face affichée à l'écran, de
+ * sorte que le fichier obtenu soit exactement celui qu'on regardait.
+ *
+ * Le PDF, lui, reprend toujours les deux faces : une carte imprimée en a deux.
+ *
+ * Auparavant, PNG et JPG rendaient `front` quelle que soit la face choisie :
+ * demander le verso téléchargeait le recto, sans erreur ni signe visible.
  */
-export async function exportCard(card, nodes, format = 'png') {
+export async function exportCard(card, nodes, format = 'png', side = 'front') {
   const { front, back } = nodes
   if (!front) throw new Error("La carte n'est pas prête à être exportée.")
 
   if (format === 'png' || format === 'jpg') {
-    const dataUrl = await render(front, format)
-    downloadUrl(dataUrl, fileNameOf(card, format))
+    const face = side === 'back' ? back : front
+    if (!face) throw new Error("Cette face de la carte n'est pas prête à être exportée.")
+    const dataUrl = await render(face, format)
+    downloadUrl(dataUrl, fileNameOf(card, format, side))
     return
   }
 
