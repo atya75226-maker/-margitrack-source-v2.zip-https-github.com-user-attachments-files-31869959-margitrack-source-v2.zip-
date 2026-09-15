@@ -240,13 +240,34 @@ export function AuthProvider({ children }) {
     return updated
   }, [user])
 
+  /**
+   * Photo du compte — celle que reprennent les cartes et le mini-site.
+   *
+   * Elle est écrite à deux endroits parce qu'elle est lue à deux moments : la
+   * table `profiles` fait foi, et les métadonnées du jeton servent à l'ouverture
+   * immédiate, avant même que le profil soit chargé. Les laisser diverger ferait
+   * réapparaître l'ancienne photo pendant une seconde au démarrage suivant.
+   */
+  const updateAvatar = useCallback(async (url) => {
+    const valeur = url || ''
+    const updated = await repo.users.update(user.id, { avatarUrl: valeur })
+    setUser(updated)
+    try {
+      await supabase.auth.updateUser({ data: { avatar_url: valeur, picture: valeur } })
+    } catch {
+      // Les métadonnées se resynchroniseront à la prochaine connexion : le
+      // profil, lui, est déjà enregistré, et c'est lui qui fait foi.
+    }
+    return updated
+  }, [user])
+
   const value = useMemo(
     () => ({
       user, session, ready, reconnecting, retryAuth,
-      signUp, signIn, signInWithGoogle, signOut, updateUser,
+      signUp, signIn, signInWithGoogle, signOut, updateUser, updateAvatar,
       isAuthenticated: !!session,
     }),
-    [user, session, ready, reconnecting, retryAuth, signUp, signIn, signInWithGoogle, signOut, updateUser],
+    [user, session, ready, reconnecting, retryAuth, signUp, signIn, signInWithGoogle, signOut, updateUser, updateAvatar],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

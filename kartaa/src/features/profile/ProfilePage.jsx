@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Avatar, Badge, Button, Field, Input, Modal, Panel, Progress, SectionTitle, Toggle } from '../../components/ui'
 import { InstallPanel } from '../../components/InstallApp'
@@ -7,6 +7,7 @@ import {
   notificationsPrisesEnCharge, notificationsSouhaitees,
 } from '../../lib/notifications'
 import { Icon } from '../../components/ui/Icons'
+import { publicImagePath, removeImage, uploadImage } from '../../lib/storage'
 import { useAuth } from '../../state/AuthContext'
 import { useData } from '../../state/DataContext'
 import { useToast } from '../../state/ToastContext'
@@ -15,7 +16,7 @@ import { useTranslation, LANGUAGES } from '../../i18n'
 import { formatBytes, initialsOf } from '../../lib/format'
 
 export default function ProfilePage() {
-  const { user, updateUser, signOut } = useAuth()
+  const { user, updateUser, updateAvatar, signOut } = useAuth()
   const { stats } = useData()
   const toast = useToast()
   const navigate = useNavigate()
@@ -43,15 +44,17 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex items-center gap-4">
+      <header className="flex flex-wrap items-center gap-4">
         <Avatar src={user.avatarUrl} initials={initialsOf(user.firstName, user.lastName)} size={64} />
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h1 className="truncate font-display text-2xl font-extrabold text-ink-900">
             {user.firstName} {user.lastName}
           </h1>
           <p className="truncate text-sm text-ink-500">{user.email}</p>
         </div>
       </header>
+
+      <PhotoDuCompte user={user} onChange={updateAvatar} />
 
       <Panel>
         <SectionTitle icon="user" title="Mes informations" />
@@ -215,6 +218,93 @@ function PanneauNotifications() {
           setSouhaitees(obtenu === 'granted')
         }}
       />
+    </Panel>
+  )
+}
+
+/**
+ * Photo du compte.
+ *
+ * Une seule photo pour tout le produit : l'application la montre en haut, le
+ * mini-site l'affiche, et les cartes la reprennent automatiquement tant qu'on
+ * ne leur en a pas donné une autre. C'est ce qui manquait : la photo venue de
+ * Google ne pouvait être ni changée ni remplacée, et rien ne permettait d'en
+ * ajouter une sans passer par une carte.
+ */
+function PhotoDuCompte({ user, onChange }) {
+  const fileRef = useRef(null)
+  const [busy, setBusy] = useState(false)
+  const toast = useToast()
+  const photo = user.avatarUrl || ''
+
+  const choisir = async (file) => {
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      toast.error('Choisissez une image.')
+      return
+    }
+    setBusy(true)
+    try {
+      const { url } = await uploadImage(file, { maxSize: 700 })
+      // L'ancienne image n'est supprimée qu'une fois la nouvelle enregistrée :
+      // un échec en cours de route laisse le compte avec une photo, jamais sans.
+      const ancien = publicImagePath(photo)
+      await onChange(url)
+      if (ancien) await removeImage(ancien)
+      toast.success('Photo mise à jour. Vos cartes l\u2019utilisent déjà.')
+    } catch (error) {
+      toast.error(error.message || "Impossible d'envoyer cette image.")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const retirer = async () => {
+    setBusy(true)
+    try {
+      const ancien = publicImagePath(photo)
+      await onChange('')
+      if (ancien) await removeImage(ancien)
+      toast.success('Photo retirée.')
+    } catch (error) {
+      toast.error(error.message || 'Suppression impossible.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Panel>
+      <SectionTitle icon="camera" title="Ma photo" />
+      <div className="flex flex-wrap items-center gap-5">
+        <Avatar src={photo} initials={initialsOf(user.firstName, user.lastName)} size={80} />
+        <div className="min-w-0 flex-1">
+          <p className="hint">
+            Elle apparaît sur vos cartes et sur votre mini-site public. Sans photo, ce sont vos initiales
+            qui s'affichent.
+          </p>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(event) => {
+              choisir(event.target.files?.[0])
+              event.target.value = ''
+            }}
+          />
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" icon="camera" loading={busy} onClick={() => fileRef.current?.click()}>
+              {photo ? 'Changer ma photo' : 'Ajouter une photo'}
+            </Button>
+            {photo && (
+              <Button size="sm" variant="ghost" icon="trash" disabled={busy} onClick={retirer}>
+                Retirer
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
     </Panel>
   )
 }

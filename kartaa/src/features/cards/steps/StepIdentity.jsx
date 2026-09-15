@@ -5,13 +5,19 @@ import { Icon } from '../../../components/ui/Icons'
 import { uploadImage, removeImage } from '../../../lib/storage'
 import { initialsOf } from '../../../lib/format'
 import { useToast } from '../../../state/ToastContext'
+import { useAuth } from '../../../state/AuthContext'
 
 export default function StepIdentity({ draft, update, errors }) {
   const profile = draft.profile
   const fileRef = useRef(null)
   const [busy, setBusy] = useState(false)
-  const photoUrl = profile.photoUrl || null
   const toast = useToast()
+  const { user } = useAuth()
+  // Par défaut, la carte reprend la photo du compte : personne n'a à la redonner.
+  // Celle choisie ici ne sert qu'à en mettre une autre sur cette carte précise.
+  const photoDuCompte = user?.avatarUrl || null
+  const photoPropre = profile.photoUrl || null
+  const photoAffichee = photoPropre || photoDuCompte
 
   const setField = (key) => (event) => update({ profile: { ...profile, [key]: event.target.value } })
 
@@ -38,10 +44,16 @@ export default function StepIdentity({ draft, update, errors }) {
     <div className="space-y-5">
       <Panel>
         <div className="flex flex-wrap items-center gap-5">
-          <Avatar src={photoUrl} initials={initialsOf(profile.firstName, profile.lastName)} size={88} />
+          <Avatar src={photoAffichee} initials={initialsOf(profile.firstName, profile.lastName)} size={88} />
           <div className="min-w-0 flex-1">
-            <p className="font-display text-sm font-bold text-ink-900">Photo de profil</p>
-            <p className="mt-1 hint">Une photo nette, cadrée sur le visage. Elle apparaît sur la carte et le mini-site.</p>
+            <p className="font-display text-sm font-bold text-ink-900">Photo</p>
+            <p className="mt-1 hint">
+              {photoPropre
+                ? 'Cette carte utilise une photo qui lui est propre. La retirer fait revenir celle de votre compte.'
+                : photoDuCompte
+                  ? 'La photo de votre compte est utilisée. Vous pouvez en choisir une autre pour cette carte seulement.'
+                  : 'Une photo nette, cadrée sur le visage. Elle apparaît sur la carte et le mini-site.'}
+            </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <input
                 ref={fileRef}
@@ -54,7 +66,7 @@ export default function StepIdentity({ draft, update, errors }) {
                 }}
               />
               <Button size="sm" variant="outline" icon="camera" loading={busy} onClick={() => fileRef.current?.click()}>
-                {profile.photoUrl ? 'Changer' : 'Ajouter une photo'}
+                {photoPropre ? 'Changer' : photoDuCompte ? 'Une autre photo pour cette carte' : 'Ajouter une photo'}
               </Button>
               {profile.photoUrl && (
                 <Button size="sm" variant="ghost" icon="trash" onClick={async () => {

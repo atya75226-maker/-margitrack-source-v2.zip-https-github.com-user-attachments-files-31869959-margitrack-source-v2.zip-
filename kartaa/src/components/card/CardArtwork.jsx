@@ -99,6 +99,27 @@ function skinOf(template, theme) {
 }
 
 /**
+ * Photo du propriétaire.
+ *
+ * Une image indisponible — lien expiré, fichier supprimé, réseau coupé — ne
+ * doit pas laisser un cadre vide ou une icône de fichier cassé sur une carte
+ * qu'on va imprimer : elle s'efface, et la carte reste propre.
+ */
+function Photo({ url, borderColor }) {
+  const [echec, setEchec] = useState(false)
+  if (!url || echec) return null
+  return (
+    <img
+      src={url}
+      alt=""
+      onError={() => setEchec(true)}
+      style={{ width: 104, height: 104, border: `3px solid ${borderColor}` }}
+      className="mb-7 rounded-full object-cover"
+    />
+  )
+}
+
+/**
  * Le logo Kartaa, dessiné ici plutôt qu'importé : `html-to-image` doit pouvoir le
  * rasteriser sans dépendre d'un fichier externe, et chaque instance a son propre
  * identifiant de dégradé pour ne pas perdre son fond quand plusieurs cartes coexistent.
@@ -214,15 +235,8 @@ function Back({ card, theme, qr, photoUrl, branded = true }) {
       <div className="relative flex h-full items-center gap-12" style={{ padding: CARD_SAFE }}>
         {/* ------------------------------------------------ identité */}
         <div className="flex min-w-0 flex-1 flex-col justify-center">
-          {/* La photo n'apparaît que si le profil en possède déjà une : rien à saisir en plus. */}
-          {photoUrl && (
-            <img
-              src={photoUrl}
-              alt=""
-              style={{ width: 104, height: 104, border: `3px solid ${skin.accent}` }}
-              className="mb-7 rounded-full object-cover"
-            />
-          )}
+          {/* La photo vient du profil déjà renseigné : rien à saisir en plus. */}
+          <Photo url={photoUrl} borderColor={skin.accent} />
           <h1 style={{ fontSize: nameSize, fontWeight: 800, lineHeight: 1.06, letterSpacing: '-.015em' }}>{fullName}</h1>
           <div style={{ background: skin.accent }} className="mt-6 h-1 w-20 rounded-full" />
           {profession && (

@@ -4,4 +4,4 @@
  */
 export * as repo from './supabase.adapter'
 export { notifyChange } from './supabase.adapter'
-export { uploadImage, removeImage, toDataUrl } from './assets'
+export { uploadImage, removeImage, publicImagePath, toDataUrl } from './assets'

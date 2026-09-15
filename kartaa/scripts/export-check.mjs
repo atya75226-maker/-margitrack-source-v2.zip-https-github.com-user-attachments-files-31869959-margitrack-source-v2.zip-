@@ -19,6 +19,32 @@ const KEY = 'sb-wadapjshbdjkjrfnsnyr-auth-token'
 const CARTE = '33333333-3333-3333-3333-333333333333'
 const COMPTE = '11111111-1111-1111-1111-111111111111'
 
+/**
+ * Photo de test : un carré d'une couleur qu'on ne trouve nulle part ailleurs
+ * dans la carte. La compter dans le fichier produit prouve que la photo du
+ * compte est bien arrivée jusqu'au téléchargement, et pas seulement à l'écran.
+ */
+const PHOTO_URL = 'https://photos.exemple.test/moi.png'
+const PHOTO_ROSE = { r: 255, g: 0, b: 255 }
+const PHOTO_PNG = (() => {
+  const png = new PNG({ width: 240, height: 240 })
+  for (let i = 0; i < png.data.length; i += 4) {
+    png.data[i] = PHOTO_ROSE.r
+    png.data[i + 1] = PHOTO_ROSE.g
+    png.data[i + 2] = PHOTO_ROSE.b
+    png.data[i + 3] = 255
+  }
+  return PNG.sync.write(png)
+})()
+
+function comptePhoto(png) {
+  let total = 0
+  for (let i = 0; i < png.data.length; i += 4) {
+    if (png.data[i] > 230 && png.data[i + 1] < 40 && png.data[i + 2] > 230) total += 1
+  }
+  return total
+}
+
 const echecs = []
 function verifier(nom, condition, detail = '') {
   if (condition) console.log(`  ok   ${nom}`)
@@ -81,7 +107,13 @@ const context = await browser.newContext({
 await context.route('**://*.supabase.co/**', (route) => route.abort('failed'))
 await context.route('**/rest/v1/profiles*', (route) => json(route, {
   id: COMPTE, first_name: 'Awa', last_name: 'Diallo', email: 'awa@example.com',
-  phone: '', avatar_url: '', plan: 'pro',
+  phone: '', avatar_url: PHOTO_URL, plan: 'pro',
+}))
+await context.route(PHOTO_URL, (route) => route.fulfill({
+  status: 200,
+  contentType: 'image/png',
+  headers: { 'Access-Control-Allow-Origin': '*' },
+  body: PHOTO_PNG,
 }))
 await context.route('**/rest/v1/cards*', (route) => json(route, carte))
 await context.route('**/rest/v1/social_links*', (route) => json(route, [
@@ -184,11 +216,20 @@ verifier('le QR Code du verso est lisible', qrVerso !== null)
 verifier('le QR Code du verso ouvre le profil public de production',
   qrVerso === 'https://kartaa-eight.vercel.app/awa-diallo', `→ ${qrVerso}`)
 
+// La photo du compte doit se retrouver sur le verso — la carte n'en a aucune
+// qui lui soit propre, elle reprend donc celle du profil.
+const photoVerso = comptePhoto(imageVerso.png)
+verifier('le verso téléchargé contient la photo du compte', photoVerso > 20000,
+  `→ ${photoVerso} pixels`)
+verifier('le recto ne porte pas la photo du propriétaire', comptePhoto(imageRecto.png) === 0)
+
 // Le contenu du verso doit correspondre à ce que l'écran affiche.
 await page.click('button:has-text("Verso")')
 await page.waitForTimeout(800)
 const capture = PNG.sync.read(await page.locator('.shadow-lift').first().screenshot())
 const versoAffiche = richesse(capture)
+verifier('la photo est aussi visible dans l’aperçu', comptePhoto(capture) > 500,
+  `→ ${comptePhoto(capture)} pixels à l’écran`)
 verifier('le verso affiché et le verso téléchargé se ressemblent',
   Math.abs(versoAffiche.varies - richesseVerso.varies) < 0.25,
   `→ écran ${(versoAffiche.varies * 100).toFixed(1)} %, fichier ${(richesseVerso.varies * 100).toFixed(1)} %`)

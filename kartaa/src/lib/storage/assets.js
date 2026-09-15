@@ -41,6 +41,22 @@ export async function uploadImage(file, { maxSize = 1024, quality = 0.86 } = {})
   return { path, url: data.publicUrl, size: blob.size }
 }
 
+/**
+ * Retrouve le chemin d'une image de notre espace public à partir de son URL.
+ *
+ * Sert à supprimer l'ancien fichier quand on en téléverse un nouveau : sans
+ * lui, chaque changement de photo laisserait un fichier orphelin. Une image
+ * hébergée ailleurs (la photo Google d'un compte, par exemple) ne nous
+ * appartient pas : on renvoie alors null, et rien n'est supprimé.
+ */
+export function publicImagePath(url) {
+  if (!url) return null
+  const marqueur = `/storage/v1/object/public/${BUCKET}/`
+  const index = url.indexOf(marqueur)
+  if (index === -1) return null
+  return decodeURIComponent(url.slice(index + marqueur.length).split('?')[0]) || null
+}
+
 export async function removeImage(path) {
   if (!path) return
   await supabase.storage.from(BUCKET).remove([path])
