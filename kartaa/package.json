@@ -15,7 +15,8 @@
     "test:pwa": "node scripts/pwa-check.mjs",
     "test:plan": "node scripts/plan-check.mjs",
     "test:export": "node scripts/export-check.mjs",
-    "test:photo": "node scripts/photo-check.mjs"
+    "test:photo": "node scripts/photo-check.mjs",
+    "test:biometrie": "node scripts/biometrie-check.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",
