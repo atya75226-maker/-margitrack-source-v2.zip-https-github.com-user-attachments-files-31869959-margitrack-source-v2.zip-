@@ -7,6 +7,8 @@ import { CardArtwork, CardScaler } from '../../components/card/CardArtwork'
 import { useQrCode } from '../../hooks/useCardAssets'
 import { DEMO_CARDS } from './demoCards'
 import { useAuth } from '../../state/AuthContext'
+import { useModeInstallation } from '../../components/InstallApp'
+import { proposerInstallation } from '../../lib/pwa'
 
 const FEATURES = [
   {
@@ -67,6 +69,7 @@ export default function LandingPage() {
       <Pricing />
       <Faq />
       <FinalCta />
+      <InstallSection />
       <Footer />
     </div>
   )
@@ -558,6 +561,66 @@ function FinalCta() {
               J'ai déjà un compte
             </Button>
           </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/**
+ * Installation depuis la page publique.
+ *
+ * L'installation ne doit pas dépendre d'un compte : quelqu'un qui découvre le
+ * site doit pouvoir poser l'application sur son écran d'accueil tout de suite.
+ * Le bloc disparaît de lui-même une fois l'application installée.
+ */
+function InstallSection() {
+  const mode = useModeInstallation()
+  const [busy, setBusy] = useState(false)
+  if (mode === 'installee') return null
+
+  return (
+    <section className="border-t border-ink-100 bg-ink-50 py-12">
+      <div className="container-app">
+        <div className="mx-auto max-w-xl text-center">
+          <span className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-brand-600 text-white">
+            <Icon name="download" size={24} />
+          </span>
+          <h2 className="font-display text-2xl font-extrabold text-ink-900">
+            Installez {APP.name} sur votre téléphone
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-ink-500">
+            Depuis votre navigateur, sans magasin d'applications. Elle s'ouvre en plein écran et
+            garde votre session.
+          </p>
+
+          {mode === 'native' && (
+            <Button
+              size="lg"
+              icon="download"
+              className="mt-6"
+              loading={busy}
+              onClick={async () => {
+                setBusy(true)
+                try {
+                  await proposerInstallation()
+                } finally {
+                  setBusy(false)
+                }
+              }}
+            >
+              Installer l'application
+            </Button>
+          )}
+
+          {mode !== 'native' && (
+            <p className="mt-6 inline-flex max-w-md rounded-2xl bg-white p-4 text-left text-sm leading-relaxed text-ink-600 shadow-soft">
+              <Icon name="info" size={18} className="mr-2.5 mt-0.5 shrink-0 text-brand-600" />
+              {mode === 'ios'
+                ? 'Sur iPhone : touchez Partager en bas de Safari, puis « Sur l’écran d’accueil ».'
+                : 'Ouvrez le menu de votre navigateur (⋮ ou ≡), puis « Installer l’application » ou « Ajouter à l’écran d’accueil ».'}
+            </p>
+          )}
         </div>
       </div>
     </section>
