@@ -34,6 +34,10 @@ export default function PublicProfilePage() {
           sessionStorage.setItem(key, '1')
           await repo.cards.registerScan(found.slug, 'qr')
         }
+        // L'ouverture est comptée à chaque visite, le scan une seule fois par
+        // session : revenir sur la page n'est pas un nouveau scan, mais c'est
+        // bien une visite de plus.
+        repo.cards.registerEvent(found.slug, 'view')
       }
     })
     return () => {
@@ -73,7 +77,17 @@ export default function PublicProfilePage() {
   const website = activeLinks(card.socialLinks).find((link) => link.platform === 'website')
   const branded = card.ownerPlan !== 'vip'
 
+  /**
+   * Signale une interaction au propriétaire de la carte.
+   *
+   * Ce qui est enregistré : le type d'action et, pour un réseau social, la
+   * plateforme. Jamais qui a cliqué — il n'y a ni compte, ni identifiant, ni
+   * adresse à rattacher au visiteur d'un mini-site public.
+   */
+  const suivre = (kind, detail = null) => repo.cards.registerEvent(card.slug, kind, detail)
+
   const addToContacts = async () => {
+    suivre('vcard')
     const photo = await toDataUrl(p.photoUrl)
     downloadVCard(card, photo)
     toast.success('Fiche contact téléchargée.')
@@ -109,7 +123,14 @@ export default function PublicProfilePage() {
           <Panel className="!p-4">
             <div className="grid gap-2.5">
               {p.phone && (
-                <ActionButton href={telHref(p.phone)} icon="phone" label="Appeler" value={p.phone} tone="dark" />
+                <ActionButton
+                  href={telHref(p.phone)}
+                  icon="phone"
+                  label="Appeler"
+                  value={p.phone}
+                  tone="dark"
+                  onTrack={() => suivre('call')}
+                />
               )}
               {(p.whatsapp || p.phone) && (
                 <ActionButton
@@ -118,15 +139,25 @@ export default function PublicProfilePage() {
                   label="WhatsApp"
                   value="Discuter maintenant"
                   tone="whatsapp"
+                  onTrack={() => suivre('whatsapp')}
                 />
               )}
-              {p.email && <ActionButton href={`mailto:${p.email}`} icon="mail" label="Envoyer un e-mail" value={p.email} />}
+              {p.email && (
+                <ActionButton
+                  href={`mailto:${p.email}`}
+                  icon="mail"
+                  label="Envoyer un e-mail"
+                  value={p.email}
+                  onTrack={() => suivre('email')}
+                />
+              )}
               {website && (
                 <ActionButton
                   href={ensureHttp(website.url)}
                   icon="globe"
                   label={website.title?.trim() || 'Visiter mon site'}
                   value={prettyUrl(website.url)}
+                  onTrack={() => suivre('website')}
                 />
               )}
             </div>
@@ -188,6 +219,7 @@ export default function PublicProfilePage() {
                           href={linkHref(link)}
                           target="_blank"
                           rel="noreferrer"
+                          onClick={() => suivre(network.key === 'whatsapp' ? 'whatsapp' : 'social', network.key)}
                           className="flex items-center gap-2 rounded-xl bg-ink-50 px-3.5 py-2.5 transition-colors hover:bg-ink-100"
                         >
                           <span className="min-w-0 flex-1">
@@ -251,6 +283,13 @@ export default function PublicProfilePage() {
             </Panel>
           )}
 
+          {!!card.gallery?.length && (
+            <Panel className="!p-5">
+              <SectionLabel icon="image" text="Ma galerie" />
+              <Galerie photos={card.gallery} />
+            </Panel>
+          )}
+
           {(p.address || p.city) && (
             <Panel className="!p-5">
               <SectionLabel icon="pin" text="Adresse" />
@@ -281,7 +320,7 @@ export default function PublicProfilePage() {
   )
 }
 
-function ActionButton({ href, icon, label, value, tone = 'default' }) {
+function ActionButton({ href, icon, label, value, tone = 'default', onTrack }) {
   const tones = {
     default: 'bg-ink-50 text-ink-800 hover:bg-ink-100',
     dark: 'bg-ink-900 text-white hover:bg-ink-800',
@@ -292,6 +331,7 @@ function ActionButton({ href, icon, label, value, tone = 'default' }) {
       href={href}
       target={href.startsWith('http') ? '_blank' : undefined}
       rel="noreferrer"
+      onClick={onTrack}
       className={`flex items-center gap-3.5 rounded-2xl px-4 py-3.5 transition-colors ${tones[tone]}`}
     >
       <Icon name={icon} size={20} className="shrink-0" />
@@ -301,6 +341,40 @@ function ActionButton({ href, icon, label, value, tone = 'default' }) {
       </span>
       <Icon name="chevronRight" size={17} className="shrink-0 opacity-50" />
     </a>
+  )
+}
+
+/**
+ * Galerie du mini-site. Une grille de vignettes, et la photo en grand au
+ * toucher — sur un téléphone, une vignette de 100 px ne montre rien.
+ */
+function Galerie({ photos }) {
+  const [agrandie, setAgrandie] = useState(null)
+  return (
+    <>
+      <div className="grid grid-cols-3 gap-2">
+        {photos.map((photo) => (
+          <button
+            key={photo.id || photo.url}
+            type="button"
+            onClick={() => setAgrandie(photo)}
+            className="aspect-square overflow-hidden rounded-xl bg-ink-100"
+          >
+            <img
+              src={photo.url}
+              alt={photo.caption || ''}
+              loading="lazy"
+              className="h-full w-full object-cover transition-transform active:scale-95"
+            />
+          </button>
+        ))}
+      </div>
+      <Modal open={!!agrandie} onClose={() => setAgrandie(null)} title="" size="lg">
+        {agrandie && (
+          <img src={agrandie.url} alt={agrandie.caption || ''} className="w-full rounded-2xl" />
+        )}
+      </Modal>
+    </>
   )
 }
 

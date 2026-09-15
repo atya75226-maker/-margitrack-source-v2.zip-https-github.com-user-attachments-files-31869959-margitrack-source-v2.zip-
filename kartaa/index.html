@@ -7,6 +7,13 @@
     <title>Kartaa — Votre identité. Votre carte. Votre QR Code.</title>
     <meta name="description" content="Créez votre carte de visite numérique, partagez toutes vos coordonnées en un seul scan et protégez vos souvenirs et documents dans un Coffre Sécurité." />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <!-- iOS ignore le manifeste : il lui faut ses propres balises pour installer. -->
+    <link rel="apple-touch-icon" href="/icone-apple.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Kartaa" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <!-- crossorigin : permet à l'export PNG/PDF de lire les règles CSS des polices -->

@@ -1,6 +1,10 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Avatar, Badge, Button, Field, Input, Modal, Panel, Progress, SectionTitle } from '../../components/ui'
+import { Avatar, Badge, Button, Field, Input, Modal, Panel, Progress, SectionTitle, Toggle } from '../../components/ui'
+import {
+  activerNotifications, desactiverNotifications, etatPermission,
+  notificationsPrisesEnCharge, notificationsSouhaitees,
+} from '../../lib/notifications'
 import { Icon } from '../../components/ui/Icons'
 import { useAuth } from '../../state/AuthContext'
 import { useData } from '../../state/DataContext'
@@ -125,6 +129,8 @@ export default function ProfilePage() {
         </p>
       </Panel>
 
+      <PanneauNotifications />
+
       <Panel>
         <SectionTitle icon="info" title="À propos de ce prototype" />
         <div className="space-y-2.5 text-sm text-ink-600">
@@ -160,5 +166,52 @@ export default function ProfilePage() {
 
 
     </div>
+  )
+}
+
+/**
+ * Préférence de notifications.
+ *
+ * Rien n'est envoyé aujourd'hui : ce réglage prépare « votre carte a été
+ * consultée » et « votre QR Code a été scanné ». L'autorisation n'est demandée
+ * qu'ici, sur un geste explicite — la réclamer au chargement de l'application
+ * vaut un refus définitif, que le navigateur ne repropose jamais.
+ */
+function PanneauNotifications() {
+  const [etat, setEtat] = useState(() => etatPermission())
+  const [souhaitees, setSouhaitees] = useState(() => notificationsSouhaitees())
+
+  if (!notificationsPrisesEnCharge()) return null
+
+  const refusees = etat === 'denied'
+
+  return (
+    <Panel>
+      <SectionTitle
+        icon="bell"
+        title="Notifications"
+        subtitle="Être prévenu quand votre carte est consultée ou votre QR Code scanné."
+      />
+      <Toggle
+        checked={souhaitees && etat === 'granted'}
+        disabled={refusees}
+        label="Recevoir les notifications"
+        description={
+          refusees
+            ? "Votre navigateur les a bloquées pour ce site. Réactivez-les dans ses réglages, puis revenez ici."
+            : "Aucune notification n'est envoyée pour l'instant : cette préférence prépare la prochaine version."
+        }
+        onChange={async (valeur) => {
+          if (!valeur) {
+            desactiverNotifications()
+            setSouhaitees(false)
+            return
+          }
+          const obtenu = await activerNotifications()
+          setEtat(obtenu)
+          setSouhaitees(obtenu === 'granted')
+        }}
+      />
+    </Panel>
   )
 }

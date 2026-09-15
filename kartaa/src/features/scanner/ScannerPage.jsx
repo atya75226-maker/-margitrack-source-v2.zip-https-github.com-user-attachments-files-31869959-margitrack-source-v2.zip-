@@ -4,7 +4,7 @@ import { Button, Panel } from '../../components/ui'
 import { Icon } from '../../components/ui/Icons'
 import { useToast } from '../../state/ToastContext'
 import { copyToClipboard } from '../../lib/download'
-import { ensureHttp, formatDateTime, telHref } from '../../lib/format'
+import { ensureHttp, telHref } from '../../lib/format'
 import {
   decodeFile, decodeFrame, interpretScan, readHistory, pushHistory, clearHistory,
 } from '../../lib/qrScanner'
@@ -204,28 +204,35 @@ export default function ScannerPage() {
               Effacer
             </button>
           </div>
-          <ul className="divide-y divide-ink-100">
-            {historique.map((entree) => (
-              <li key={entree.value + entree.at}>
-                <button
-                  type="button"
-                  onClick={() => setResultat(interpretScan(entree.value))}
-                  className="flex w-full items-center gap-3 py-3 text-left"
-                >
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-ink-100 text-ink-500">
-                    <Icon name={ICONE_PAR_TYPE[entree.kind] || 'qr'} size={16} />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold text-ink-800">
-                      {entree.label || entree.value}
-                    </span>
-                    <span className="block text-xs text-ink-400">{formatDateTime(entree.at)}</span>
-                  </span>
-                  <Icon name="chevronRight" size={16} className="shrink-0 text-ink-300" />
-                </button>
-              </li>
+          <div className="space-y-4">
+            {grouperParJour(historique).map(({ titre, entrees }) => (
+              <div key={titre}>
+                <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-400">{titre}</p>
+                <ul className="divide-y divide-ink-100">
+                  {entrees.map((entree) => (
+                    <li key={entree.value + entree.at}>
+                      <button
+                        type="button"
+                        onClick={() => setResultat(interpretScan(entree.value))}
+                        className="flex w-full items-center gap-3 py-3 text-left"
+                      >
+                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-ink-100 text-ink-500">
+                          <Icon name={ICONE_PAR_TYPE[entree.kind] || 'qr'} size={16} />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-semibold text-ink-800">
+                            {entree.label || entree.value}
+                          </span>
+                          <span className="block truncate text-xs text-ink-400">{entree.value}</span>
+                        </span>
+                        <Icon name="chevronRight" size={16} className="shrink-0 text-ink-300" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ))}
-          </ul>
+          </div>
           <p className="hint mt-2">Cet historique reste sur cet appareil.</p>
         </Panel>
       )}
@@ -283,4 +290,40 @@ function ResultatScan({ lecture, onOuvrir, onRelancer, onCopier }) {
       </div>
     </Panel>
   )
+}
+
+/**
+ * Regroupe les scans par jour : « Aujourd'hui », « Hier », puis la date.
+ *
+ * Un horodatage complet sur chaque ligne se lit mal et se compare mal ; le jour
+ * en tête de groupe suffit, et la ligne peut alors montrer l'adresse scannée,
+ * bien plus utile pour reconnaître un scan.
+ */
+function grouperParJour(entrees) {
+  const jour = (valeur) => {
+    const date = new Date(valeur)
+    date.setHours(0, 0, 0, 0)
+    return date.getTime()
+  }
+  const aujourdhui = jour(Date.now())
+  const hier = aujourdhui - 24 * 60 * 60 * 1000
+
+  const groupes = new Map()
+  entrees.forEach((entree) => {
+    const cle = jour(entree.at)
+    if (!groupes.has(cle)) groupes.set(cle, [])
+    groupes.get(cle).push(entree)
+  })
+
+  return Array.from(groupes.entries())
+    .sort((a, b) => b[0] - a[0])
+    .map(([cle, liste]) => ({
+      titre:
+        cle === aujourdhui
+          ? "Aujourd'hui"
+          : cle === hier
+            ? 'Hier'
+            : new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(cle)),
+      entrees: liste,
+    }))
 }

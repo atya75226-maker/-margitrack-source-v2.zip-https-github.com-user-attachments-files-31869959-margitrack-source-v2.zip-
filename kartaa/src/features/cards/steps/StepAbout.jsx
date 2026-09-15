@@ -1,12 +1,17 @@
-import { useState } from 'react'
-import { Button, Field, Input, Panel, Textarea } from '../../../components/ui'
+import { useRef, useState } from 'react'
+import { Button, Field, Input, Panel, Textarea, EmptyState } from '../../../components/ui'
 import { Icon } from '../../../components/ui/Icons'
+import { uploadImage, removeImage } from '../../../lib/storage'
+import { randomId } from '../../../lib/crypto'
+
+const GALERIE_MAX = 12
 
 const SUGGESTIONS = ['Marketing digital', 'Création de sites web', 'Formation', 'Conseil', 'Photographie', 'Import-export']
 
 export default function StepAbout({ draft, update }) {
   const [activity, setActivity] = useState('')
   const activities = draft.activities || []
+  const gallery = draft.gallery || []
 
   const addActivity = (value) => {
     const clean = (value || '').trim()
@@ -86,6 +91,106 @@ export default function StepAbout({ draft, update }) {
           </div>
         </div>
       </Panel>
+
+      <Galerie
+        photos={gallery}
+        onChange={(photos) => update({ gallery: photos })}
+      />
     </div>
+  )
+}
+
+/**
+ * Galerie du mini-site : quelques photos de réalisations, de produits ou de
+ * lieu. Les images partent dans l'espace public des cartes, comme la photo de
+ * profil et les logos — elles s'affichent pour un visiteur non connecté. Rien
+ * de privé n'a sa place ici : c'est le Coffre Sécurité qui sert à cela.
+ */
+function Galerie({ photos, onChange }) {
+  const champ = useRef(null)
+  const [busy, setBusy] = useState(false)
+
+  const ajouter = async (fichiers) => {
+    const restants = GALERIE_MAX - photos.length
+    if (restants <= 0) return
+    setBusy(true)
+    try {
+      const ajoutees = []
+      for (const fichier of Array.from(fichiers).slice(0, restants)) {
+        // Une par une : téléverser en parallèle sature les connexions lentes.
+        const envoyee = await uploadImage(fichier, { maxSize: 1400 })
+        ajoutees.push({ id: randomId('img'), url: envoyee.url, path: envoyee.path, caption: '' })
+      }
+      onChange([...photos, ...ajoutees])
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const retirer = async (photo) => {
+    onChange(photos.filter((item) => item.id !== photo.id))
+    await removeImage(photo.path)
+  }
+
+  return (
+    <Panel>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <p className="font-display text-base font-bold text-ink-900">Ma galerie</p>
+          <p className="hint mt-0.5">
+            Vos réalisations, vos produits, votre local. Jusqu'à {GALERIE_MAX} photos, visibles sur votre
+            mini-site.
+          </p>
+        </div>
+        <Button
+          size="sm"
+          variant="outline"
+          icon="plus"
+          loading={busy}
+          disabled={photos.length >= GALERIE_MAX}
+          onClick={() => champ.current?.click()}
+        >
+          Ajouter
+        </Button>
+      </div>
+
+      <input
+        ref={champ}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={(event) => {
+          const fichiers = event.target.files
+          event.target.value = ''
+          if (fichiers?.length) ajouter(fichiers)
+        }}
+      />
+
+      {photos.length ? (
+        <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
+          {photos.map((photo) => (
+            <div key={photo.id} className="group relative aspect-square overflow-hidden rounded-2xl bg-ink-100">
+              <img src={photo.url} alt={photo.caption || ''} className="h-full w-full object-cover" />
+              <button
+                type="button"
+                onClick={() => retirer(photo)}
+                aria-label="Retirer cette photo"
+                className="absolute right-1.5 top-1.5 grid h-7 w-7 place-items-center rounded-lg bg-ink-900/70 text-white opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100"
+              >
+                <Icon name="trash" size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <EmptyState
+          icon="image"
+          title="Aucune photo"
+          description="Une galerie donne du crédit à une carte : montrez ce que vous faites."
+          className="!py-8"
+        />
+      )}
+    </Panel>
   )
 }
