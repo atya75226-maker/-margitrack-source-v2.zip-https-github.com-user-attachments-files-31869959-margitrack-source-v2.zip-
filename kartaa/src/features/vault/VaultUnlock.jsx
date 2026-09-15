@@ -6,6 +6,7 @@ import { lockStatus, unlockWithBiometrics, unlockWithPassword, resetPasswordWith
 import { normalizeRecoveryCode, passwordStrength, STRENGTH_LABELS } from '../../lib/crypto'
 import { useToast } from '../../state/ToastContext'
 import { repo } from '../../lib/storage'
+import { isPlatformAuthenticatorAvailable } from '../../lib/webauthn'
 import * as vaultPublic from '../../lib/vaultPublic'
 
 /**
@@ -19,6 +20,13 @@ export default function VaultUnlock({ vault: initialVault, onUnlocked, standalon
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
   const [, setTick] = useState(0)
+  // Le bouton n'apparaît que si CET appareil sait vraiment lire une empreinte :
+  // proposer un déverrouillage impossible ne mène qu'à une erreur.
+  const [capteurDisponible, setCapteurDisponible] = useState(false)
+
+  useEffect(() => {
+    isPlatformAuthenticatorAvailable().then(setCapteurDisponible)
+  }, [])
 
   useEffect(() => setVault(initialVault), [initialVault])
 
@@ -139,7 +147,7 @@ export default function VaultUnlock({ vault: initialVault, onUnlocked, standalon
             </form>
           )}
 
-          {vault.hasBiometric && !status.locked && (
+          {vault.hasBiometric && capteurDisponible && !status.locked && (
             <Button full variant="outline" icon="fingerprint" onClick={submitBiometrics} disabled={busy}>
               Utiliser mon empreinte digitale
             </Button>

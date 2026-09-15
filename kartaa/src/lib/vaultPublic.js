@@ -34,6 +34,11 @@ export async function intro(vaultId) {
     protection: data.protection,
     hasBiometric: !!data.hasBiometric,
     biometric: data.biometric || null,
+    // Sels de l'enveloppe biométrique : publics par nature, comme ceux du mot
+    // de passe. Ils permettent au navigateur de calculer sa preuve avant même
+    // de demander quoi que ce soit au serveur.
+    biometricSalt: data.biometricSalt || null,
+    biometricIterations: data.biometricIterations || null,
     failedAttempts: data.failedAttempts || 0,
     lockedUntil: data.lockedUntil,
     kdfIterations: data.kdfIterations,

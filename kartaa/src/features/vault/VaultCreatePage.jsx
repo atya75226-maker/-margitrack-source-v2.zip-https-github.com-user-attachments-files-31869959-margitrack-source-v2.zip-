@@ -50,6 +50,11 @@ export default function VaultCreatePage() {
         userLabel: user.email,
       })
       rememberVaultKey(created.vault.id, created.vaultKey)
+      // Le coffre existe, mais l'empreinte n'a pas été enrôlée : le dire tout de
+      // suite, sans quoi l'utilisateur croirait pouvoir l'ouvrir au doigt.
+      if (created.biometricError) {
+        toast.error(`Coffre créé, mais sans empreinte : ${created.biometricError} Vous pourrez l'activer depuis la page du coffre.`)
+      }
       setResult(created)
       setPassword('')
       setConfirm('')

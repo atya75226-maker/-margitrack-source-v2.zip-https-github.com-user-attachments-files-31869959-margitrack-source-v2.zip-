@@ -62,6 +62,10 @@ function statusError(status) {
       return new VaultError('Session du coffre expirée. Saisissez à nouveau le mot de passe.')
     case 'biometric_disabled':
       return new VaultError("La biométrie n'est pas activée sur ce coffre.")
+    case 'biometric':
+      return new VaultError(
+        "Cet appareil n'est pas reconnu pour ce coffre. Ouvrez-le avec votre mot de passe, puis activez la biométrie depuis la page du coffre.",
+      )
     default:
       return new VaultError('Coffre inaccessible.')
   }
@@ -100,18 +104,22 @@ export async function createVault({ name, password, useBiometrics = false, userL
 
   let vault = await repo.vaults.get(vaultId)
 
+  // Un refus du capteur ne doit pas faire échouer la création : le mot de passe
+  // suffit, la biométrie s'ajoute plus tard. En revanche l'échec est remonté —
+  // le taire laissait croire à un coffre protégé par l'empreinte alors qu'il ne
+  // l'était pas.
+  let biometricError = null
   if (useBiometrics) {
-    // Un refus du capteur ne doit pas faire échouer la création : le mot de passe
-    // suffit, la biométrie s'ajoute plus tard.
     try {
       vault = await addBiometrics(vault, vaultKey, userLabel)
-    } catch {
+    } catch (error) {
+      biometricError = error?.message || "L'enrôlement biométrique n'a pas abouti."
       vault = await repo.vaults.get(vaultId)
     }
   }
 
   notifyChange()
-  return { vault, recoveryCode, vaultKey }
+  return { vault, recoveryCode, vaultKey, biometricError }
 }
 
 /* --------------------------------------------------------- déverrouillage */
@@ -154,6 +162,15 @@ export async function unlockWithRecoveryCode(vault, code) {
   }
 }
 
+/**
+ * Déverrouillage par empreinte ou visage.
+ *
+ * Le capteur reste géré par le téléphone : il ne rend qu'une signature, dont on
+ * tire un secret propre à cet appareil. De ce secret le navigateur dérive une
+ * preuve, exactement comme il le ferait d'un mot de passe, et le serveur ne
+ * livre l'enveloppe chiffrée que si cette preuve correspond. Aucun compte n'est
+ * nécessaire : détenir l'appareil enrôlé est la preuve.
+ */
 export async function unlockWithBiometrics(vault) {
   const info = await intro(vault.id)
   if (!info.biometric) throw new VaultError("La biométrie n'est pas activée sur ce coffre.")
@@ -164,10 +181,24 @@ export async function unlockWithBiometrics(vault) {
     throw new VaultError("Cet appareil n'est pas enrôlé pour ce coffre. Utilisez votre mot de passe.")
   }
 
-  const status = await openStatus('vault_open_biometric', { p_vault_id: vault.id }, 'Déverrouillage biométrique impossible.')
+  const tours = info.biometricIterations || KDF_ITERATIONS
+  // Les enrôlements antérieurs à la preuve par vérificateur n'ont pas de sel
+  // publié : le serveur s'en tient alors à l'ancienne règle du propriétaire.
+  const derive = info.biometricSalt ? await deriveVaultMaterial(secret, info.biometricSalt, tours) : null
+
+  const status = await openStatus(
+    'vault_open_biometric',
+    { p_vault_id: vault.id, p_verifier: derive?.verifier ?? null },
+    'Déverrouillage biométrique impossible.',
+  )
+
   const wrap = status.wrap
   try {
-    const { wrappingKey } = await deriveVaultMaterial(secret, wrap.salt, wrap.iterations || KDF_ITERATIONS)
+    // La dérivation coûte deux cent mille tours : on ne la refait que si le sel
+    // renvoyé diffère de celui qui a servi à la preuve.
+    const { wrappingKey } = derive && info.biometricSalt === wrap.salt
+      ? derive
+      : await deriveVaultMaterial(secret, wrap.salt, wrap.iterations || KDF_ITERATIONS)
     return { key: await openWrappedKey(wrap, wrappingKey), token: status.token || null }
   } catch {
     throw new VaultError('Déverrouillage biométrique impossible sur cet appareil.')
@@ -187,6 +218,9 @@ export async function addBiometrics(vault, vaultKey, userLabel) {
     p_vault_id: vault.id,
     p_biometric: { credentialId: enrollment.credentialId, prfSalt: enrollment.prfSalt, prfSupported: enrollment.prfSupported, enrolledAt: enrollment.enrolledAt },
     p_wrap: wrapped.wrap,
+    // Le vérificateur permettra au serveur d'exiger une preuve au déverrouillage,
+    // au lieu de se fier au compte connecté : le QR Code n'en ouvre aucun.
+    p_verifier: wrapped.verifier,
   }, "L'enrôlement biométrique a échoué.")
 
   notifyChange()
@@ -195,7 +229,7 @@ export async function addBiometrics(vault, vaultKey, userLabel) {
 
 export async function removeBiometrics(vault) {
   webauthn.clearDeviceSecret(vault.id)
-  await rpc('vault_set_biometric', { p_vault_id: vault.id, p_biometric: null, p_wrap: null }, 'Désactivation impossible.')
+  await rpc('vault_set_biometric', { p_vault_id: vault.id, p_biometric: null, p_wrap: null, p_verifier: null }, 'Désactivation impossible.')
   notifyChange()
   return repo.vaults.get(vault.id)
 }
