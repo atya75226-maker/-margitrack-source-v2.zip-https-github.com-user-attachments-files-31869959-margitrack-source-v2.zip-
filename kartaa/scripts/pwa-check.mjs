@@ -87,16 +87,123 @@ console.log('\nService worker')
   await context.close()
 }
 
-console.log('\nInvitation d\'installation')
+console.log('\nInstallation dès le premier chargement')
+{
+  // Chromium sans drapeau n'émet pas beforeinstallprompt : on l'émet nous-mêmes
+  // au premier chargement, exactement comme le fait Chrome sur un téléphone,
+  // pour vérifier que l'application le capte sans rien recharger.
+  const context = await browser.newContext()
+  const page = await context.newPage()
+  await page.addInitScript(() => {
+    window.__prompt = 0
+    const evenement = new Event('beforeinstallprompt')
+    evenement.prompt = () => { window.__prompt += 1 }
+    evenement.userChoice = Promise.resolve({ outcome: 'accepted' })
+    // Émis très tôt, avant que React ne soit monté : c'est le cas réel.
+    document.addEventListener('DOMContentLoaded', () => window.dispatchEvent(evenement))
+  })
+
+  await page.goto(BASE, { waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(2500)
+  const texte = await page.innerText('body')
+
+  verifier("le bouton d'installation est là au premier chargement, sans compte",
+    /Installer l'application/.test(texte), `→ ${texte.slice(0, 120)}`)
+  verifier("aucune consigne de rechargement",
+    !/recharg|actualis|revenez|deuxième visite/i.test(texte))
+
+  await page.click("button:has-text(\"Installer l'application\")")
+  await page.waitForTimeout(600)
+  const appels = await page.evaluate(() => window.__prompt)
+  verifier("le clic déclenche la vraie fenêtre du navigateur", appels === 1, `→ ${appels} appel(s)`)
+  await context.close()
+}
+
+console.log('\nService worker enregistré même quand « load » est déjà passé')
 {
   const context = await browser.newContext()
   const page = await context.newPage()
-  await page.goto(`${BASE}/app`, { waitUntil: 'domcontentloaded' })
+  await page.goto(`${BASE}/app`, { waitUntil: 'load' })
+  // On recharge une fois : le deuxième chargement est celui où « load » risque
+  // d'avoir précédé l'exécution du module.
+  await page.reload({ waitUntil: 'load' })
   await page.waitForTimeout(1500)
-  verifier('absente à la première visite',
-    !(await page.innerText('body')).includes('Installer Kartaa'))
-  const visites = await page.evaluate(() => window.localStorage.getItem('kartaa.pwa.visites'))
-  verifier('les visites sont comptées', Number(visites) >= 1, `→ ${visites}`)
+  const actif = await page.evaluate(async () => {
+    const enregistrement = await navigator.serviceWorker.getRegistration()
+    return !!(enregistrement && (enregistrement.active || enregistrement.installing))
+  })
+  verifier('enregistré sur un chargement rapide', actif)
+  await context.close()
+}
+
+console.log('\nNavigateur sans installation programmable')
+{
+  // Safari sur iPhone n'émet jamais beforeinstallprompt : la marche à suivre
+  // doit apparaître, et surtout aucune consigne de rechargement.
+  const context = await browser.newContext({
+    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+  })
+  const page = await context.newPage()
+  await page.goto(BASE, { waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(2000)
+  const texte = await page.innerText('body')
+  verifier('la marche à suivre est expliquée', /Partager en bas de Safari/.test(texte))
+  verifier('le geste iPhone est nommé', /écran d’accueil|écran d'accueil/.test(texte))
+  verifier('aucune consigne de rechargement', !/recharg|actualis/i.test(texte))
+  await context.close()
+}
+
+console.log('\nApplication déjà installée')
+{
+  const context = await browser.newContext()
+  const page = await context.newPage()
+  // On simule le mode autonome, comme au lancement depuis l'icône.
+  await page.addInitScript(() => {
+    const original = window.matchMedia.bind(window)
+    window.matchMedia = (requete) => (requete.includes('standalone')
+      ? { matches: true, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} }
+      : original(requete))
+  })
+  await page.goto(BASE, { waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(2000)
+  verifier("« / » mène à la connexion, jamais au marketing",
+    new URL(page.url()).pathname === '/connexion', `→ ${page.url()}`)
+  const texte = await page.innerText('body')
+  verifier("aucune proposition d'installation une fois installée",
+    !/Installer l'application/.test(texte))
+  await context.close()
+}
+
+console.log('\nSession conservée après installation')
+{
+  // L'application installée tourne sur la même adresse : elle partage donc le
+  // stockage du navigateur. Installer ne doit jamais déconnecter.
+  const KEY = 'sb-wadapjshbdjkjrfnsnyr-auth-token'
+  const session = {
+    access_token: 'a.b.c', refresh_token: 'r',
+    expires_at: Math.floor(Date.now() / 1000) + 3600, expires_in: 3600, token_type: 'bearer',
+    user: {
+      id: '11111111-1111-1111-1111-111111111111', email: 'awa@example.com',
+      user_metadata: { first_name: 'Awa', last_name: 'Diallo' },
+      app_metadata: {}, aud: 'authenticated', created_at: new Date().toISOString(),
+    },
+  }
+  const context = await browser.newContext({
+    storageState: { cookies: [], origins: [{ origin: BASE, localStorage: [{ name: KEY, value: JSON.stringify(session) }] }] },
+  })
+  await context.route('**://*.supabase.co/**', (route) => route.abort('failed'))
+  const page = await context.newPage()
+  await page.addInitScript(() => {
+    const original = window.matchMedia.bind(window)
+    window.matchMedia = (requete) => (requete.includes('standalone')
+      ? { matches: true, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} }
+      : original(requete))
+  })
+  await page.goto(BASE, { waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(2500)
+  verifier("la session ouverte mène au tableau de bord",
+    new URL(page.url()).pathname === '/app', `→ ${page.url()}`)
+  verifier('le tableau de bord est bien affiché', /tableau de bord/i.test(await page.innerText('body')))
   await context.close()
 }
 

@@ -1,25 +1,40 @@
 /**
  * Installation et mises à jour de l'application.
  *
- * Deux problèmes que ce fichier règle, et qu'on ne voit qu'une fois l'application
- * installée sur un téléphone :
+ * Quatre choses que ce fichier doit faire dans le bon ordre, sous peine de
+ * rendre l'installation introuvable :
  *
- * 1. beforeinstallprompt n'est émis qu'une seule fois par chargement, et tôt —
- *    souvent avant que le composant qui voudrait l'écouter soit monté. On le
- *    capte donc ici, au démarrage, et on le garde de côté.
+ * 1. enregistrer le service worker DÈS le premier chargement. Chrome n'émet
+ *    beforeinstallprompt qu'une fois un service worker enregistré ; s'il ne
+ *    l'est pas, l'installation n'est jamais proposée. L'enregistrement était
+ *    accroché à l'évènement « load » — or quand la page se charge vite, « load »
+ *    est déjà passé au moment où ce module s'exécute, l'écouteur n'est jamais
+ *    appelé, et il fallait alors recharger la page pour que l'installation
+ *    devienne possible. On regarde donc l'état du document plutôt que d'attendre
+ *    un évènement peut-être déjà émis.
  *
- * 2. une application installée continue de servir sa version en cache jusqu'à ce
- *    qu'un nouveau service worker prenne la main. Sans signal, la seule façon de
- *    recevoir une correction serait de fermer complètement l'application depuis
- *    le multitâche — ce qu'aucun utilisateur ne devine.
+ * 2. capter beforeinstallprompt au démarrage : il n'est émis qu'une fois par
+ *    chargement, et souvent avant que le composant qui voudrait l'écouter soit
+ *    monté.
+ *
+ * 3. dire honnêtement ce que le navigateur permet. Safari sur iPhone et Firefox
+ *    n'émettent jamais cet évènement : sur ces navigateurs, l'installation
+ *    existe mais passe par le menu. Prétendre le contraire donne un bouton qui
+ *    ne fait rien.
+ *
+ * 4. proposer les mises à jour sans les imposer : une application installée sert
+ *    sa version en cache jusqu'à ce qu'un nouveau service worker prenne la main.
  */
 
 const CLE_REFUS = 'kartaa.pwa.refus'
 const CLE_VISITES = 'kartaa.pwa.visites'
 const JOURS_AVANT_NOUVELLE_PROPOSITION = 21
-const VISITES_AVANT_PROPOSITION = 2
 
 let propositionNative = null
+// Une proposition refusée ne peut pas être rejouée : la spécification interdit
+// de réutiliser l'évènement. On s'en souvient pour continuer d'indiquer le
+// chemin manuel plutôt que de laisser l'écran muet.
+let propositionRefusee = false
 const abonnesInstallation = new Set()
 const abonnesMiseAJour = new Set()
 
@@ -48,14 +63,46 @@ export function estInstallee() {
 }
 
 /**
- * L'invitation ne doit pas apparaître à chaque visite : on attend une deuxième
- * visite, et un refus la repousse de trois semaines.
+ * Le bandeau flottant ne doit pas s'imposer à chaque visite : un refus le
+ * repousse de trois semaines.
+ *
+ * Ce délai ne vaut QUE pour le bandeau. Le bouton « Installer l'application »,
+ * lui, reste accessible en permanence depuis le profil : attendre une deuxième
+ * visite pour rendre l'installation possible revenait à la cacher.
  */
-export function peutProposerInstallation() {
+export function peutProposerBandeau() {
   if (estInstallee()) return false
   const refusLe = Number(lire(CLE_REFUS) || 0)
-  if (refusLe && Date.now() - refusLe < JOURS_AVANT_NOUVELLE_PROPOSITION * 86400000) return false
-  return Number(lire(CLE_VISITES) || 0) >= VISITES_AVANT_PROPOSITION
+  return !(refusLe && Date.now() - refusLe < JOURS_AVANT_NOUVELLE_PROPOSITION * 86400000)
+}
+
+/** Nombre de visites, seulement pour la mesure — il ne conditionne plus rien. */
+export function visites() {
+  return Number(lire(CLE_VISITES) || 0)
+}
+
+const ua = () => (typeof navigator === 'undefined' ? '' : navigator.userAgent)
+
+function estIos() {
+  return /iPad|iPhone|iPod/.test(ua())
+    || (/Macintosh/.test(ua()) && typeof document !== 'undefined' && 'ontouchend' in document)
+}
+
+/**
+ * Ce que le navigateur permet réellement, ici et maintenant :
+ *
+ *   « installee » — la page tourne déjà comme application ;
+ *   « native »    — le navigateur a proposé son mécanisme, un clic suffit ;
+ *   « ios »       — Safari : passer par Partager → Sur l'écran d'accueil ;
+ *   « manuel »    — Firefox et consorts : par le menu du navigateur ;
+ *   « attente »   — le navigateur peut encore émettre sa proposition.
+ */
+export function modeInstallation() {
+  if (estInstallee()) return 'installee'
+  if (propositionNative) return 'native'
+  if (estIos()) return 'ios'
+  if (propositionRefusee || /Firefox/.test(ua())) return 'manuel'
+  return 'attente'
 }
 
 export function noterRefusInstallation() {
@@ -73,7 +120,11 @@ export async function proposerInstallation() {
   propositionNative = null
   invite.prompt()
   const { outcome } = await invite.userChoice
-  if (outcome !== 'accepted') noterRefusInstallation()
+  if (outcome !== 'accepted') {
+    propositionRefusee = true
+    noterRefusInstallation()
+  }
+  abonnesInstallation.forEach((rappel) => rappel())
   return outcome === 'accepted'
 }
 
@@ -106,19 +157,38 @@ export function initialiserPwa() {
   ecrire(CLE_VISITES, String(Number(lire(CLE_VISITES) || 0) + 1))
 
   window.addEventListener('beforeinstallprompt', (evenement) => {
+    // preventDefault empêche la bannière automatique de Chrome : c'est notre
+    // bouton qui déclenchera la proposition, au moment choisi par la personne.
     evenement.preventDefault()
     propositionNative = evenement
+    propositionRefusee = false
     abonnesInstallation.forEach((rappel) => rappel())
   })
 
   window.addEventListener('appinstalled', () => {
     propositionNative = null
+    propositionRefusee = false
     abonnesInstallation.forEach((rappel) => rappel())
   })
 
+  // Une application peut être installée depuis une autre fenêtre, ou lancée
+  // depuis son icône : l'écran doit suivre sans recharger.
+  window.matchMedia?.('(display-mode: standalone)')
+    ?.addEventListener?.('change', () => abonnesInstallation.forEach((rappel) => rappel()))
+
   if (!('serviceWorker' in navigator)) return
 
-  window.addEventListener('load', () => {
+  /**
+   * Enregistre le service worker sans attendre un évènement déjà passé.
+   *
+   * L'enregistrement était accroché à « load ». Quand la page se charge vite —
+   * ressources en cache, deuxième visite, connexion correcte — « load » est
+   * déjà émis au moment où ce module s'exécute : l'écouteur ne se déclenchait
+   * jamais, aucun service worker n'était enregistré, et Chrome n'avait donc
+   * aucune raison de proposer l'installation. Recharger la page réglait le
+   * problème par hasard, en repassant par un chargement plus lent.
+   */
+  const enregistrer = () => {
     navigator.serviceWorker
       .register('/sw.js')
       .then((enregistrement) => {
@@ -151,5 +221,8 @@ export function initialiserPwa() {
       rechargee = true
       window.location.reload()
     })
-  })
+  }
+
+  if (document.readyState === 'complete') enregistrer()
+  else window.addEventListener('load', enregistrer, { once: true })
 }

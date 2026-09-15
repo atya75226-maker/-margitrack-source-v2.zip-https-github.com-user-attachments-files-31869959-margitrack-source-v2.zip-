@@ -324,9 +324,29 @@ Le service worker suit deux règles, dans cet ordre :
    leur nom changeant à chaque version.
 
 Une nouvelle version **ne prend jamais la main toute seule** : un bandeau la
-propose, et le rechargement n'a lieu qu'après le clic. L'invitation à installer
-n'apparaît qu'à partir de la deuxième visite, et un refus la repousse de trois
-semaines.
+propose, et le rechargement n'a lieu qu'après le clic.
+
+### L'installation doit être possible au premier chargement
+
+Trois choses l'en empêchaient, et la première était la plus sournoise :
+
+1. **Le service worker était enregistré dans un écouteur de `load`.** Quand la
+   page se charge vite, `load` est déjà émis au moment où le module s'exécute :
+   l'écouteur n'était jamais appelé, aucun service worker n'était enregistré, et
+   Chrome n'avait donc aucune raison d'émettre `beforeinstallprompt`. Recharger
+   la page réglait le problème par hasard. On regarde désormais
+   `document.readyState` au lieu d'attendre un évènement peut-être déjà passé.
+2. **Le bandeau attendait la deuxième visite**, et c'était le seul endroit d'où
+   installer. Le délai ne s'applique plus qu'au bandeau, et un bouton permanent
+   existe sur la page publique comme dans le profil.
+3. **Rien n'était prévu pour les navigateurs sans installation programmable.**
+   Safari sur iPhone et Firefox n'émettent jamais `beforeinstallprompt` : ils
+   reçoivent maintenant la marche à suivre par le menu, jamais une consigne de
+   rechargement.
+
+Une fois installée, l'application dit qu'elle l'est et ne propose plus rien. Et
+`/` n'y affiche jamais la page vitrine : connecté, on arrive au tableau de bord ;
+sinon, à la connexion.
 
 `npm run test:pwa` vérifie tout cela dans un navigateur, à commencer par
 l'absence de toute ressource externe dans les caches.

@@ -7,6 +7,7 @@ import { ProLockProvider } from './components/ProLock'
 import { Toaster, Spinner } from './components/ui'
 import Reconnecting from './components/Reconnecting'
 import PwaBanners from './components/PwaBanners'
+import { estInstallee } from './lib/pwa'
 import AppLayout from './router/AppLayout'
 import LandingPage from './features/landing/LandingPage'
 import SignInPage from './features/auth/SignInPage'
@@ -53,6 +54,11 @@ function AccueilOuApplication() {
   const { isAuthenticated, ready } = useAuth()
   if (!ready) return <Patientez />
   if (isAuthenticated) return <Navigate to="/app" replace />
+  // Lancée depuis son icône, l'application ne doit jamais s'ouvrir sur la page
+  // vitrine : le manifeste démarre sur /app, mais une fenêtre autonome peut
+  // atterrir sur « / » (lien partagé, page d'accueil du navigateur, retour
+  // arrière). Sans compte, on emmène vers la connexion, pas vers le marketing.
+  if (estInstallee()) return <Navigate to="/connexion" replace />
   return <LandingPage />
 }
 

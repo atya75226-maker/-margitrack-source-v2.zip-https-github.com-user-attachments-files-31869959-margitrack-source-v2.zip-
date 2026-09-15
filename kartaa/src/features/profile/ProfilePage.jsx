@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Avatar, Badge, Button, Field, Input, Modal, Panel, Progress, SectionTitle, Toggle } from '../../components/ui'
+import { InstallPanel } from '../../components/InstallApp'
 import {
   activerNotifications, desactiverNotifications, etatPermission,
   notificationsPrisesEnCharge, notificationsSouhaitees,
@@ -128,6 +129,8 @@ export default function ProfilePage() {
           {stats.files > 1 ? 's' : ''} dans {stats.vaults} coffre{stats.vaults > 1 ? 's' : ''}.
         </p>
       </Panel>
+
+      <InstallPanel />
 
       <PanneauNotifications />
 
