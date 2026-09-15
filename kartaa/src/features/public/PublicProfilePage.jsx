@@ -45,7 +45,9 @@ export default function PublicProfilePage() {
     }
   }, [slug])
 
-  const assets = useCardAssets(card || {})
+  // La photo du propriétaire vient de la base : cette page est publique, elle ne
+  // doit jamais emprunter la photo du visiteur qui la consulte.
+  const assets = useCardAssets(card || {}, card?.ownerAvatarUrl || '')
 
   if (loading) {
     return (
@@ -88,7 +90,7 @@ export default function PublicProfilePage() {
 
   const addToContacts = async () => {
     suivre('vcard')
-    const photo = await toDataUrl(p.photoUrl)
+    const photo = await toDataUrl(assets.photoUrl)
     downloadVCard(card, photo)
     toast.success('Fiche contact téléchargée.')
   }
