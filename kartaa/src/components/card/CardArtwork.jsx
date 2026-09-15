@@ -1,17 +1,32 @@
-import { useEffect, useRef, useState } from 'react'
-import { Icon, SocialIcon } from '../ui/Icons'
-import { initialsOf, prettyUrl } from '../../lib/format'
+import { useEffect, useId, useRef, useState } from 'react'
+import { prettyUrl } from '../../lib/format'
 import { publicUrl } from '../../lib/slug'
-import { distinctPlatforms, activeLinks } from '../../lib/socialLinks'
+import { APP } from '../../config/app.config'
 
 /**
  * Rendu « réaliste » d'une carte, à taille fixe (1050 × 600 px).
  * Le même composant sert à la prévisualisation (mise à l'échelle par transform)
  * et à l'export PNG / JPG / PDF, pour que le fichier obtenu soit identique à l'écran.
+ *
+ * Répartition des deux faces :
+ *   • RECTO — identité Kartaa uniquement (logo, nom de la marque). Aucun QR Code,
+ *     aucune donnée du propriétaire : c'est la face « marque ».
+ *   • VERSO — identité du propriétaire : son nom, éventuellement son métier, et le
+ *     grand QR Code qui ouvre son profil public Kartaa.
+ * Les trois modèles (standard / premium / VIP) ne changent que l'habillage :
+ * mêmes informations, même structure, mêmes garanties.
  */
 
 export const CARD_WIDTH = 1050
 export const CARD_HEIGHT = 600
+
+/**
+ * Marge de sécurité pour l'impression.
+ * 1050 px pour 85 mm ≈ 12,35 px/mm : 64 px valent un peu plus de 5 mm, la marge
+ * habituellement demandée par les imprimeurs. Rien d'important ne sort de cette zone,
+ * donc une découpe légèrement décalée ne coupe jamais le nom ni le QR Code.
+ */
+export const CARD_SAFE = 64
 
 const FONT_STACK = {
   sans: "'Plus Jakarta Sans', system-ui, sans-serif",
@@ -37,267 +52,219 @@ function readableOn(hex) {
   return (r * 299 + g * 587 + b * 114) / 1000 > 150 ? '#141728' : '#ffffff'
 }
 
-function contactLines(card) {
-  const p = card.profile || {}
-  return [
-    p.phone && { icon: 'phone', value: p.phone },
-    p.whatsapp && p.whatsapp !== p.phone && { icon: 'whatsapp', value: p.whatsapp },
-    p.email && { icon: 'mail', value: p.email },
-    (p.city || p.country) && { icon: 'pin', value: [p.city, p.country].filter(Boolean).join(', ') },
-  ].filter(Boolean)
+/**
+ * Habillage d'un modèle : les deux faces y puisent leurs couleurs, donc le recto et
+ * le verso d'une même carte restent assortis sans être dupliqués.
+ */
+function skinOf(template, theme) {
+  if (template === 'vip') {
+    return {
+      background: '#0a0c18',
+      text: '#ffffff',
+      muted: '#8f97bb',
+      soft: '#cbcfe0',
+      accent: theme.accent,
+      glow: `radial-gradient(75% 130% at 82% -10%, ${theme.accent}30 0%, transparent 62%)`,
+      frame: `${theme.accent}55`,
+      markPlate: 'rgba(255,255,255,.06)',
+      markPlateBorder: `${theme.accent}66`,
+    }
+  }
+  if (template === 'premium') {
+    const text = readableOn(theme.primary)
+    const light = text === '#ffffff'
+    return {
+      background: `linear-gradient(135deg, ${theme.primary} 0%, ${shade(theme.primary, -0.45)} 100%)`,
+      text,
+      muted: light ? 'rgba(255,255,255,.62)' : 'rgba(20,23,40,.6)',
+      soft: light ? 'rgba(255,255,255,.86)' : 'rgba(20,23,40,.8)',
+      accent: theme.accent,
+      glow: `radial-gradient(55% 90% at 100% 0%, ${theme.accent}40 0%, transparent 62%)`,
+      frame: light ? 'rgba(255,255,255,.28)' : 'rgba(20,23,40,.18)',
+      markPlate: '#ffffff',
+      markPlateBorder: 'transparent',
+    }
+  }
+  return {
+    background: '#ffffff',
+    text: '#141728',
+    muted: '#757ea6',
+    soft: '#41486c',
+    accent: theme.accent,
+    glow: `radial-gradient(60% 100% at 100% 0%, ${theme.primary}0f 0%, transparent 60%)`,
+    frame: `${theme.primary}26`,
+    markPlate: 'transparent',
+    markPlateBorder: 'transparent',
+  }
 }
 
-/** Sur la carte, une icône par plateforme : pas de doublon même avec dix comptes. */
-function socialList(card) {
-  return distinctPlatforms(card.socialLinks).map((network) => ({ key: network.key }))
+/**
+ * Le logo Kartaa, dessiné ici plutôt qu'importé : `html-to-image` doit pouvoir le
+ * rasteriser sans dépendre d'un fichier externe, et chaque instance a son propre
+ * identifiant de dégradé pour ne pas perdre son fond quand plusieurs cartes coexistent.
+ */
+function KartaaMark({ size = 140 }) {
+  const gradientId = useId()
+  return (
+    <svg viewBox="0 0 64 64" width={size} height={size} className="shrink-0">
+      <defs>
+        <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#9b77ff" />
+          <stop offset="1" stopColor="#4a1d93" />
+        </linearGradient>
+      </defs>
+      <rect width="64" height="64" rx="16" fill={`url(#${gradientId})`} />
+      <rect x="14" y="14" width="14" height="14" rx="3.5" fill="#fff" />
+      <rect x="36" y="14" width="14" height="14" rx="3.5" fill="#f5b229" />
+      <rect x="14" y="36" width="14" height="14" rx="3.5" fill="#f5b229" />
+      <rect x="36" y="36" width="6" height="6" rx="1.5" fill="#fff" />
+      <rect x="44" y="44" width="6" height="6" rx="1.5" fill="#fff" />
+      <rect x="36" y="44" width="6" height="6" rx="1.5" fill="#fff" />
+      <rect x="44" y="36" width="6" height="6" rx="1.5" fill="#fff" />
+    </svg>
+  )
 }
 
 /* ------------------------------------------------------------------ recto */
 
-function Front({ card, theme, photoUrl, logoUrl, qr }) {
-  const p = card.profile || {}
-  const fullName = [p.firstName, p.lastName].filter(Boolean).join(' ') || 'Votre nom'
+/**
+ * Recto : la marque, rien d'autre.
+ * Pas de QR Code ici — celui du propriétaire est au verso, seul et bien lisible,
+ * pour qu'aucun lecteur n'hésite entre deux codes sur la même carte.
+ */
+function Front({ card, theme }) {
   const font = FONT_STACK[theme.font] || FONT_STACK.sans
   const template = card.template || 'standard'
-  const contacts = contactLines(card)
-  const socials = socialList(card)
+  const skin = skinOf(template, theme)
+  const plated = skin.markPlate !== 'transparent'
 
-  if (template === 'vip') {
-    return (
-      <div style={{ width: CARD_WIDTH, height: CARD_HEIGHT, fontFamily: font, background: '#0a0c18', color: '#fff' }} className="relative overflow-hidden">
-        <div style={{ background: `radial-gradient(70% 120% at 85% 0%, ${theme.accent}33 0%, transparent 60%)` }} className="absolute inset-0" />
-        <div style={{ border: `1px solid ${theme.accent}55` }} className="absolute inset-6 rounded-[28px]" />
-        <div className="relative flex h-full items-center gap-12 px-16">
-          <div className="flex-1">
-            <div style={{ color: theme.accent, letterSpacing: '.32em' }} className="mb-5 text-[15px] font-bold uppercase">
-              {(card.companies?.[0]?.name || p.profession || 'Carte VIP').slice(0, 26)}
-            </div>
-            <h1 style={{ fontSize: 62, lineHeight: 1.03, fontWeight: 600 }} className="mb-4">{fullName}</h1>
-            <div style={{ background: theme.accent }} className="mb-6 h-px w-24" />
-            <p style={{ fontSize: 23, color: '#cbcfe0' }} className="mb-8">{p.profession || 'Votre activité'}</p>
-            <div className="space-y-3">
-              {contacts.slice(0, 3).map((line) => (
-                <div key={line.value} className="flex items-center gap-3" style={{ fontSize: 20, color: '#e8eaf2' }}>
-                  <Icon name={line.icon} size={21} style={{ color: theme.accent }} />
-                  <span>{line.value}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="flex flex-col items-center gap-6">
-            {photoUrl ? (
-              <img src={photoUrl} alt="" style={{ width: 168, height: 168, border: `2px solid ${theme.accent}` }} className="rounded-full object-cover" />
-            ) : (
-              <div style={{ width: 168, height: 168, border: `2px solid ${theme.accent}`, color: theme.accent, fontSize: 56 }} className="grid place-items-center rounded-full font-semibold">
-                {initialsOf(p.firstName, p.lastName)}
-              </div>
-            )}
-            <div className="rounded-2xl bg-white p-3">
-              {qr ? <img src={qr} alt="QR Code" style={{ width: 132, height: 132 }} /> : <div style={{ width: 132, height: 132 }} />}
-            </div>
-            <span style={{ fontSize: 15, color: '#757ea6' }}>{prettyUrl(publicUrl(card.slug || ''))}</span>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (template === 'premium') {
-    const text = readableOn(theme.primary)
-    return (
-      <div
-        style={{
-          width: CARD_WIDTH,
-          height: CARD_HEIGHT,
-          fontFamily: font,
-          background: `linear-gradient(135deg, ${theme.primary} 0%, ${shade(theme.primary, -0.45)} 100%)`,
-          color: text,
-        }}
-        className="relative overflow-hidden"
-      >
-        <div style={{ background: `radial-gradient(50% 80% at 100% 0%, ${theme.accent}44 0%, transparent 60%)` }} className="absolute inset-0" />
-        <div className="relative flex h-full flex-col justify-between px-16 py-14">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-6">
-              {photoUrl ? (
-                <img src={photoUrl} alt="" style={{ width: 130, height: 130, border: `3px solid ${theme.accent}` }} className="rounded-3xl object-cover" />
-              ) : (
-                <div style={{ width: 130, height: 130, background: 'rgba(255,255,255,.16)', fontSize: 46 }} className="grid place-items-center rounded-3xl font-bold">
-                  {initialsOf(p.firstName, p.lastName)}
-                </div>
-              )}
-              <div>
-                <h1 style={{ fontSize: 52, lineHeight: 1.05, fontWeight: 800 }}>{fullName}</h1>
-                <p style={{ fontSize: 24, color: theme.accent, fontWeight: 600 }} className="mt-2">{p.profession || 'Votre activité'}</p>
-                {card.companies?.[0]?.name && (
-                  <p style={{ fontSize: 19, opacity: 0.78 }} className="mt-1">{card.companies[0].name}</p>
-                )}
-              </div>
-            </div>
-            {logoUrl && <img src={logoUrl} alt="" style={{ height: 64 }} className="rounded-xl bg-white/90 p-2" />}
-          </div>
-
-          <div className="flex items-end justify-between gap-10">
-            <div className="space-y-3.5">
-              {contacts.map((line) => (
-                <div key={line.value} className="flex items-center gap-3.5" style={{ fontSize: 21 }}>
-                  <span style={{ background: 'rgba(255,255,255,.16)' }} className="grid h-10 w-10 place-items-center rounded-xl">
-                    <Icon name={line.icon} size={20} />
-                  </span>
-                  <span>{line.value}</span>
-                </div>
-              ))}
-              {!!socials.length && (
-                <div className="flex items-center gap-3 pt-2">
-                  {socials.slice(0, 6).map((social) => (
-                    <span key={social.key} style={{ background: 'rgba(255,255,255,.16)' }} className="grid h-10 w-10 place-items-center rounded-xl">
-                      <SocialIcon network={social.key} size={19} />
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="flex flex-col items-center gap-3">
-              <div className="rounded-2xl bg-white p-3.5">
-                {qr ? <img src={qr} alt="QR Code" style={{ width: 152, height: 152 }} /> : <div style={{ width: 152, height: 152 }} />}
-              </div>
-              <span style={{ fontSize: 15, opacity: 0.8 }}>Scannez-moi</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  /* standard */
   return (
-    <div style={{ width: CARD_WIDTH, height: CARD_HEIGHT, fontFamily: font, background: '#fff', color: '#141728' }} className="relative overflow-hidden">
-      <div style={{ background: theme.primary }} className="absolute inset-y-0 left-0 w-6" />
-      <div style={{ background: theme.accent }} className="absolute bottom-0 left-6 h-2 w-full" />
-      <div className="relative flex h-full items-center justify-between gap-10 px-20 py-14">
-        <div className="flex-1">
-          <div className="mb-8 flex items-center gap-6">
-            {photoUrl ? (
-              <img src={photoUrl} alt="" style={{ width: 126, height: 126, border: `4px solid ${theme.primary}` }} className="rounded-full object-cover" />
-            ) : (
-              <div style={{ width: 126, height: 126, background: `${theme.primary}18`, color: theme.primary, fontSize: 44 }} className="grid place-items-center rounded-full font-bold">
-                {initialsOf(p.firstName, p.lastName)}
-              </div>
-            )}
-            <div>
-              <h1 style={{ fontSize: 50, lineHeight: 1.05, fontWeight: 800 }}>{fullName}</h1>
-              <p style={{ fontSize: 23, color: theme.primary, fontWeight: 700 }} className="mt-1.5">{p.profession || 'Votre activité'}</p>
-              {card.companies?.[0]?.name && <p style={{ fontSize: 19, color: '#545d88' }} className="mt-1">{card.companies[0].name}</p>}
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-            {contacts.map((line) => (
-              <div key={line.value} className="flex items-center gap-3" style={{ fontSize: 19, color: '#353a57' }}>
-                <Icon name={line.icon} size={20} style={{ color: theme.primary }} />
-                <span className="truncate">{line.value}</span>
-              </div>
-            ))}
-          </div>
-          {!!socials.length && (
-            <div className="mt-7 flex items-center gap-3">
-              {socials.slice(0, 7).map((social) => (
-                <span key={social.key} style={{ background: `${theme.primary}12`, color: theme.primary }} className="grid h-10 w-10 place-items-center rounded-xl">
-                  <SocialIcon network={social.key} size={19} />
-                </span>
-              ))}
-            </div>
-          )}
+    <div
+      style={{ width: CARD_WIDTH, height: CARD_HEIGHT, fontFamily: font, background: skin.background, color: skin.text }}
+      className="relative overflow-hidden"
+    >
+      <div style={{ background: skin.glow }} className="absolute inset-0" />
+      {template === 'vip' && <div style={{ border: `1px solid ${skin.frame}` }} className="absolute inset-6 rounded-[28px]" />}
+      {template === 'standard' && (
+        <>
+          <div style={{ background: theme.primary }} className="absolute inset-y-0 left-0 w-6" />
+          <div style={{ background: theme.accent }} className="absolute bottom-0 left-6 right-0 h-2" />
+        </>
+      )}
+
+      <div className="relative flex h-full flex-col items-center justify-center" style={{ padding: CARD_SAFE }}>
+        <div
+          style={{
+            background: skin.markPlate,
+            border: skin.markPlateBorder === 'transparent' ? 'none' : `1px solid ${skin.markPlateBorder}`,
+            padding: plated ? 22 : 0,
+          }}
+          className="rounded-[34px]"
+        >
+          <KartaaMark size={132} />
         </div>
-        <div className="flex flex-col items-center gap-3">
-          {logoUrl && <img src={logoUrl} alt="" style={{ height: 52 }} className="mb-1" />}
-          <div style={{ border: `2px solid ${theme.primary}22` }} className="rounded-2xl p-3">
-            {qr ? <img src={qr} alt="QR Code" style={{ width: 158, height: 158 }} /> : <div style={{ width: 158, height: 158 }} />}
-          </div>
-          <span style={{ fontSize: 15, color: '#757ea6' }}>{prettyUrl(publicUrl(card.slug || ''))}</span>
-        </div>
+        <h1 style={{ fontSize: 68, fontWeight: 800, letterSpacing: '-.02em', lineHeight: 1 }} className="mt-9">
+          Kartaa
+        </h1>
+        <div style={{ background: skin.accent }} className="mt-7 h-px w-24" />
+        <p style={{ fontSize: 18, letterSpacing: '.3em', color: skin.muted }} className="mt-7 font-semibold uppercase">
+          Carte de visite numérique
+        </p>
       </div>
+
+      <p
+        style={{ fontSize: 15, color: skin.muted, bottom: 44 }}
+        className="absolute inset-x-0 text-center font-medium"
+      >
+        {APP.publicDomain}
+      </p>
     </div>
   )
 }
 
 /* ------------------------------------------------------------------ verso */
 
-function Back({ card, theme, qr, branded = true }) {
+/**
+ * Verso : l'identité du propriétaire et son QR Code.
+ * Le nom vient du profil déjà saisi (aucune ressaisie), et le QR Code ne contient
+ * qu'une URL publique — jamais une donnée personnelle, jamais un fichier.
+ */
+function Back({ card, theme, qr, photoUrl, branded = true }) {
   const font = FONT_STACK[theme.font] || FONT_STACK.sans
-  const dark = card.template === 'vip'
-  // Le verso détaille les liens : on y montre les noms donnés par l'utilisateur.
-  const detail = activeLinks(card.socialLinks)
+  const template = card.template || 'standard'
+  const skin = skinOf(template, theme)
+  const p = card.profile || {}
+  const fullName = [p.firstName, p.lastName].filter(Boolean).join(' ') || 'Votre nom'
+  // Une seule ligne professionnelle, courte : le reste vit sur le profil public.
+  const profession = (p.profession || '').trim()
+  const company = (card.companies?.[0]?.name || '').trim()
+  const url = prettyUrl(publicUrl(card.slug || ''))
+  // Le nom passe en deux tailles pour que « Jean-Baptiste Kouassi » tienne sans être coupé.
+  const nameSize = fullName.length > 22 ? 46 : fullName.length > 16 ? 54 : 62
+
   return (
     <div
-      style={{
-        width: CARD_WIDTH,
-        height: CARD_HEIGHT,
-        fontFamily: font,
-        background: dark ? '#0a0c18' : '#fff',
-        color: dark ? '#fff' : '#141728',
-      }}
+      style={{ width: CARD_WIDTH, height: CARD_HEIGHT, fontFamily: font, background: skin.background, color: skin.text }}
       className="relative overflow-hidden"
     >
-      <div style={{ background: theme.primary }} className="absolute inset-x-0 top-0 h-3" />
-      <div className="flex h-full gap-12 px-16 pb-12 pt-16">
-        <div className="flex-1">
-          {card.about && (
-            <>
-              <h2 style={{ fontSize: 17, letterSpacing: '.18em', color: theme.primary === '#141728' ? theme.accent : theme.primary }} className="mb-3 font-bold uppercase">
-                À propos
-              </h2>
-              <p style={{ fontSize: 20, lineHeight: 1.55, color: dark ? '#cbcfe0' : '#41486c' }} className="mb-8">
-                {card.about.slice(0, 320)}
-              </p>
-            </>
+      <div style={{ background: skin.glow }} className="absolute inset-0" />
+      {template === 'vip' && <div style={{ border: `1px solid ${skin.frame}` }} className="absolute inset-6 rounded-[28px]" />}
+      {template === 'standard' && <div style={{ background: theme.primary }} className="absolute inset-x-0 top-0 h-3" />}
+
+      <div className="relative flex h-full items-center gap-12" style={{ padding: CARD_SAFE }}>
+        {/* ------------------------------------------------ identité */}
+        <div className="flex min-w-0 flex-1 flex-col justify-center">
+          {/* La photo n'apparaît que si le profil en possède déjà une : rien à saisir en plus. */}
+          {photoUrl && (
+            <img
+              src={photoUrl}
+              alt=""
+              style={{ width: 104, height: 104, border: `3px solid ${skin.accent}` }}
+              className="mb-7 rounded-full object-cover"
+            />
           )}
-          {!!card.activities?.length && (
-            <>
-              <h2 style={{ fontSize: 17, letterSpacing: '.18em', color: theme.primary === '#141728' ? theme.accent : theme.primary }} className="mb-3 font-bold uppercase">
-                Mes activités
-              </h2>
-              <div className="flex flex-wrap gap-2.5">
-                {card.activities.slice(0, 8).map((activity) => (
-                  <span
-                    key={activity}
-                    style={{ background: dark ? 'rgba(255,255,255,.08)' : `${theme.primary}12`, color: dark ? '#e8eaf2' : theme.primary, fontSize: 18 }}
-                    className="rounded-full px-4 py-2 font-semibold"
-                  >
-                    {activity}
-                  </span>
-                ))}
-              </div>
-            </>
+          <h1 style={{ fontSize: nameSize, fontWeight: 800, lineHeight: 1.06, letterSpacing: '-.015em' }}>{fullName}</h1>
+          <div style={{ background: skin.accent }} className="mt-6 h-1 w-20 rounded-full" />
+          {profession && (
+            <p style={{ fontSize: 26, color: skin.soft, fontWeight: 600 }} className="mt-6 leading-snug">
+              {profession.slice(0, 48)}
+            </p>
           )}
-          {!!detail.length && (
-            <div className="mt-8 space-y-2.5">
-              {detail.slice(0, 5).map((link) => (
-                <div key={link.id || link.uid || link.url} className="flex items-center gap-3" style={{ fontSize: 18, color: dark ? '#cbcfe0' : '#41486c' }}>
-                  <SocialIcon network={link.platform} size={19} />
-                  <span className="truncate">{link.title?.trim() || prettyUrl(link.url)}</span>
-                </div>
-              ))}
-            </div>
+          {company && (
+            <p style={{ fontSize: 21, color: skin.muted }} className="mt-2 leading-snug">
+              {company.slice(0, 44)}
+            </p>
+          )}
+          {branded && (
+            <p style={{ fontSize: 15, color: skin.muted }} className="mt-10 font-medium">
+              Créé avec Kartaa
+            </p>
           )}
         </div>
-        <div className="flex w-[300px] flex-col items-center justify-center gap-5 text-center">
-          <div className="rounded-3xl bg-white p-4" style={{ boxShadow: dark ? 'none' : '0 20px 40px -20px rgba(10,12,24,.35)' }}>
-            {qr ? <img src={qr} alt="QR Code" style={{ width: 210, height: 210 }} /> : <div style={{ width: 210, height: 210 }} />}
+
+        {/* ------------------------------------------------ QR Code */}
+        <div className="flex w-[372px] shrink-0 flex-col items-center gap-5 text-center">
+          {/* Fond blanc et marge autour du code : deux conditions pour qu'un téléphone
+              le lise du premier coup, y compris sur les modèles sombres. */}
+          <div
+            className="rounded-3xl bg-white"
+            style={{ padding: 18, boxShadow: template === 'standard' ? '0 20px 40px -22px rgba(10,12,24,.35)' : 'none' }}
+          >
+            {qr ? <img src={qr} alt="QR Code" style={{ width: 300, height: 300, display: 'block' }} /> : <div style={{ width: 300, height: 300 }} />}
           </div>
-          <p style={{ fontSize: 19, fontWeight: 700 }}>Scannez pour découvrir mon profil</p>
-          <p style={{ fontSize: 16, color: dark ? '#757ea6' : '#757ea6' }}>{prettyUrl(publicUrl(card.slug || ''))}</p>
-          {branded && <p style={{ fontSize: 14, color: '#a3a9c6' }} className="mt-2">Créé avec Kartaa</p>}
+          <p style={{ fontSize: 20, fontWeight: 700 }} className="whitespace-nowrap">Scannez pour voir mon profil</p>
+          <p style={{ fontSize: 16, color: skin.muted }} className="truncate max-w-full">{url}</p>
         </div>
       </div>
     </div>
   )
 }
 
-export function CardArtwork({ card, side = 'front', qr, photoUrl, logoUrl, branded = true }) {
+export function CardArtwork({ card, side = 'front', qr, photoUrl, branded = true }) {
   const theme = { primary: '#6d28d9', accent: '#f5b229', font: 'sans', layout: 'left', ...(card.theme || {}) }
   return side === 'back'
-    ? <Back card={card} theme={theme} qr={qr} branded={branded} />
-    : <Front card={card} theme={theme} qr={qr} photoUrl={photoUrl} logoUrl={logoUrl} />
+    ? <Back card={card} theme={theme} qr={qr} photoUrl={photoUrl} branded={branded} />
+    : <Front card={card} theme={theme} />
 }
 
 /** Conteneur responsive : met la carte à l'échelle sans déformer le rendu. */

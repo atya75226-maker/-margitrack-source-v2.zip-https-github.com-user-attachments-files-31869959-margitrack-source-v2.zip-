@@ -88,7 +88,7 @@ export default function CardDetailPage() {
         />
         <div className="overflow-hidden rounded-2xl shadow-lift">
           <CardScaler>
-            <CardArtwork card={card} side={side} qr={assets.qr} photoUrl={assets.photoUrl} logoUrl={assets.logoUrl} branded={!can(user, 'removeBranding')} />
+            <CardArtwork card={card} side={side} qr={assets.qr} photoUrl={assets.photoUrl} branded={!can(user, 'removeBranding')} />
           </CardScaler>
         </div>
         <div className="mt-5 grid gap-2 sm:grid-cols-3">
@@ -199,10 +199,10 @@ export default function CardDetailPage() {
       {/* Rendu hors écran, à taille réelle, utilisé pour l'export des fichiers. */}
       <div aria-hidden className="pointer-events-none fixed -left-[4000px] top-0">
         <div ref={frontRef}>
-          <CardArtwork card={card} qr={assets.qr} photoUrl={assets.photoUrl} logoUrl={assets.logoUrl} />
+          <CardArtwork card={card} qr={assets.qr} />
         </div>
         <div ref={backRef}>
-          <CardArtwork card={card} side="back" qr={assets.qr} branded={!can(user, 'removeBranding')} />
+          <CardArtwork card={card} side="back" qr={assets.qr} photoUrl={assets.photoUrl} branded={!can(user, 'removeBranding')} />
         </div>
       </div>
 
@@ -350,8 +350,17 @@ function PrintModal({ open, onClose, card }) {
       }
     >
       <div className="space-y-4">
-        <div className="rounded-2xl bg-ink-50 p-4 text-sm text-ink-600">
-          Design retenu : <strong className="text-ink-900">{card.template === 'vip' ? 'VIP' : card.template === 'premium' ? 'Premium' : 'Standard'}</strong> — QR Code imprimé au dos.
+        <div className="space-y-2 rounded-2xl bg-ink-50 p-4 text-sm text-ink-600">
+          <p>
+            Design retenu : <strong className="text-ink-900">{card.template === 'vip' ? 'VIP' : card.template === 'premium' ? 'Premium' : 'Standard'}</strong>
+          </p>
+          <p>
+            Recto : l'identité Kartaa. Verso : votre nom et votre QR Code.
+          </p>
+          <p className="text-ink-500">
+            Format standard 85 × 55 mm, marge de sécurité de 5 mm : rien d'important n'est coupé même si
+            la découpe se décale légèrement. Le PDF téléchargé contient déjà les deux faces, dans cet ordre.
+          </p>
         </div>
         <Field label="Quantité">
           <Input type="number" min="50" step="50" value={form.quantity} onChange={(event) => setForm({ ...form, quantity: event.target.value })} />

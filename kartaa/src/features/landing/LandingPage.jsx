@@ -192,7 +192,7 @@ function Hero() {
           <div className="flex min-w-0 items-center justify-center gap-4">
             <div className="w-full max-w-[330px] rotate-[-3deg] overflow-hidden rounded-3xl shadow-card transition-transform duration-500 hover:rotate-0">
               <CardScaler maxWidth={330}>
-                <CardArtwork card={card} qr={qr} />
+                <CardArtwork card={card} side="back" qr={qr} />
               </CardScaler>
             </div>
             <PhoneMockup card={card} qr={qr} className="hidden w-[165px] shrink-0 translate-y-6 sm:block" />
@@ -303,7 +303,7 @@ function Examples() {
         <div className="grid items-center gap-10 lg:grid-cols-[1.3fr,1fr]">
           <div className="overflow-hidden rounded-3xl shadow-card">
             <CardScaler maxWidth={720}>
-              <CardArtwork card={card} qr={qr} />
+              <CardArtwork card={card} side="back" qr={qr} />
             </CardScaler>
           </div>
           <div className="rounded-3xl border border-ink-100 bg-white p-7 shadow-soft">

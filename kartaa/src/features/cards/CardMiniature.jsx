@@ -9,7 +9,7 @@ const TEMPLATE_LABEL = { standard: 'Standard', premium: 'Premium', vip: 'VIP' }
 
 /** Vignette de carte utilisée sur le tableau de bord et la liste des cartes. */
 export default function CardMiniature({ card, to }) {
-  const { photoUrl, logoUrl, qr } = useCardAssets(card)
+  const { photoUrl, qr } = useCardAssets(card)
   return (
     <Link
       to={to || `/app/cartes/${card.id}`}
@@ -17,7 +17,7 @@ export default function CardMiniature({ card, to }) {
     >
       <div className="overflow-hidden bg-ink-100">
         <CardScaler>
-          <CardArtwork card={card} qr={qr} photoUrl={photoUrl} logoUrl={logoUrl} />
+          <CardArtwork card={card} side="back" qr={qr} photoUrl={photoUrl} />
         </CardScaler>
       </div>
       <div className="flex items-center justify-between gap-3 px-4 py-3.5">

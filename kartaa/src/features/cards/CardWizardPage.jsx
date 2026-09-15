@@ -231,12 +231,12 @@ function PreviewBlock({ draft, assets }) {
       </p>
       <div className="overflow-hidden rounded-2xl shadow-soft">
         <CardScaler>
-          <CardArtwork card={draft} qr={assets.qr} photoUrl={assets.photoUrl} logoUrl={assets.logoUrl} />
+          <CardArtwork card={draft} qr={assets.qr} />
         </CardScaler>
       </div>
       <div className="mt-3 overflow-hidden rounded-2xl shadow-soft">
         <CardScaler>
-          <CardArtwork card={draft} side="back" qr={assets.qr} />
+          <CardArtwork card={draft} side="back" qr={assets.qr} photoUrl={assets.photoUrl} />
         </CardScaler>
       </div>
     </>
