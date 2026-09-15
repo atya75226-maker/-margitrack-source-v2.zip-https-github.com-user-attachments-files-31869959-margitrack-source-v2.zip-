@@ -7,8 +7,7 @@ import { CardArtwork, CardScaler } from '../../components/card/CardArtwork'
 import { useQrCode } from '../../hooks/useCardAssets'
 import { DEMO_CARDS } from './demoCards'
 import { useAuth } from '../../state/AuthContext'
-import { useModeInstallation } from '../../components/InstallApp'
-import { proposerInstallation, raisonInstallation } from '../../lib/pwa'
+import { InstallButton, useModeInstallation } from '../../components/InstallApp'
 
 const FEATURES = [
   {
@@ -574,9 +573,15 @@ function FinalCta() {
  * site doit pouvoir poser l'application sur son écran d'accueil tout de suite.
  * Le bloc disparaît de lui-même une fois l'application installée.
  */
+/**
+ * Installation depuis la page publique.
+ *
+ * L'installation ne doit pas dépendre d'un compte : quelqu'un qui découvre le
+ * site doit pouvoir poser l'application sur son écran d'accueil tout de suite.
+ * Le bloc disparaît de lui-même une fois l'application installée.
+ */
 function InstallSection() {
   const mode = useModeInstallation()
-  const [busy, setBusy] = useState(false)
   if (mode === 'installee') return null
 
   return (
@@ -593,41 +598,9 @@ function InstallSection() {
             Depuis votre navigateur, sans magasin d'applications. Elle s'ouvre en plein écran et
             garde votre session.
           </p>
-
-          {mode === 'native' && (
-            <Button
-              size="lg"
-              icon="download"
-              className="mt-6"
-              loading={busy}
-              onClick={async () => {
-                setBusy(true)
-                try {
-                  await proposerInstallation()
-                } finally {
-                  setBusy(false)
-                }
-              }}
-            >
-              Installer l'application
-            </Button>
-          )}
-
-          {mode !== 'native' && (
-            <p className="mt-6 inline-flex max-w-md rounded-2xl bg-white p-4 text-left text-sm leading-relaxed text-ink-600 shadow-soft">
-              <Icon name="info" size={18} className="mr-2.5 mt-0.5 shrink-0 text-brand-600" />
-              <span>
-                {/* Le message vient de la même fonction que partout ailleurs :
-                    une seule explication, jamais deux versions qui divergent. */}
-                {raisonInstallation()}{' '}
-                {mode === 'ios'
-                  ? 'Touchez Partager en bas de Safari, puis « Sur l’écran d’accueil ».'
-                  : mode === 'fenetre-integree'
-                    ? 'Menu ⋮ ou ••• → « Ouvrir dans Chrome ».'
-                    : 'Menu ⋮ ou ≡ → « Installer l’application » ou « Ajouter à l’écran d’accueil ».'}
-              </span>
-            </p>
-          )}
+          <div className="mt-6">
+            <InstallButton />
+          </div>
         </div>
       </div>
     </section>

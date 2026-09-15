@@ -31,10 +31,11 @@ const CLE_VISITES = 'kartaa.pwa.visites'
 const JOURS_AVANT_NOUVELLE_PROPOSITION = 21
 
 let propositionNative = null
-// Une proposition refusée ne peut pas être rejouée : la spécification interdit
-// de réutiliser l'évènement. On s'en souvient pour continuer d'indiquer le
-// chemin manuel plutôt que de laisser l'écran muet.
-let propositionRefusee = false
+// Motif d'échec de l'enregistrement du service worker, s'il y en a un. Sans
+// service worker, aucun navigateur ne propose l'installation : c'est le cas du
+// mode « Lite » et de l'économiseur de données, fréquents sur les téléphones
+// d'entrée de gamme, et d'une navigation privée qui refuse le stockage.
+let echecServiceWorker = null
 const abonnesInstallation = new Set()
 const abonnesMiseAJour = new Set()
 
@@ -107,6 +108,25 @@ function estIos() {
 }
 
 /**
+ * Famille du navigateur, pour donner la bonne marche à suivre.
+ *
+ * L'ordre compte : Edge, Opera et Samsung Internet se déclarent tous « Chrome »
+ * dans leur signature. Tester Chrome en premier les rangerait tous ensemble et
+ * donnerait à chacun le chemin de menu d'un autre.
+ */
+export function navigateur() {
+  const agent = ua()
+  if (estFenetreIntegree()) return 'fenetre-integree'
+  if (estIos()) return /CriOS/.test(agent) ? 'chrome-ios' : 'safari-ios'
+  if (/SamsungBrowser/.test(agent)) return 'samsung'
+  if (/EdgA?\//.test(agent)) return 'edge'
+  if (/OPR\/|Opera/.test(agent)) return 'opera'
+  if (/Firefox|FxiOS/.test(agent)) return 'firefox'
+  if (/Chrome|Chromium/.test(agent)) return 'chrome'
+  return 'autre'
+}
+
+/**
  * Ce que le navigateur permet réellement, ici et maintenant :
  *
  *   « installee » — la page tourne déjà comme application ;
@@ -115,13 +135,25 @@ function estIos() {
  *   « manuel »    — Firefox et consorts : par le menu du navigateur ;
  *   « attente »   — le navigateur peut encore émettre sa proposition.
  */
+/**
+ * Ce que la personne peut faire, ici et maintenant.
+ *
+ *   « installee »        — la page tourne déjà comme application ;
+ *   « native »           — le navigateur a remis sa proposition, un clic suffit ;
+ *   « fenetre-integree » — fenêtre d'une autre application : il faut en sortir ;
+ *   sinon                — installation par le menu, dont le chemin dépend du
+ *                          navigateur.
+ *
+ * Il n'existe plus d'état « on attend que le navigateur propose ». Chrome
+ * Android n'émet beforeinstallprompt qu'après une interaction avec la page, et
+ * jamais du tout sur plusieurs navigateurs : attendre cet évènement pour
+ * afficher quelque chose laissait une impasse à l'écran, alors que le menu du
+ * navigateur, lui, propose toujours l'installation d'un site éligible.
+ */
 export function modeInstallation() {
   if (estInstallee()) return 'installee'
   if (propositionNative) return 'native'
-  if (estFenetreIntegree()) return 'fenetre-integree'
-  if (estIos()) return 'ios'
-  if (propositionRefusee || /Firefox/.test(ua())) return 'manuel'
-  return 'attente'
+  return 'manuel'
 }
 
 /**
@@ -133,19 +165,74 @@ export function modeInstallation() {
  * conseiller un rechargement qui n'y changera rien — on nomme la raison.
  */
 export function raisonInstallation() {
-  switch (modeInstallation()) {
-    case 'installee':
-      return 'Elle est déjà installée sur cet appareil.'
+  if (estInstallee()) return 'Elle est déjà installée sur cet appareil.'
+  if (propositionDisponible()) return null
+  if (echecServiceWorker || !('serviceWorker' in navigator)) {
+    return "Ce navigateur bloque le composant nécessaire à l'installation — souvent le mode « Lite »,"
+      + " l'économiseur de données ou la navigation privée. Désactivez-le, ou installez par le menu."
+  }
+  switch (navigateur()) {
     case 'fenetre-integree':
       return "Vous êtes dans la fenêtre d'une autre application, qui n'installe jamais. Ouvrez le site dans Chrome."
-    case 'ios':
-      return "Safari n'ouvre pas de fenêtre d'installation : elle se fait par le bouton Partager."
-    case 'manuel':
-      return "Ce navigateur n'ouvre pas de fenêtre d'installation : elle se fait par son menu."
-    case 'attente':
-      return "Votre navigateur ne l'a pas encore proposée. Sur Android, elle apparaît dans Chrome."
+    case 'safari-ios':
+      return "Sur iPhone, l'installation passe par le bouton Partager."
+    case 'chrome-ios':
+      return "Sur iPhone, seul Safari installe une application. Ouvrez cette adresse dans Safari."
+    case 'firefox':
+      return "Firefox installe par son menu, sans fenêtre de confirmation."
     default:
-      return null
+      // Chrome, Edge, Opera, Samsung Internet : le menu propose toujours
+      // l'installation d'un site éligible, même quand la fenêtre automatique
+      // n'est pas apparue.
+      return "Votre navigateur installe par son menu."
+  }
+}
+
+/** Marche à suivre, propre à chaque navigateur. */
+export function etapesInstallation() {
+  switch (navigateur()) {
+    case 'fenetre-integree':
+      return [
+        'Touchez le menu de cette fenêtre (⋮ ou •••).',
+        'Choisissez « Ouvrir dans Chrome » ou « Ouvrir dans le navigateur ».',
+        'Reprenez l’installation depuis Chrome.',
+      ]
+    case 'safari-ios':
+      return [
+        'Touchez le bouton Partager, en bas de Safari.',
+        'Faites défiler, puis choisissez « Sur l’écran d’accueil ».',
+        'Validez avec « Ajouter ».',
+      ]
+    case 'chrome-ios':
+      return [
+        'Copiez cette adresse.',
+        'Ouvrez-la dans Safari.',
+        'Partager → « Sur l’écran d’accueil ».',
+      ]
+    case 'samsung':
+      return [
+        'Touchez le menu ≡, en bas à droite.',
+        'Choisissez « Ajouter la page à » puis « Écran d’accueil ».',
+        'Validez.',
+      ]
+    case 'firefox':
+      return [
+        'Touchez le menu ⋮, en haut à droite.',
+        'Choisissez « Installer » ou « Ajouter à l’écran d’accueil ».',
+        'Validez.',
+      ]
+    case 'opera':
+      return [
+        'Touchez le menu Opera, en bas à droite.',
+        'Choisissez « Ajouter à… » puis « Écran d’accueil ».',
+        'Validez.',
+      ]
+    default:
+      return [
+        'Touchez le menu ⋮, en haut à droite de Chrome.',
+        'Choisissez « Installer l’application » ou « Ajouter à l’écran d’accueil ».',
+        'Validez avec « Installer ».',
+      ]
   }
 }
 
@@ -156,11 +243,13 @@ export async function etatPwa() {
     : null
   return {
     mode: modeInstallation(),
+    navigateur: navigateur(),
     raison: raisonInstallation(),
     installee: estInstallee(),
     fenetreIntegree: estFenetreIntegree(),
     https: window.location.protocol === 'https:' || window.location.hostname === 'localhost',
     serviceWorker: !!enregistrement,
+    echecServiceWorker,
     serviceWorkerActif: !!enregistrement?.active,
     controle: !!navigator.serviceWorker?.controller,
     propositionRecue: !!propositionNative,
@@ -183,10 +272,9 @@ export async function proposerInstallation() {
   propositionNative = null
   invite.prompt()
   const { outcome } = await invite.userChoice
-  if (outcome !== 'accepted') {
-    propositionRefusee = true
-    noterRefusInstallation()
-  }
+  // Une proposition refusée ne peut pas être rejouée : la spécification interdit
+  // de réutiliser l'évènement. L'écran bascule alors sur le chemin du menu.
+  if (outcome !== 'accepted') noterRefusInstallation()
   abonnesInstallation.forEach((rappel) => rappel())
   return outcome === 'accepted'
 }
@@ -224,13 +312,11 @@ export function initialiserPwa() {
     // bouton qui déclenchera la proposition, au moment choisi par la personne.
     evenement.preventDefault()
     propositionNative = evenement
-    propositionRefusee = false
     abonnesInstallation.forEach((rappel) => rappel())
   })
 
   window.addEventListener('appinstalled', () => {
     propositionNative = null
-    propositionRefusee = false
     abonnesInstallation.forEach((rappel) => rappel())
   })
 
@@ -274,8 +360,11 @@ export function initialiserPwa() {
         surveiller(enregistrement.installing)
         enregistrement.addEventListener('updatefound', () => surveiller(enregistrement.installing))
       })
-      .catch(() => {
-        /* pas de service worker : l'application fonctionne, sans hors-ligne */
+      .catch((erreur) => {
+        // L'application continue de fonctionner, sans hors-ligne ni
+        // installation : autant le dire plutôt que de laisser chercher.
+        echecServiceWorker = String(erreur?.message || erreur)
+        abonnesInstallation.forEach((rappel) => rappel())
       })
 
     let rechargee = false
