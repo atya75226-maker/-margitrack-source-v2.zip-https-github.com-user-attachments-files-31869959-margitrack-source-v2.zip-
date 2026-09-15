@@ -5,6 +5,7 @@ import { Icon, Logo } from '../../components/ui/Icons'
 import { supabase, AUTH_STORAGE_KEY, readStoredSession } from '../../lib/supabaseClient'
 import { STORAGE_KIND } from '../../lib/authStorage'
 import { isInAppBrowser, isStandalone } from '../../lib/browserEnv'
+import { etatPwa } from '../../lib/pwa'
 
 /**
  * Page de diagnostic de la connexion, ouverte depuis /diagnostic.
@@ -35,6 +36,15 @@ export default function DiagnosticPage() {
   const [rechargements, setRechargements] = useState(0)
   const [sessionServeur, setSessionServeur] = useState('en cours…')
   const [renouvellement, setRenouvellement] = useState('non testé')
+  const [pwa, setPwa] = useState(null)
+
+  // Ce que le navigateur a réellement en place pour l'installation. C'est cette
+  // partie qui explique pourquoi un téléphone installe et pas un autre.
+  useEffect(() => {
+    let vivant = true
+    etatPwa().then((etat) => vivant && setPwa(etat))
+    return () => { vivant = false }
+  }, [])
 
   // Témoin de persistance : écrit puis relu à chaque chargement de la page.
   useEffect(() => {
@@ -76,6 +86,9 @@ export default function DiagnosticPage() {
     `renouvellement : ${renouvellement}`,
     `fenêtre intégrée : ${isInAppBrowser() ? 'oui' : 'non'}`,
     `installée : ${isStandalone() ? 'oui' : 'non'}`,
+    `installation : ${pwa?.mode || '…'}`,
+    `service worker : ${pwa?.serviceWorker ? 'enregistré' : 'absent'}${pwa?.serviceWorkerActif ? ', actif' : ''}`,
+    `proposition reçue : ${pwa?.propositionRecue ? 'oui' : 'non'}`,
     `navigateur : ${navigator.userAgent}`,
   ].join('\n')
 
@@ -127,6 +140,28 @@ export default function DiagnosticPage() {
             <Ligne label="Application installée" valeur={isStandalone() ? 'oui' : 'non'} />
             <Ligne label="Adresse du site" valeur={window.location.hostname} />
             <Ligne label="Clé de session" valeur={AUTH_STORAGE_KEY} />
+          </div>
+
+          <div className="mt-6 border-t border-ink-100 pt-4">
+            <p className="font-display text-sm font-bold text-ink-900">Installation de l'application</p>
+            {pwa && (
+              <div className="mt-2">
+                <Ligne
+                  label="Installation possible"
+                  valeur={pwa.mode === 'native' ? 'oui, par bouton' : pwa.mode === 'installee' ? 'déjà installée' : 'par le menu'}
+                  etat={pwa.mode === 'native' || pwa.mode === 'installee' ? 'ok' : 'neutre'}
+                />
+                <Ligne label="Service worker enregistré" valeur={pwa.serviceWorker ? 'oui' : 'non'} etat={pwa.serviceWorker ? 'ok' : 'ko'} />
+                <Ligne label="Service worker actif" valeur={pwa.serviceWorkerActif ? 'oui' : 'non'} etat={pwa.serviceWorkerActif ? 'ok' : 'neutre'} />
+                <Ligne label="Page contrôlée" valeur={pwa.controle ? 'oui' : 'pas encore'} etat={pwa.controle ? 'ok' : 'neutre'} />
+                <Ligne label="Proposition reçue du navigateur" valeur={pwa.propositionRecue ? 'oui' : 'non'} etat={pwa.propositionRecue ? 'ok' : 'neutre'} />
+                <Ligne label="HTTPS" valeur={pwa.https ? 'oui' : 'non'} etat={pwa.https ? 'ok' : 'ko'} />
+                <Ligne label="Fenêtre d'une autre application" valeur={pwa.fenetreIntegree ? 'oui' : 'non'} etat={pwa.fenetreIntegree ? 'ko' : 'ok'} />
+              </div>
+            )}
+            {pwa?.raison && (
+              <p className="mt-2 rounded-2xl bg-ink-50 p-3 text-xs leading-relaxed text-ink-600">{pwa.raison}</p>
+            )}
           </div>
 
           <div className="mt-5 grid gap-2.5">

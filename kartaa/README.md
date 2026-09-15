@@ -344,6 +344,24 @@ Trois choses l'en empêchaient, et la première était la plus sournoise :
    reçoivent maintenant la marche à suivre par le menu, jamais une consigne de
    rechargement.
 
+#### Pourquoi un téléphone installe et pas un autre
+
+Le manifeste, les icônes, le `scope` et le HTTPS sont les mêmes pour tout le
+monde : ils ne peuvent pas expliquer une différence entre deux appareils. C'est
+l'état du navigateur qui change, et l'application le nomme désormais au lieu de
+rester muette :
+
+| Ce que voit la personne | Cause |
+| --- | --- |
+| « Ouvrez le site dans Chrome » | Le lien a été ouvert dans la fenêtre intégrée de Facebook, WhatsApp ou Instagram — elle n'installe jamais. C'est la cause la plus fréquente, puisqu'un lien partagé s'y ouvre par défaut. |
+| « Touchez Partager… » | Safari sur iPhone : l'installation n'y est pas programmable. |
+| « Menu ⋮ → Installer » | Firefox et consorts. |
+| « Elle est déjà installée » | Chrome cesse d'émettre l'évènement une fois l'application posée sur l'appareil. |
+
+La page `/diagnostic` montre l'état réel sur l'appareil concerné : service
+worker enregistré, actif, page contrôlée, proposition reçue, HTTPS, fenêtre
+intégrée.
+
 Une fois installée, l'application dit qu'elle l'est et ne propose plus rien. Et
 `/` n'y affiche jamais la page vitrine : connecté, on arrive au tableau de bord ;
 sinon, à la connexion.
@@ -387,6 +405,42 @@ tiennent désormais côté serveur :
 
 Le nombre de cartes, de coffres et le quota de stockage étaient déjà tenus par
 `plan_limits()` et ses déclencheurs ; rien n'y a changé.
+
+### Le paiement, et la seule voie vers Pro
+
+Le paiement passe par Chariow : `ffnigord.mychariow.shop/prd_dv4ahcby`. Ouvrir
+cette page n'accorde rien. **Rien de ce qui vient du navigateur ne prouve un
+paiement** — ni un clic, ni un retour de page, ni un paramètre d'URL.
+
+Le seul chemin vers Pro :
+
+```
+paiement chez Chariow
+      ↓  notification signée (Pulse)
+fonction Edge chariow-webhook   ← vérifie la signature HMAC du corps reçu
+      ↓
+activate_pro(email, 30 jours)   ← prolonge l'échéance, journalise, refuse un doublon
+```
+
+Le rattachement se fait par **l'adresse e-mail du paiement** : Chariow la
+collecte toujours, et l'écran rappelle de payer avec celle du compte.
+
+`profiles.pro_until` porte l'échéance ; `current_plan()` et `plan_of()` ne
+renvoient `pro` que si elle est dans le futur. **Un abonnement échu perd donc ses
+droits partout automatiquement** — limites de cartes et de coffres, modèles,
+galerie, domaine, statistiques : tout passe déjà par ces deux fonctions.
+
+#### À configurer une fois
+
+1. Dans Chariow → Automations → Pulses : une notification vers
+   `https://wadapjshbdjkjrfnsnyr.supabase.co/functions/v1/chariow-webhook`,
+   abonnée à `successful_sale`, `license_expired` et `license_revoked`.
+2. Copier le secret affiché (`whsec_…`) dans le secret Supabase
+   `CHARIOW_PULSE_SECRET`. Sans lui, la fonction refuse tout (401) — c'est
+   voulu : sans signature vérifiée, n'importe qui s'offrirait un abonnement en
+   appelant cette adresse.
+
+Pour activer un compte à la main : `select set_user_plan('<id>', 'pro');`.
 
 ### Aucun paiement n'est simulé
 

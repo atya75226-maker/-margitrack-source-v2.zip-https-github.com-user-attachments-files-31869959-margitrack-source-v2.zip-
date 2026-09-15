@@ -49,7 +49,7 @@ const browser = await chromium.launch()
  * Le profil arrive normalement de la table profiles ; ici le réseau est coupé,
  * donc on répond à sa place sur la route PostgREST correspondante.
  */
-async function ouvrir(plan) {
+async function ouvrir(plan, proUntil = null) {
   const context = await browser.newContext({
     viewport: { width: 412, height: 915 },
     storageState: {
@@ -70,7 +70,7 @@ async function ouvrir(plan) {
       body: JSON.stringify({
         id: '11111111-1111-1111-1111-111111111111',
         first_name: 'Awa', last_name: 'Diallo', email: 'awa@example.com',
-        phone: '', avatar_url: '', plan,
+        phone: '', avatar_url: '', plan, pro_until: proUntil, pro_source: proUntil ? 'chariow' : null,
       }),
     }))
 
@@ -118,6 +118,55 @@ for (const plan of ['free', 'pro']) {
     verifier('aucun verrou affiché à un abonné', !/Voir Pro/.test(stats))
   }
 
+  await context.close()
+}
+
+console.log('\nAbonnement expiré')
+{
+  // Le serveur applique déjà la règle ; l'écran doit dire la même chose que lui.
+  const hier = new Date(Date.now() - 86400000).toISOString()
+  const { page, context } = await ouvrir('pro', hier)
+  await page.goto(`${BASE}/app/abonnement`, { waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(2000)
+  const texte = await page.innerText('body')
+  verifier("l'expiration est annoncée", /a expiré|has expired/i.test(texte), `→ ${texte.slice(0, 100)}`)
+  verifier('le bouton de paiement revient', /Passer à Pro|Upgrade to Pro/i.test(texte))
+
+  await page.goto(`${BASE}/app/statistiques`, { waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(1800)
+  verifier('les fonctionnalités Pro sont reverrouillées', /Voir Pro/.test(await page.innerText('body')))
+  await context.close()
+}
+
+console.log('\nLe paiement passe par le prestataire')
+{
+  const { page, context } = await ouvrir('free')
+  await page.goto(`${BASE}/app/abonnement`, { waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(2000)
+  await page.click('button:has-text("Passer à Pro"), button:has-text("Upgrade to Pro")')
+  await page.waitForTimeout(800)
+
+  const fenetre = await page.innerText('body')
+  verifier("l'adresse de paiement est rappelée", /adresse e-mail de votre compte|account email address/i.test(fenetre))
+
+  // On retient l'adresse demandée plutôt que de la charger : le domaine du
+  // prestataire n'est pas joignable depuis l'environnement de test, et c'est
+  // notre code qu'on vérifie, pas son site.
+  await page.evaluate(() => {
+    window.__ouvertures = []
+    window.open = (url) => { window.__ouvertures.push(url); return null }
+  })
+  await page.click('button:has-text("Aller au paiement"), button:has-text("Go to payment")')
+  await page.waitForTimeout(1200)
+  const ouvertures = await page.evaluate(() => window.__ouvertures || [])
+  verifier("le bouton ouvre la page de paiement du prestataire",
+    ouvertures.some((url) => /ffnigord\.mychariow\.shop\/prd_dv4ahcby/.test(url)),
+    `→ ${ouvertures.join(', ')}`)
+
+  await page.goto(`${BASE}/app/abonnement`, { waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(1800)
+  verifier("aucun droit accordé au retour du paiement",
+    /offre Gratuit|Free plan/i.test(await page.innerText('body')))
   await context.close()
 }
 
