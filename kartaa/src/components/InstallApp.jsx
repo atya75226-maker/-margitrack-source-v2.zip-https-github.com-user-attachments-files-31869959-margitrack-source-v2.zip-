@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Button, Panel, SectionTitle } from './ui'
+import { Button, Modal, Panel, SectionTitle } from './ui'
 import { Icon } from './ui/Icons'
 import { APP } from '../config/app.config'
 import {
   estInstallee,
+  etapesInstallation,
   modeInstallation,
+  navigateur,
   noterRefusInstallation,
   peutProposerBandeau,
   proposerInstallation,
@@ -42,32 +44,8 @@ export function useModeInstallation() {
   return mode
 }
 
-const MARCHES = {
-  ios: [
-    'Touchez le bouton Partager, en bas de Safari.',
-    'Faites défiler, puis choisissez « Sur l’écran d’accueil ».',
-    'Validez avec « Ajouter ».',
-  ],
-  manuel: [
-    'Ouvrez le menu de votre navigateur (⋮ ou ≡).',
-    'Choisissez « Installer l’application » ou « Ajouter à l’écran d’accueil ».',
-    'Validez.',
-  ],
-  // Une fenêtre intégrée n'installe pas : la seule issue est d'en sortir.
-  'fenetre-integree': [
-    'Touchez le menu de cette fenêtre (⋮ ou •••).',
-    'Choisissez « Ouvrir dans Chrome » ou « Ouvrir dans le navigateur ».',
-    'Depuis Chrome, le bouton d’installation apparaîtra ici même.',
-  ],
-  attente: [
-    'Ouvrez le site dans Chrome, sur Android.',
-    'Le bouton d’installation apparaîtra ici dès que Chrome le proposera.',
-    'Sinon, menu ⋮ → « Ajouter à l’écran d’accueil » fonctionne aussi.',
-  ],
-}
-
-function Marches({ mode }) {
-  const etapes = MARCHES[mode] || MARCHES.manuel
+function Marches() {
+  const etapes = etapesInstallation()
   return (
     <ol className="mt-3 space-y-2">
       {etapes.map((etape, index) => (
@@ -125,12 +103,14 @@ export function InstallPanel() {
       {mode !== 'native' && (
         <div>
           <p className="text-sm font-semibold text-ink-800">
-            {mode === 'fenetre-integree' ? 'Ouvrez le site dans Chrome' : 'Installation manuelle'}
+            {navigateur() === 'fenetre-integree'
+              ? 'Ouvrez le site dans Chrome'
+              : `Installer en ${etapesInstallation().length} gestes`}
           </p>
           {/* Nommer la raison plutôt que de laisser croire à une panne : deux
               téléphones ouvrant la même adresse ne se comportent pas pareil. */}
           <p className="hint mt-0.5">{raisonInstallation()}</p>
-          <Marches mode={mode} />
+          <Marches />
           <p className="hint mt-3">Adresse à ouvrir : {APP.publicDomain}</p>
         </div>
       )}
@@ -193,5 +173,58 @@ export function InstallBanner() {
         </div>
       </div>
     </div>
+  )
+}
+
+/**
+ * Bouton d'installation utilisable partout, et qui mène toujours quelque part.
+ *
+ * Quand le navigateur a remis sa proposition, il ouvre la vraie fenêtre
+ * d'installation. Sinon il ouvre la marche à suivre de CE navigateur — Chrome
+ * Android propose toujours « Installer l'application » dans son menu pour un
+ * site éligible, même lorsqu'il n'a pas émis d'évènement. Un bouton qui ne
+ * ferait rien dans ce cas serait pire que pas de bouton du tout.
+ */
+export function InstallButton({ size = 'lg', className = '' }) {
+  const mode = useModeInstallation()
+  const [busy, setBusy] = useState(false)
+  const [marche, setMarche] = useState(false)
+
+  if (mode === 'installee') return null
+
+  return (
+    <>
+      <Button
+        size={size}
+        icon="download"
+        className={className}
+        loading={busy}
+        onClick={async () => {
+          if (mode === 'native') {
+            setBusy(true)
+            try {
+              await proposerInstallation()
+            } finally {
+              setBusy(false)
+            }
+            return
+          }
+          setMarche(true)
+        }}
+      >
+        Installer {APP.name}
+      </Button>
+
+      <Modal
+        open={marche}
+        onClose={() => setMarche(false)}
+        title={`Installer ${APP.name}`}
+        description={raisonInstallation()}
+        size="sm"
+      >
+        <Marches />
+        <p className="hint mt-4">Adresse à ouvrir : {APP.publicDomain}</p>
+      </Modal>
+    </>
   )
 }

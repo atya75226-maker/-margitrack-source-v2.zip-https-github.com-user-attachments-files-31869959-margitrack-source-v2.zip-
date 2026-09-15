@@ -108,11 +108,11 @@ console.log('\nInstallation dès le premier chargement')
   const texte = await page.innerText('body')
 
   verifier("le bouton d'installation est là au premier chargement, sans compte",
-    /Installer l'application/.test(texte), `→ ${texte.slice(0, 120)}`)
+    /Installer Kartaa/.test(texte), `→ ${texte.slice(0, 120)}`)
   verifier("aucune consigne de rechargement",
     !/recharg|actualis|revenez|deuxième visite/i.test(texte))
 
-  await page.click("button:has-text(\"Installer l'application\")")
+  await page.click('button:has-text("Installer Kartaa")')
   await page.waitForTimeout(600)
   const appels = await page.evaluate(() => window.__prompt)
   verifier("le clic déclenche la vraie fenêtre du navigateur", appels === 1, `→ ${appels} appel(s)`)
@@ -136,21 +136,39 @@ console.log('\nService worker enregistré même quand « load » est déjà pass
   await context.close()
 }
 
-console.log('\nNavigateur sans installation programmable')
+console.log('\nChaque navigateur reçoit SA marche à suivre')
 {
-  // Safari sur iPhone n'émet jamais beforeinstallprompt : la marche à suivre
-  // doit apparaître, et surtout aucune consigne de rechargement.
-  const context = await browser.newContext({
-    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
-  })
-  const page = await context.newPage()
-  await page.goto(BASE, { waitUntil: 'domcontentloaded' })
-  await page.waitForTimeout(2000)
-  const texte = await page.innerText('body')
-  verifier('la marche à suivre est expliquée', /Partager en bas de Safari/.test(texte))
-  verifier('le geste iPhone est nommé', /écran d’accueil|écran d'accueil/.test(texte))
-  verifier('aucune consigne de rechargement', !/recharg|actualis/i.test(texte))
-  await context.close()
+  // Le même lien, cinq navigateurs : aucun ne doit rester sans chemin, et
+  // aucun ne doit recevoir le chemin de menu d'un autre.
+  const navigateurs = [
+    ['Chrome Android', 'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36', /menu ⋮/],
+    ['Samsung Internet', 'Mozilla/5.0 (Linux; Android 13; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/23.0 Chrome/115.0.0.0 Mobile Safari/537.36', /menu ≡/],
+    ['Firefox Android', 'Mozilla/5.0 (Android 13; Mobile; rv:120.0) Gecko/120.0 Firefox/120.0', /menu ⋮/],
+    ['Opera Android', 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36 OPR/79.0', /menu Opera/],
+    ['Safari iPhone', 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1', /Partager/],
+    // Fenêtre intégrée à Facebook : elle n'installe jamais, la seule issue est
+    // d'en sortir. C'est la cause la plus fréquente d'un téléphone qui n'y
+    // arrive pas alors qu'un autre y arrive.
+    ['Fenêtre Facebook', 'Mozilla/5.0 (Linux; Android 13; SM-A536B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Mobile Safari/537.36 [FBAN/EMA;FBLC/fr_FR]', /Ouvrir dans Chrome/],
+  ]
+
+  for (const [nom, agent, attendu] of navigateurs) {
+    const context = await browser.newContext({ userAgent: agent })
+    const page = await context.newPage()
+    await page.goto(BASE, { waitUntil: 'domcontentloaded' })
+    await page.waitForTimeout(1800)
+
+    // Le bouton doit exister partout, et ouvrir la marche à suivre.
+    const bouton = page.locator('button:has-text("Installer Kartaa")').first()
+    verifier(`${nom} : le bouton d'installation existe`, await bouton.count() > 0)
+    await bouton.click()
+    await page.waitForTimeout(600)
+    const texte = await page.innerText('body')
+    verifier(`${nom} : reçoit sa propre marche à suivre`, attendu.test(texte),
+      `→ ${texte.slice(texte.indexOf('Installer Kartaa'), texte.indexOf('Installer Kartaa') + 200)}`)
+    verifier(`${nom} : aucune consigne de rechargement`, !/recharg|actualis|pas encore proposée/i.test(texte))
+    await context.close()
+  }
 }
 
 console.log('\nApplication déjà installée')
@@ -170,25 +188,7 @@ console.log('\nApplication déjà installée')
     new URL(page.url()).pathname === '/connexion', `→ ${page.url()}`)
   const texte = await page.innerText('body')
   verifier("aucune proposition d'installation une fois installée",
-    !/Installer l'application/.test(texte))
-  await context.close()
-}
-
-console.log('\nFenêtre intégrée à une autre application')
-{
-  // Un lien ouvert depuis Facebook ou WhatsApp s'affiche dans leur fenêtre :
-  // elle n'installe jamais. C'est la première cause d'un téléphone qui installe
-  // et d'un autre qui n'y arrive pas, avec la même adresse.
-  const context = await browser.newContext({
-    userAgent: 'Mozilla/5.0 (Linux; Android 13; SM-A536B) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/120.0 Mobile Safari/537.36 [FBAN/EMA;FBLC/fr_FR]',
-  })
-  const page = await context.newPage()
-  await page.goto(BASE, { waitUntil: 'domcontentloaded' })
-  await page.waitForTimeout(2000)
-  const texte = await page.innerText('body')
-  verifier('la fenêtre intégrée est reconnue', /Ouvrez le site dans Chrome|ouvrir dans Chrome/i.test(texte),
-    `→ ${texte.slice(0, 120)}`)
-  verifier('aucune consigne de rechargement', !/recharg|actualis/i.test(texte))
+    !/Installer Kartaa/.test(texte))
   await context.close()
 }
 

@@ -348,15 +348,36 @@ Trois choses l'en empêchaient, et la première était la plus sournoise :
 
 Le manifeste, les icônes, le `scope` et le HTTPS sont les mêmes pour tout le
 monde : ils ne peuvent pas expliquer une différence entre deux appareils. C'est
-l'état du navigateur qui change, et l'application le nomme désormais au lieu de
-rester muette :
+l'état du navigateur qui change — et surtout, **`beforeinstallprompt` n'est pas
+une condition de l'installation, seulement un raccourci.**
 
-| Ce que voit la personne | Cause |
+Chrome Android ne l'émet qu'après une interaction avec la page, et plusieurs
+navigateurs ne l'émettent jamais. Attendre cet évènement pour proposer quoi que
+ce soit laissait une impasse à l'écran (« votre navigateur ne l'a pas encore
+proposée »), alors que **le menu du navigateur propose toujours l'installation
+d'un site éligible**.
+
+Le bouton « Installer Kartaa » mène donc toujours quelque part :
+
+| Navigateur | Ce que fait le bouton |
 | --- | --- |
-| « Ouvrez le site dans Chrome » | Le lien a été ouvert dans la fenêtre intégrée de Facebook, WhatsApp ou Instagram — elle n'installe jamais. C'est la cause la plus fréquente, puisqu'un lien partagé s'y ouvre par défaut. |
-| « Touchez Partager… » | Safari sur iPhone : l'installation n'y est pas programmable. |
-| « Menu ⋮ → Installer » | Firefox et consorts. |
-| « Elle est déjà installée » | Chrome cesse d'émettre l'évènement une fois l'application posée sur l'appareil. |
+| Chrome, Edge (proposition reçue) | Ouvre la vraie fenêtre d'installation |
+| Chrome, Edge (sans proposition) | Menu ⋮ → « Installer l'application » |
+| Samsung Internet | Menu ≡ → « Ajouter la page à » → « Écran d'accueil » |
+| Firefox | Menu ⋮ → « Installer » |
+| Opera | Menu Opera → « Ajouter à… » → « Écran d'accueil » |
+| Safari iPhone | Partager → « Sur l'écran d'accueil » |
+| Chrome sur iPhone | Seul Safari installe : ouvrir l'adresse dans Safari |
+| Fenêtre Facebook / WhatsApp | N'installe jamais : ouvrir dans Chrome |
+
+Deux cas techniques sont détectés et nommés en plus : l'application **déjà
+installée** (Chrome cesse alors d'émettre l'évènement) et le **service worker
+refusé** par le mode « Lite », l'économiseur de données ou la navigation privée
+— sans lui, aucun navigateur ne propose l'installation.
+
+`npm run test:pwa` rejoue les sept navigateurs ci-dessus sur la même adresse et
+vérifie que chacun reçoit sa propre marche à suivre, jamais celle d'un autre, et
+jamais une consigne de rechargement.
 
 La page `/diagnostic` montre l'état réel sur l'appareil concerné : service
 worker enregistré, actif, page contrôlée, proposition reçue, HTTPS, fenêtre
