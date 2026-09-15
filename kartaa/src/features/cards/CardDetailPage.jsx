@@ -304,6 +304,7 @@ function DomainModal({ open, onClose, card, allowed }) {
 
 function PrintModal({ open, onClose, card }) {
   const [form, setForm] = useState({ quantity: '100', address: '', note: '' })
+  const [busy, setBusy] = useState(false)
   const toast = useToast()
   return (
     <Modal
@@ -315,9 +316,18 @@ function PrintModal({ open, onClose, card }) {
         <Button
           full
           icon="check"
-          onClick={() => {
-            toast.success('Demande enregistrée. Nous vous contacterons au lancement.')
-            onClose()
+          loading={busy}
+          onClick={async () => {
+            setBusy(true)
+            try {
+              await repo.cards.requestPrint(card, form)
+              toast.success('Demande enregistrée. Nous vous contacterons au lancement.')
+              onClose()
+            } catch (erreur) {
+              toast.error(erreur.message)
+            } finally {
+              setBusy(false)
+            }
           }}
         >
           Enregistrer ma demande
@@ -337,7 +347,11 @@ function PrintModal({ open, onClose, card }) {
         <Field label="Remarque (facultatif)">
           <Input value={form.note} onChange={(event) => setForm({ ...form, note: event.target.value })} placeholder="Papier mat, coins arrondis…" />
         </Field>
-        <p className="hint">Aucun paiement n'est demandé : l'impression sera activée dans une prochaine version.</p>
+        <p className="hint">
+          Aucun paiement n'est demandé : l'impression sera activée dans une prochaine version, et votre
+          abonnement ne change pas. La même adresse pourra être écrite sur une carte NFC, qui ouvrira le
+          mini-site exactement comme le QR Code.
+        </p>
       </div>
     </Modal>
   )

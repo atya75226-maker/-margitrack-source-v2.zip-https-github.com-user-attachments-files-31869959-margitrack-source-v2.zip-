@@ -11,6 +11,20 @@ import { can } from '../../config/app.config'
 import { formatBytes, formatNumber } from '../../lib/format'
 
 const DAYS = 14
+const DAYS_INTERACTIONS = 30
+
+/**
+ * Ce qu'une carte déclenche vraiment. L'ordre suit l'intérêt : être appelé
+ * compte davantage que d'être regardé.
+ */
+const INTERACTIONS = [
+  { kind: 'call', label: 'Appels', icon: 'phone', tone: 'brand' },
+  { kind: 'whatsapp', label: 'WhatsApp', icon: 'whatsapp', tone: 'emerald' },
+  { kind: 'email', label: 'E-mails', icon: 'mail', tone: 'ink' },
+  { kind: 'social', label: 'Réseaux', icon: 'share', tone: 'gold' },
+  { kind: 'website', label: 'Sites web', icon: 'globe', tone: 'ink' },
+  { kind: 'vcard', label: 'Ajouts aux contacts', icon: 'download', tone: 'brand' },
+]
 
 export default function StatsPage() {
   const { cards, vaults, stats } = useData()
@@ -18,6 +32,7 @@ export default function StatsPage() {
   const detailed = can(user, 'advancedStats')
 
   const [history, setHistory] = useState([])
+  const [interactions, setInteractions] = useState(null)
 
   useEffect(() => {
     let cancelled = false
@@ -28,6 +43,19 @@ export default function StatsPage() {
       cancelled = true
     }
   }, [cards.length])
+
+  // Le détail des interactions suit la même règle que le reste des statistiques
+  // avancées : inutile de le charger pour un compte qui ne peut pas le voir.
+  useEffect(() => {
+    if (!detailed) return undefined
+    let cancelled = false
+    repo.cards.myEventCounts(DAYS_INTERACTIONS).then((counts) => {
+      if (!cancelled) setInteractions(counts)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [detailed, cards.length])
 
   const series = useMemo(() => {
     const buckets = new Map()
@@ -87,6 +115,42 @@ export default function StatsPage() {
           <EmptyState icon="qr" title="Pas encore de données" description="Créez une carte et partagez son QR Code pour voir les scans arriver ici." className="!py-8" />
         )}
       </Panel>
+
+      {detailed && (
+        <Panel>
+          <SectionTitle
+            icon="sparkles"
+            title="Ce que vos cartes déclenchent"
+            subtitle={`Actions sur vos mini-sites, sur les ${DAYS_INTERACTIONS} derniers jours.`}
+          />
+          {interactions && Object.keys(interactions).length ? (
+            <>
+              <p className="mb-3 text-sm text-ink-500">
+                <strong className="text-ink-900">{formatNumber(interactions.view || 0)}</strong> ouverture
+                {(interactions.view || 0) > 1 ? 's' : ''} de mini-site sur la période.
+              </p>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {INTERACTIONS.map((item) => (
+                  <StatTile
+                    key={item.kind}
+                    icon={item.icon}
+                    label={item.label}
+                    value={formatNumber(interactions[item.kind] || 0)}
+                    tone={item.tone}
+                  />
+                ))}
+              </div>
+            </>
+          ) : (
+            <EmptyState
+              icon="sparkles"
+              title="Aucune action pour l'instant"
+              description="Dès qu'une personne appellera, écrira ou ouvrira un de vos réseaux depuis votre mini-site, le compte apparaîtra ici."
+              className="!py-8"
+            />
+          )}
+        </Panel>
+      )}
 
       <Panel>
         <SectionTitle icon="card" title="Par carte" subtitle="Classement par nombre de scans." />
@@ -156,7 +220,8 @@ export default function StatsPage() {
               <div>
                 <p className="font-display text-sm font-bold text-ink-900">Statistiques avancées</p>
                 <p className="hint mt-0.5">
-                  Provenance des scans, appareils, heures de pointe et export : inclus dans l'abonnement Pro.
+                  Appels, messages WhatsApp, e-mails et clics sur vos réseaux : savoir ce que votre carte
+                  déclenche vraiment est inclus dans l'abonnement Pro.
                 </p>
               </div>
             </div>

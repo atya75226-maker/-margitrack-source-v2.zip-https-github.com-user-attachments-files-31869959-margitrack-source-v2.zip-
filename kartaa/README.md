@@ -306,6 +306,51 @@ documentées dans le schéma.
 
 ---
 
+## Application installable (PWA)
+
+Kartaa s'installe depuis le navigateur, sans passer par un magasin
+d'applications : manifeste à la portée `/`, icônes 192/512 et une icône
+masquable pour Android, mode autonome, raccourcis vers le scanner, les coffres
+et les cartes.
+
+Le service worker suit deux règles, dans cet ordre :
+
+1. **Rien de ce qui vient d'ailleurs n'est mis en cache.** Appels à Supabase,
+   URL signées des fichiers de coffre, jetons d'authentification : un fichier
+   déchiffré oublié dans un cache annulerait la protection du coffre. Seules les
+   requêtes GET de ce domaine sont interceptées.
+2. Les pages passent par le réseau d'abord, le cache seulement s'il ne répond
+   pas ; les fichiers versionnés de `/assets/` passent par le cache d'abord,
+   leur nom changeant à chaque version.
+
+Une nouvelle version **ne prend jamais la main toute seule** : un bandeau la
+propose, et le rechargement n'a lieu qu'après le clic. L'invitation à installer
+n'apparaît qu'à partir de la deuxième visite, et un refus la repousse de trois
+semaines.
+
+`npm run test:pwa` vérifie tout cela dans un navigateur, à commencer par
+l'absence de toute ressource externe dans les caches.
+
+## Ce qu'une carte déclenche
+
+Les scans étaient comptés, mais pas ce qui suit le scan. La table `card_events`
+enregistre désormais les ouvertures de mini-site, les appels, les messages
+WhatsApp, les e-mails, les clics sur les réseaux et les ajouts aux contacts.
+
+Ce qui est enregistré : le type d'action, et la plateforme pour un réseau
+social. Jamais qui a cliqué — un mini-site public n'a ni compte, ni
+identifiant, ni adresse à rattacher à son visiteur. Le détail s'affiche dans
+Statistiques, sous la même règle que le reste des statistiques avancées :
+réservé à l'abonnement Pro existant, sans nouvelle offre ni nouveau prix.
+
+## Préparé, pas encore branché
+
+| | État |
+| --- | --- |
+| **Carte NFC** | Table `card_media` : un support physique est relié à une carte. Une puce n'est qu'un déclencheur de plus vers le même mini-site ; l'activer demandera d'écrire l'adresse publique sur la puce et d'enregistrer son numéro de série. Aucun parcours ne s'en sert encore. |
+| **Impression** | Table `card_orders` : le formulaire de commande enregistre réellement la demande, sans paiement. L'abonnement Pro reste le seul. |
+| **Notifications** | `src/lib/notifications.js` et un réglage dans le profil. Rien n'est envoyé : l'autorisation n'est demandée que sur un geste explicite, car un refus est définitif pour le navigateur. |
+
 ## Routes
 
 | Route | Rôle |

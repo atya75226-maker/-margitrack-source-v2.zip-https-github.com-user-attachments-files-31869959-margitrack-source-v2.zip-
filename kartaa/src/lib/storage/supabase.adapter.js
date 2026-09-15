@@ -242,6 +242,65 @@ export const cards = {
     await supabase.rpc('register_card_scan', { p_slug: slug, p_source: source })
   },
 
+  /**
+   * Signale une interaction sur le mini-site : ouverture, appel, WhatsApp,
+   * e-mail, réseau social. Volontairement silencieuse — mesurer ne doit jamais
+   * empêcher le visiteur d'appeler.
+   */
+  async registerEvent(slug, kind, detail = null) {
+    try {
+      await supabase.rpc('register_card_event', { p_slug: slug, p_kind: kind, p_detail: detail })
+    } catch {
+      /* une statistique perdue ne vaut pas une action bloquée */
+    }
+  },
+
+  /** Compteurs d'interactions d'une carte, réservés à son propriétaire. */
+  async eventCounts(cardId, days = 30) {
+    const { data, error } = await supabase.rpc('card_event_counts', { p_card_id: cardId, p_days: days })
+    if (error) return {}
+    return data || {}
+  },
+
+  /** Mêmes compteurs, toutes cartes du compte confondues. */
+  async myEventCounts(days = 30) {
+    const { data, error } = await supabase.rpc('my_event_counts', { p_days: days })
+    if (error) return {}
+    return data || {}
+  },
+
+  /**
+   * Supports physiques d'une carte : QR imprimé, puce NFC.
+   *
+   * Préparation seulement. Une puce NFC n'est qu'un déclencheur de plus vers le
+   * même mini-site : la faire fonctionner plus tard ne demandera que d'écrire
+   * l'adresse publique sur la puce et d'enregistrer son numéro de série ici,
+   * sans toucher aux cartes ni aux QR Codes existants.
+   */
+  async media(cardId) {
+    const { data, error } = await supabase
+      .from('card_media').select('*').eq('card_id', cardId).order('created_at')
+    if (error) return []
+    return (data || []).map((row) => ({
+      id: row.id, cardId: row.card_id, kind: row.kind, label: row.label,
+      serial: row.serial, status: row.status, createdAt: row.created_at,
+    }))
+  },
+
+  /** Enregistre une demande de carte imprimée. Aucun paiement, aucune offre nouvelle. */
+  async requestPrint(card, { quantity, address, note }) {
+    const { data: auth } = await supabase.auth.getUser()
+    const { error } = await supabase.from('card_orders').insert({
+      card_id: card.id,
+      user_id: auth?.user?.id,
+      template: card.template || 'standard',
+      quantity: Math.max(1, Math.min(10000, Number(quantity) || 100)),
+      address: (address || '').trim() || null,
+      note: (note || '').trim() || null,
+    })
+    if (error) fail(error, "La demande n'a pas pu être enregistrée.")
+  },
+
   /** Historique des scans pour les statistiques. */
   async scanHistory(days = 14) {
     const since = new Date()

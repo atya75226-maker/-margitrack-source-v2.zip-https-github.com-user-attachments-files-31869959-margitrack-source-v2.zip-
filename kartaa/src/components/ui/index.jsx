@@ -14,6 +14,9 @@ const VARIANTS = {
   ghost: 'text-ink-600 hover:bg-ink-100 hover:text-ink-900',
   danger: 'bg-rose-600 text-white hover:bg-rose-700',
   dangerSoft: 'bg-rose-50 text-rose-700 hover:bg-rose-100',
+  // Posés sur un fond sombre : bandeaux de mise à jour et d'installation.
+  light: 'bg-white text-ink-900 hover:bg-ink-100 shadow-soft',
+  ghostLight: 'text-white/80 hover:bg-white/10 hover:text-white',
 }
 
 const SIZES = {

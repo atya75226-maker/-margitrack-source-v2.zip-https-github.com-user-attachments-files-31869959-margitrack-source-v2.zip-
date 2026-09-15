@@ -6,6 +6,7 @@ import { LanguageProvider } from './i18n'
 import { ProLockProvider } from './components/ProLock'
 import { Toaster, Spinner } from './components/ui'
 import Reconnecting from './components/Reconnecting'
+import PwaBanners from './components/PwaBanners'
 import AppLayout from './router/AppLayout'
 import LandingPage from './features/landing/LandingPage'
 import SignInPage from './features/auth/SignInPage'
@@ -122,6 +123,7 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
           <Toaster />
+          <PwaBanners />
             </ProLockProvider>
           </DataProvider>
         </AuthProvider>
