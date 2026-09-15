@@ -12,7 +12,8 @@
     "test:scanner": "node scripts/scanner-check.mjs",
     "test:e2e": "node scripts/e2e-smoke.mjs",
     "test:session": "node scripts/session-check.mjs",
-    "test:pwa": "node scripts/pwa-check.mjs"
+    "test:pwa": "node scripts/pwa-check.mjs",
+    "test:plan": "node scripts/plan-check.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",

@@ -384,3 +384,36 @@ export const vaults = {
     })
   },
 }
+
+/* ------------------------------------------------------------- abonnement */
+
+/**
+ * Demandes d'abonnement Pro.
+ *
+ * Une demande n'active rien : le plan ne se change que par set_user_plan(),
+ * fermée au navigateur. Écrire plan = 'pro' depuis ici — ce que faisait la page
+ * d'abonnement — revenait à célébrer un paiement qui n'a jamais eu lieu.
+ */
+export const subscriptions = {
+  async request(note = null) {
+    const { data: auth } = await supabase.auth.getUser()
+    if (!auth?.user?.id) throw new Error('Authentification requise.')
+    const { error } = await supabase.from('subscription_requests').insert({
+      user_id: auth.user.id,
+      plan: 'pro',
+      note,
+    })
+    if (error) fail(error, "La demande n'a pas pu être enregistrée.")
+  },
+
+  /** Demande en attente, s'il y en a une. */
+  async pending() {
+    const { data } = await supabase
+      .from('subscription_requests')
+      .select('id, created_at, status')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+      .limit(1)
+    return data?.[0] || null
+  },
+}

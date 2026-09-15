@@ -331,6 +331,54 @@ semaines.
 `npm run test:pwa` vérifie tout cela dans un navigateur, à commencer par
 l'absence de toute ressource externe dans les caches.
 
+## Gratuit et Pro
+
+Un seul produit payant : **Pro, 5 000 FCFA par mois**. Premium et VIP sont des
+styles de cartes, pas des offres ; le coffre, le scanner, le NFC et le domaine
+n'ont pas d'abonnement à eux.
+
+| Gratuit | Pro |
+| --- | --- |
+| 1 carte, modèle Standard | Plusieurs cartes, modèles Premium et VIP |
+| Mini-site public complet : coordonnées, WhatsApp, e-mail, réseaux, services | Galerie, plusieurs entreprises, plusieurs activités, personnalisation avancée |
+| Réseaux et liens illimités | Domaine personnalisé, QR personnalisé |
+| Scanner universel et historique | Statistiques avancées |
+| 1 coffre, 200 Mo | Plusieurs coffres, 20 Go |
+| Application installable, français et anglais | — |
+
+### La séparation est tenue par la base, pas par l'écran
+
+Cacher un bouton ne protège rien. Trois choses ne tenaient qu'à l'interface, et
+tiennent désormais côté serveur :
+
+1. **La colonne `plan`.** La politique RLS autorise un compte à modifier sa
+   ligne de profil — plan compris : une commande depuis la console du navigateur
+   suffisait à devenir Pro. Un déclencheur ramène maintenant toute écriture du
+   plan à sa valeur précédente, sauf appel à `set_user_plan()`, fermée à `anon`
+   comme à `authenticated`. Ce déclencheur est en `SECURITY INVOKER` : dans une
+   fonction `SECURITY DEFINER`, `current_user` vaut le propriétaire et ne permet
+   jamais de reconnaître un appel venu du navigateur.
+2. **Les options Pro d'une carte** — modèles Premium et VIP, domaine, galerie,
+   entreprises et activités multiples — sont refusées par un déclencheur sur
+   `cards`. Il ne bloque que ce qui *augmente* : un compte qui repasse en gratuit
+   garde ses données et peut toujours les corriger.
+3. **Les statistiques avancées** répondent `{"locked":"pro"}` au lieu de
+   chiffres.
+
+Le nombre de cartes, de coffres et le quota de stockage étaient déjà tenus par
+`plan_limits()` et ses déclencheurs ; rien n'y a changé.
+
+### Aucun paiement n'est simulé
+
+La page d'abonnement écrivait directement `plan = 'pro'` : un paiement réussi
+qui n'avait jamais eu lieu. Le bouton enregistre désormais une intention dans
+`subscription_requests` et le dit clairement. L'activation passe par
+`set_user_plan()`, côté serveur — c'est là que se branchera l'encaissement.
+
+`npm run test:plan` compare les deux offres dans un navigateur : un seul bouton,
+un seul prix, aucune activation sans paiement, et un verrou qui nomme la
+fonctionnalité au lieu d'un cadenas muet.
+
 ## Ce qu'une carte déclenche
 
 Les scans étaient comptés, mais pas ce qui suit le scan. La table `card_events`

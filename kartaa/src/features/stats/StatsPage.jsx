@@ -7,7 +7,7 @@ import StatTile from '../dashboard/StatTile'
 import { useData } from '../../state/DataContext'
 import { repo } from '../../lib/storage'
 import { useAuth } from '../../state/AuthContext'
-import { can } from '../../config/app.config'
+import { can, PRO_CAPABILITIES } from '../../config/app.config'
 import { formatBytes, formatNumber } from '../../lib/format'
 
 const DAYS = 14
@@ -50,7 +50,9 @@ export default function StatsPage() {
     if (!detailed) return undefined
     let cancelled = false
     repo.cards.myEventCounts(DAYS_INTERACTIONS).then((counts) => {
-      if (!cancelled) setInteractions(counts)
+      // Le serveur applique la même règle que l'écran : il répond
+      // « verrouillé » plutôt que des chiffres si l'offre ne les couvre pas.
+      if (!cancelled) setInteractions(counts?.locked ? null : counts)
     })
     return () => {
       cancelled = true
@@ -216,13 +218,12 @@ export default function StatsPage() {
         <Panel className="border-gold-200 bg-gold-50/50">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex gap-3">
-              <Icon name="crown" size={20} className="mt-0.5 shrink-0 text-gold-600" />
+              <Icon name="lock" size={20} className="mt-0.5 shrink-0 text-gold-600" />
               <div>
-                <p className="font-display text-sm font-bold text-ink-900">Statistiques avancées</p>
-                <p className="hint mt-0.5">
-                  Appels, messages WhatsApp, e-mails et clics sur vos réseaux : savoir ce que votre carte
-                  déclenche vraiment est inclus dans l'abonnement Pro.
+                <p className="font-display text-sm font-bold text-ink-900">
+                  {PRO_CAPABILITIES.advancedStats.label}
                 </p>
+                <p className="hint mt-0.5">{PRO_CAPABILITIES.advancedStats.value}</p>
               </div>
             </div>
             <Button as={Link} to="/app/abonnement" variant="gold" size="sm">
