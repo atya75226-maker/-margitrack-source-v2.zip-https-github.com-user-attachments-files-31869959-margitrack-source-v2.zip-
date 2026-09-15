@@ -8,6 +8,7 @@ import {
   noterRefusInstallation,
   peutProposerBandeau,
   proposerInstallation,
+  raisonInstallation,
   surInstallationPossible,
 } from '../lib/pwa'
 
@@ -51,6 +52,17 @@ const MARCHES = {
     'Ouvrez le menu de votre navigateur (⋮ ou ≡).',
     'Choisissez « Installer l’application » ou « Ajouter à l’écran d’accueil ».',
     'Validez.',
+  ],
+  // Une fenêtre intégrée n'installe pas : la seule issue est d'en sortir.
+  'fenetre-integree': [
+    'Touchez le menu de cette fenêtre (⋮ ou •••).',
+    'Choisissez « Ouvrir dans Chrome » ou « Ouvrir dans le navigateur ».',
+    'Depuis Chrome, le bouton d’installation apparaîtra ici même.',
+  ],
+  attente: [
+    'Ouvrez le site dans Chrome, sur Android.',
+    'Le bouton d’installation apparaîtra ici dès que Chrome le proposera.',
+    'Sinon, menu ⋮ → « Ajouter à l’écran d’accueil » fonctionne aussi.',
   ],
 }
 
@@ -110,21 +122,17 @@ export function InstallPanel() {
         </Button>
       )}
 
-      {(mode === 'ios' || mode === 'manuel') && (
+      {mode !== 'native' && (
         <div>
-          <p className="text-sm font-semibold text-ink-800">Installation manuelle</p>
-          <p className="hint mt-0.5">
-            Votre navigateur n'ouvre pas de fenêtre d'installation : elle se fait par son menu.
+          <p className="text-sm font-semibold text-ink-800">
+            {mode === 'fenetre-integree' ? 'Ouvrez le site dans Chrome' : 'Installation manuelle'}
           </p>
+          {/* Nommer la raison plutôt que de laisser croire à une panne : deux
+              téléphones ouvrant la même adresse ne se comportent pas pareil. */}
+          <p className="hint mt-0.5">{raisonInstallation()}</p>
           <Marches mode={mode} />
+          <p className="hint mt-3">Adresse à ouvrir : {APP.publicDomain}</p>
         </div>
-      )}
-
-      {mode === 'attente' && (
-        <p className="text-sm leading-relaxed text-ink-500">
-          Votre navigateur ne propose pas encore l'installation. Elle apparaîtra ici dès qu'il la
-          permettra — sur Android, ouvrez {APP.publicDomain} dans Chrome.
-        </p>
       )}
     </Panel>
   )

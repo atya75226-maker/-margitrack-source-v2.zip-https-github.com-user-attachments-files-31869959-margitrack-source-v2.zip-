@@ -83,6 +83,24 @@ export function visites() {
 
 const ua = () => (typeof navigator === 'undefined' ? '' : navigator.userAgent)
 
+/**
+ * Fenêtre intégrée à une autre application (Facebook, Messenger, Instagram,
+ * WhatsApp, TikTok…). Elle n'installe jamais : c'est la première cause de
+ * « ça marche sur mon téléphone mais pas sur le sien », puisqu'un lien partagé
+ * s'y ouvre par défaut.
+ */
+const SIGNATURES_INTEGREES = [
+  'FBAN', 'FBAV', 'FB_IAB', 'Instagram', 'Messenger',
+  'Line/', 'MicroMessenger', 'TikTok', 'Twitter', 'Snapchat',
+]
+
+export function estFenetreIntegree() {
+  const agent = ua()
+  if (!agent) return false
+  if (SIGNATURES_INTEGREES.some((signature) => agent.includes(signature))) return true
+  return /\bwv\b/.test(agent) && /Android/.test(agent)
+}
+
 function estIos() {
   return /iPad|iPhone|iPod/.test(ua())
     || (/Macintosh/.test(ua()) && typeof document !== 'undefined' && 'ontouchend' in document)
@@ -100,9 +118,54 @@ function estIos() {
 export function modeInstallation() {
   if (estInstallee()) return 'installee'
   if (propositionNative) return 'native'
+  if (estFenetreIntegree()) return 'fenetre-integree'
   if (estIos()) return 'ios'
   if (propositionRefusee || /Firefox/.test(ua())) return 'manuel'
   return 'attente'
+}
+
+/**
+ * Pourquoi l'installation automatique n'est pas proposée, en un coup d'œil.
+ *
+ * Deux téléphones ouvrant la même adresse peuvent se comporter différemment :
+ * le manifeste et les icônes sont les mêmes pour tout le monde, c'est l'état du
+ * navigateur qui change. Plutôt que de laisser l'écran muet — ou pire, de
+ * conseiller un rechargement qui n'y changera rien — on nomme la raison.
+ */
+export function raisonInstallation() {
+  switch (modeInstallation()) {
+    case 'installee':
+      return 'Elle est déjà installée sur cet appareil.'
+    case 'fenetre-integree':
+      return "Vous êtes dans la fenêtre d'une autre application, qui n'installe jamais. Ouvrez le site dans Chrome."
+    case 'ios':
+      return "Safari n'ouvre pas de fenêtre d'installation : elle se fait par le bouton Partager."
+    case 'manuel':
+      return "Ce navigateur n'ouvre pas de fenêtre d'installation : elle se fait par son menu."
+    case 'attente':
+      return "Votre navigateur ne l'a pas encore proposée. Sur Android, elle apparaît dans Chrome."
+    default:
+      return null
+  }
+}
+
+/** Ce que le navigateur a réellement en place, pour le diagnostic à l'écran. */
+export async function etatPwa() {
+  const enregistrement = 'serviceWorker' in navigator
+    ? await navigator.serviceWorker.getRegistration().catch(() => null)
+    : null
+  return {
+    mode: modeInstallation(),
+    raison: raisonInstallation(),
+    installee: estInstallee(),
+    fenetreIntegree: estFenetreIntegree(),
+    https: window.location.protocol === 'https:' || window.location.hostname === 'localhost',
+    serviceWorker: !!enregistrement,
+    serviceWorkerActif: !!enregistrement?.active,
+    controle: !!navigator.serviceWorker?.controller,
+    propositionRecue: !!propositionNative,
+    visites: visites(),
+  }
 }
 
 export function noterRefusInstallation() {

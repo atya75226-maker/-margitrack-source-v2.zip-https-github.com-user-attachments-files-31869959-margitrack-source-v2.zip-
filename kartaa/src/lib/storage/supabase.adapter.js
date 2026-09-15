@@ -37,6 +37,10 @@ const toProfile = (row) => row && {
   phone: row.phone || '',
   avatarUrl: row.avatar_url || '',
   plan: row.plan || 'free',
+  // L'échéance voyage avec le profil : sans elle, l'écran croirait Pro un
+  // abonnement échu, alors que la base le traite déjà comme gratuit.
+  proUntil: row.pro_until || null,
+  proSource: row.pro_source || null,
   createdAt: row.created_at,
 }
 
@@ -395,6 +399,13 @@ export const vaults = {
  * d'abonnement — revenait à célébrer un paiement qui n'a jamais eu lieu.
  */
 export const subscriptions = {
+  /** État complet de l'abonnement, tel que le serveur le calcule. */
+  async status() {
+    const { data, error } = await supabase.rpc('my_subscription')
+    if (error) return null
+    return data || null
+  },
+
   async request(note = null) {
     const { data: auth } = await supabase.auth.getUser()
     if (!auth?.user?.id) throw new Error('Authentification requise.')

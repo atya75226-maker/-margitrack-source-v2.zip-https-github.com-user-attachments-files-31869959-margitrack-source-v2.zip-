@@ -5,7 +5,7 @@ import { Icon } from '../../components/ui/Icons'
 import { useAuth } from '../../state/AuthContext'
 import { useToast } from '../../state/ToastContext'
 import { useTranslation, LANGUAGES } from '../../i18n'
-import { isPro, PRO_PRICE } from '../../config/app.config'
+import { CHECKOUT_URL, isPro, PRO_PRICE, subscriptionStatus } from '../../config/app.config'
 import { repo } from '../../lib/storage'
 
 const PRO_FEATURES = ['sub.f1', 'sub.f2', 'sub.f3', 'sub.f4', 'sub.f5', 'sub.f6', 'sub.f7', 'sub.f8', 'sub.f9', 'sub.f10']
@@ -22,6 +22,11 @@ export default function SubscriptionPage() {
   const [payment, setPayment] = useState(false)
   const [busy, setBusy] = useState(false)
   const pro = isPro(user)
+  const statut = subscriptionStatus(user)
+  const echeance = user?.proUntil
+    ? new Intl.DateTimeFormat(language === 'en' ? 'en-GB' : 'fr-FR', { dateStyle: 'long' })
+      .format(new Date(user.proUntil))
+    : null
 
   /**
    * Enregistre l'intention de passer à Pro.
@@ -30,16 +35,27 @@ export default function SubscriptionPage() {
    * c'est-à-dire un paiement réussi qui n'a jamais eu lieu. Le plan ne se change
    * désormais que côté serveur, par une fonction fermée au navigateur.
    */
-  const demander = async () => {
+  /**
+   * Ouvre la page de paiement du prestataire.
+   *
+   * Aucun droit n'est accordé ici, et il ne faut surtout pas en accorder au
+   * retour : un retour de navigateur se falsifie. C'est la confirmation signée
+   * envoyée par le prestataire à la fonction chariow-webhook qui active
+   * l'abonnement, et elle seule.
+   *
+   * La demande enregistrée avant l'ouverture sert à retrouver qui a voulu
+   * payer, et à rattacher un paiement dont l'adresse ne correspondrait pas.
+   */
+  const ouvrirLePaiement = async () => {
     setBusy(true)
     try {
       await repo.subscriptions.request()
-      toast.success(t('sub.activated'))
-      setPayment(false)
-    } catch (error) {
-      toast.error(error.message)
+    } catch {
+      /* la demande n'est qu'une trace : son échec ne doit pas bloquer le paiement */
     } finally {
       setBusy(false)
+      setPayment(false)
+      window.open(CHECKOUT_URL, '_blank', 'noopener,noreferrer')
     }
   }
 
@@ -75,8 +91,14 @@ export default function SubscriptionPage() {
           <div>
             <p className="text-xs font-extrabold uppercase tracking-[.18em] text-ink-400">{t('sub.current')}</p>
             <p className="mt-1 font-display text-xl font-extrabold text-ink-900">
-              {pro ? t('sub.currentPro') : t('sub.currentFree')}
+              {pro ? t('sub.currentPro') : statut === 'expired' ? t('sub.expired') : t('sub.currentFree')}
             </p>
+            {pro && echeance && (
+              <p className="mt-1 text-sm text-ink-500">{t('sub.until')} {echeance}</p>
+            )}
+            {statut === 'expired' && echeance && (
+              <p className="mt-1 text-sm text-rose-600">{t('sub.expiredOn')} {echeance}</p>
+            )}
           </div>
           <Badge tone={pro ? 'gold' : 'neutral'} icon={pro ? 'crown' : null}>
             {pro ? t('plan.pro') : t('plan.free')}
@@ -142,7 +164,7 @@ export default function SubscriptionPage() {
         title={t('sub.paymentPending')}
         size="sm"
         footer={
-          <Button full loading={busy} onClick={demander}>
+          <Button full loading={busy} icon="arrowRight" onClick={ouvrirLePaiement}>
             {t('sub.activate')}
           </Button>
         }
@@ -152,9 +174,12 @@ export default function SubscriptionPage() {
           <p className="font-display text-2xl font-extrabold text-ink-900">{price(PRO_PRICE)}</p>
           <p className="mt-0.5 text-xs font-semibold text-ink-500">{t('plan.perMonth')}</p>
         </div>
-        <p className="hint mt-3 text-center">
-          Aucun montant n'est prélevé ici.
-        </p>
+        <div className="mt-4 flex gap-3 rounded-2xl border border-gold-200 bg-gold-50/70 p-3.5">
+          <Icon name="alert" size={18} className="mt-0.5 shrink-0 text-gold-600" />
+          <p className="text-xs leading-relaxed text-ink-700">
+            {t('sub.emailNotice')} <strong className="font-bold">{user?.email}</strong>
+          </p>
+        </div>
       </Modal>
     </div>
   )

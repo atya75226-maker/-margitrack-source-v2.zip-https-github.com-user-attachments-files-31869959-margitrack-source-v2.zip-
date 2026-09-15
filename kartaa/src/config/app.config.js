@@ -57,6 +57,19 @@ export const CURRENCY = {
 
 export const PRO_PRICE = 5000
 
+/**
+ * Page de paiement de l'abonnement Pro, chez le prestataire.
+ *
+ * Ouvrir cette page n'accorde rien : c'est la confirmation signée envoyée par
+ * le prestataire à la fonction chariow-webhook qui active l'abonnement, jamais
+ * un retour de navigateur. Le rattachement au compte se fait par l'adresse
+ * e-mail du paiement — d'où la consigne affichée à côté du bouton.
+ */
+export const CHECKOUT_URL = 'https://ffnigord.mychariow.shop/prd_dv4ahcby'
+
+/** Durée accordée par paiement, en jours. Doit rester alignée sur activate_pro(). */
+export const PRO_PERIOD_DAYS = 30
+
 /** « 5 000 FCFA » en français, « 5,000 FCFA » en anglais. Jamais de $, € ou £. */
 export function formatPrice(amount = PRO_PRICE, language = 'fr') {
   const separator = language === 'en' ? ',' : ' '
@@ -86,12 +99,28 @@ export const PLANS = {
 
 export const PLAN_ORDER = ['free', 'pro']
 
+/**
+ * Offre effective d'une personne.
+ *
+ * « Pro » ne suffit pas : un abonnement échu redevient gratuit. La base applique
+ * exactement la même règle (plan_of, current_plan) — l'écran ne fait que
+ * refléter ce que le serveur appliquera de toute façon.
+ */
 export function planOf(user) {
-  return PLANS[user?.plan] || PLANS.free
+  if (user?.plan !== 'pro') return PLANS.free
+  if (user.proUntil && new Date(user.proUntil).getTime() <= Date.now()) return PLANS.free
+  return PLANS.pro
 }
 
 export function isPro(user) {
   return planOf(user).id === 'pro'
+}
+
+/** « free », « active » ou « expired » — ce que la page Mon abonnement affiche. */
+export function subscriptionStatus(user) {
+  if (user?.plan !== 'pro') return 'free'
+  if (!user.proUntil) return 'active'
+  return new Date(user.proUntil).getTime() > Date.now() ? 'active' : 'expired'
 }
 
 /**

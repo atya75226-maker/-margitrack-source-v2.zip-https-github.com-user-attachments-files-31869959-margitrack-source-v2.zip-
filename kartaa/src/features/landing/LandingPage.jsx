@@ -8,7 +8,7 @@ import { useQrCode } from '../../hooks/useCardAssets'
 import { DEMO_CARDS } from './demoCards'
 import { useAuth } from '../../state/AuthContext'
 import { useModeInstallation } from '../../components/InstallApp'
-import { proposerInstallation } from '../../lib/pwa'
+import { proposerInstallation, raisonInstallation } from '../../lib/pwa'
 
 const FEATURES = [
   {
@@ -616,9 +616,16 @@ function InstallSection() {
           {mode !== 'native' && (
             <p className="mt-6 inline-flex max-w-md rounded-2xl bg-white p-4 text-left text-sm leading-relaxed text-ink-600 shadow-soft">
               <Icon name="info" size={18} className="mr-2.5 mt-0.5 shrink-0 text-brand-600" />
-              {mode === 'ios'
-                ? 'Sur iPhone : touchez Partager en bas de Safari, puis « Sur l’écran d’accueil ».'
-                : 'Ouvrez le menu de votre navigateur (⋮ ou ≡), puis « Installer l’application » ou « Ajouter à l’écran d’accueil ».'}
+              <span>
+                {/* Le message vient de la même fonction que partout ailleurs :
+                    une seule explication, jamais deux versions qui divergent. */}
+                {raisonInstallation()}{' '}
+                {mode === 'ios'
+                  ? 'Touchez Partager en bas de Safari, puis « Sur l’écran d’accueil ».'
+                  : mode === 'fenetre-integree'
+                    ? 'Menu ⋮ ou ••• → « Ouvrir dans Chrome ».'
+                    : 'Menu ⋮ ou ≡ → « Installer l’application » ou « Ajouter à l’écran d’accueil ».'}
+              </span>
             </p>
           )}
         </div>

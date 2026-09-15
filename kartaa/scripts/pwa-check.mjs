@@ -174,6 +174,24 @@ console.log('\nApplication déjà installée')
   await context.close()
 }
 
+console.log('\nFenêtre intégrée à une autre application')
+{
+  // Un lien ouvert depuis Facebook ou WhatsApp s'affiche dans leur fenêtre :
+  // elle n'installe jamais. C'est la première cause d'un téléphone qui installe
+  // et d'un autre qui n'y arrive pas, avec la même adresse.
+  const context = await browser.newContext({
+    userAgent: 'Mozilla/5.0 (Linux; Android 13; SM-A536B) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/120.0 Mobile Safari/537.36 [FBAN/EMA;FBLC/fr_FR]',
+  })
+  const page = await context.newPage()
+  await page.goto(BASE, { waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(2000)
+  const texte = await page.innerText('body')
+  verifier('la fenêtre intégrée est reconnue', /Ouvrez le site dans Chrome|ouvrir dans Chrome/i.test(texte),
+    `→ ${texte.slice(0, 120)}`)
+  verifier('aucune consigne de rechargement', !/recharg|actualis/i.test(texte))
+  await context.close()
+}
+
 console.log('\nSession conservée après installation')
 {
   // L'application installée tourne sur la même adresse : elle partage donc le

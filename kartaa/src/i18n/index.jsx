@@ -33,15 +33,20 @@ const DICTIONARY = {
     'sub.freeTitle': 'Ce que l’offre Gratuit vous donne déjà',
     'sub.manage': 'Gérer mon abonnement',
     'sub.cancel': 'Revenir à l’offre Gratuit',
-    'sub.paymentPending': 'Demander l’abonnement Pro',
+    'sub.paymentPending': 'Passer à Pro — 5 000 FCFA / mois',
     'sub.paymentNote':
-      'Aucun prestataire de paiement n’est encore connecté : cette demande n’active donc rien et ne vous prélève rien. Elle nous signale que vous voulez passer à Pro, et nous vous contacterons pour l’activation.',
-    'sub.activate': 'Envoyer ma demande',
+      'Vous allez être redirigé vers notre page de paiement sécurisée. Votre abonnement s’active automatiquement dès que le paiement est confirmé — vous n’avez rien d’autre à faire.',
+    'sub.emailNotice':
+      'Important : payez avec l’adresse e-mail de votre compte, c’est elle qui rattache le paiement à votre abonnement. Votre adresse :',
+    'sub.activate': 'Aller au paiement',
     'sub.activated': 'Demande enregistrée. Nous vous contactons pour l’activation.',
+    'sub.expired': 'Votre abonnement Pro a expiré.',
+    'sub.expiredOn': 'Expiré le',
+    'sub.until': 'Actif jusqu’au',
     'sub.alreadyRequested': 'Votre demande est déjà enregistrée.',
     'sub.reverted': 'Retour à l’offre Gratuit.',
     'sub.manageNote':
-      'Pour suspendre ou reprendre votre abonnement, écrivez-nous : le changement d’offre se fait de notre côté, jamais depuis cette page.',
+      'Votre abonnement se renouvelle par un nouveau paiement. Pour le suspendre ou poser une question, écrivez-nous : le changement d’offre se fait côté serveur, jamais depuis cette page.',
 
     'sub.f1': 'Plusieurs cartes professionnelles',
     'sub.f2': 'Modèles Premium',
@@ -88,15 +93,20 @@ const DICTIONARY = {
     'sub.freeTitle': 'What the Free plan already gives you',
     'sub.manage': 'Manage my subscription',
     'sub.cancel': 'Back to the Free plan',
-    'sub.paymentPending': 'Request the Pro plan',
+    'sub.paymentPending': 'Upgrade to Pro — 5,000 FCFA / month',
     'sub.paymentNote':
-      'No payment provider is connected yet, so this request activates nothing and charges you nothing. It tells us you want Pro, and we will contact you to activate it.',
-    'sub.activate': 'Send my request',
+      'You will be taken to our secure payment page. Your subscription activates automatically once the payment is confirmed — nothing else to do.',
+    'sub.emailNotice':
+      'Important: pay with your account email address — that is what links the payment to your subscription. Your address:',
+    'sub.activate': 'Go to payment',
     'sub.activated': 'Request saved. We will contact you to activate it.',
+    'sub.expired': 'Your Pro subscription has expired.',
+    'sub.expiredOn': 'Expired on',
+    'sub.until': 'Active until',
     'sub.alreadyRequested': 'Your request is already on file.',
     'sub.reverted': 'Back on the Free plan.',
     'sub.manageNote':
-      'To pause or resume your subscription, write to us: plan changes happen on our side, never from this page.',
+      'Your subscription renews with a new payment. To pause it or ask a question, write to us: plan changes happen server-side, never from this page.',
 
     'sub.f1': 'Multiple business cards',
     'sub.f2': 'Premium templates',
