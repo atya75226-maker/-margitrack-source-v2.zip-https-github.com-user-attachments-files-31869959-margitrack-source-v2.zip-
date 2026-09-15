@@ -440,6 +440,19 @@ qu'un écran de connexion à l'hébergeur. Les zones privées de l'application �
 tableau de bord et les coffres — restent protégées par l'authentification décrite
 plus haut.
 
+### Vérification du téléchargement des deux faces
+
+```bash
+npm run build && npm run preview -- --port 4173
+npm run test:export
+```
+
+Le test intercepte le clic de téléchargement pour récupérer le fichier
+réellement produit, puis vérifie que le verso n'est ni vide, ni une copie du
+recto. Regarder l'écran ne suffisait pas : le recto s'affichait correctement,
+c'est le fichier qui était faux — l'export rendait `front` quelle que soit la
+face demandée.
+
 ### Vérification de la session et de la navigation (navigateur réel)
 
 ```bash

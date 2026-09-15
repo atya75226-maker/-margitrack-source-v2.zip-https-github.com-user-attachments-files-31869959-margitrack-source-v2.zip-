@@ -47,8 +47,14 @@ export default function CardDetailPage() {
   const handleExport = async (format) => {
     setExporting(format)
     try {
-      await exportCard(card, { front: frontRef.current, back: backRef.current }, format)
-      toast.success(`Carte téléchargée en ${format.toUpperCase()}.`)
+      // La face exportée est celle qu'on regarde : le bouton téléchargera le
+      // verso si l'onglet Verso est ouvert.
+      await exportCard(card, { front: frontRef.current, back: backRef.current }, format, side)
+      toast.success(
+        format === 'pdf'
+          ? 'Carte téléchargée en PDF, recto et verso.'
+          : `${side === 'back' ? 'Verso' : 'Recto'} téléchargé en ${format.toUpperCase()}.`,
+      )
     } catch (error) {
       toast.error(error.message || 'Le téléchargement a échoué. Réessayez.')
     } finally {
@@ -93,8 +99,8 @@ export default function CardDetailPage() {
           ))}
         </div>
         <p className="hint mt-3 text-center">
-          Le fichier reprend votre nom, vos coordonnées, vos réseaux, votre présentation et votre QR Code. Le PDF contient
-          le recto et le verso.
+          PNG et JPG téléchargent la face affichée ci-dessus — {side === 'back' ? 'le verso' : 'le recto'}. Le PDF
+          contient les deux faces.
         </p>
       </Panel>
 
