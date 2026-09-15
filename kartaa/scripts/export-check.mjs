@@ -12,6 +12,7 @@
  */
 import { chromium } from 'playwright'
 import { PNG } from 'pngjs'
+import jsQR from 'jsqr'
 
 const BASE = process.env.BASE_URL || 'http://localhost:4173'
 const KEY = 'sb-wadapjshbdjkjrfnsnyr-auth-token'
@@ -127,6 +128,16 @@ function imageDe(dataUrl) {
   return { png: PNG.sync.read(brut), octets: brut.length }
 }
 
+/**
+ * Lecture réelle du QR Code dans le fichier produit.
+ * C'est la seule preuve qui compte : un code « visible » mais illisible par un
+ * téléphone laisserait le propriétaire distribuer des cartes mortes.
+ */
+function lireQr(png) {
+  const code = jsQR(new Uint8ClampedArray(png.data), png.width, png.height)
+  return code ? code.data : null
+}
+
 /** Part des pixels qui ne sont pas de la couleur dominante — un fichier vide tombe à zéro. */
 function richesse(png) {
   const compte = new Map()
@@ -163,6 +174,15 @@ verifier('le verso n’est pas vide', richesseVerso.varies > 0.05 && richesseVer
 
 const identiques = imageRecto.png.data.equals(imageVerso.png.data)
 verifier('le verso n’est pas une copie du recto', !identiques)
+
+// Les deux faces ont chacune leur rôle : la marque au recto, le QR Code au verso.
+const qrRecto = lireQr(imageRecto.png)
+verifier('le recto ne porte aucun QR Code', qrRecto === null, `→ ${qrRecto}`)
+
+const qrVerso = lireQr(imageVerso.png)
+verifier('le QR Code du verso est lisible', qrVerso !== null)
+verifier('le QR Code du verso ouvre le profil public de production',
+  qrVerso === 'https://kartaa-eight.vercel.app/awa-diallo', `→ ${qrVerso}`)
 
 // Le contenu du verso doit correspondre à ce que l'écran affiche.
 await page.click('button:has-text("Verso")')
