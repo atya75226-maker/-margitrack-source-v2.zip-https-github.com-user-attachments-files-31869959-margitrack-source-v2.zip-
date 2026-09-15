@@ -11,7 +11,7 @@ import { exportCard } from '../../lib/cardExport'
 import { copyToClipboard, downloadUrl } from '../../lib/download'
 import { publicUrl } from '../../lib/slug'
 import { formatDate, formatNumber } from '../../lib/format'
-import { can } from '../../config/app.config'
+import { can, PRO_CAPABILITIES } from '../../config/app.config'
 
 export default function CardDetailPage() {
   const { cardId } = useParams()
@@ -164,7 +164,7 @@ export default function CardDetailPage() {
               ? `${card.customDomain.value} — ${card.customDomain.status === 'verified' ? 'vérifié' : 'en attente de vérification'}`
               : "Remplacez l'adresse par la vôtre : www.votre-nom.com"
           }
-          badge={can(user, 'customDomain') ? null : 'Premium'}
+          badge={can(user, 'customDomain') ? null : 'Pro'}
           action="Connecter mon domaine"
           onClick={() => setDomainOpen(true)}
         />
@@ -266,9 +266,18 @@ function DomainModal({ open, onClose, card, allowed }) {
       }
     >
       {!allowed && (
-        <div className="mb-5 flex gap-3 rounded-2xl bg-gold-50 p-4 text-sm text-gold-800">
-          <Icon name="crown" size={18} className="mt-0.5 shrink-0" />
-          <p>Le domaine personnalisé fait partie des offres Premium et VIP. Vous pouvez préparer la configuration dès maintenant.</p>
+        <div className="mb-5 rounded-2xl bg-gold-50 p-4">
+          <div className="flex gap-3 text-sm text-gold-800">
+            <Icon name="lock" size={18} className="mt-0.5 shrink-0" />
+            <p>
+              <strong className="font-bold">{PRO_CAPABILITIES.customDomain.label}</strong>
+              {' — '}
+              {PRO_CAPABILITIES.customDomain.value} Vous pouvez préparer la configuration dès maintenant.
+            </p>
+          </div>
+          <Button as={Link} to="/app/abonnement" variant="gold" size="sm" className="mt-3">
+            Voir Pro
+          </Button>
         </div>
       )}
       <Field label="Votre nom de domaine" hint="Exemple : www.jean-dupont.com">

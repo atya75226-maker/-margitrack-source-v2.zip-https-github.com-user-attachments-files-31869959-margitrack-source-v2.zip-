@@ -5,27 +5,35 @@ import { Icon } from '../../components/ui/Icons'
 import { useAuth } from '../../state/AuthContext'
 import { useToast } from '../../state/ToastContext'
 import { useTranslation, LANGUAGES } from '../../i18n'
-import { FEATURE_FLAGS, isPro, PRO_PRICE } from '../../config/app.config'
+import { isPro, PRO_PRICE } from '../../config/app.config'
+import { repo } from '../../lib/storage'
 
-const PRO_FEATURES = ['sub.f1', 'sub.f2', 'sub.f3', 'sub.f4', 'sub.f5', 'sub.f6', 'sub.f7', 'sub.f8']
-const FREE_FEATURES = ['free.f1', 'free.f2', 'free.f3', 'free.f4', 'free.f5', 'free.f6']
+const PRO_FEATURES = ['sub.f1', 'sub.f2', 'sub.f3', 'sub.f4', 'sub.f5', 'sub.f6', 'sub.f7', 'sub.f8', 'sub.f9', 'sub.f10']
+const FREE_FEATURES = ['free.f1', 'free.f2', 'free.f3', 'free.f4', 'free.f5', 'free.f6', 'free.f7', 'free.f8', 'free.f9']
 
 /**
  * Page unique d'abonnement. Tous les chemins de l'application y mènent, et il
  * n'existe qu'une offre payante : Pro, 5 000 FCFA par mois.
  */
 export default function SubscriptionPage() {
-  const { user, updateUser } = useAuth()
+  const { user } = useAuth()
   const { t, price, language, setLanguage } = useTranslation()
   const toast = useToast()
   const [payment, setPayment] = useState(false)
   const [busy, setBusy] = useState(false)
   const pro = isPro(user)
 
-  const activate = async () => {
+  /**
+   * Enregistre l'intention de passer à Pro.
+   *
+   * Cette page n'active plus rien : elle écrivait directement plan = 'pro',
+   * c'est-à-dire un paiement réussi qui n'a jamais eu lieu. Le plan ne se change
+   * désormais que côté serveur, par une fonction fermée au navigateur.
+   */
+  const demander = async () => {
     setBusy(true)
     try {
-      await updateUser({ plan: 'pro' })
+      await repo.subscriptions.request()
       toast.success(t('sub.activated'))
       setPayment(false)
     } catch (error) {
@@ -104,17 +112,9 @@ export default function SubscriptionPage() {
           </ul>
 
           {pro ? (
-            <Button
-              variant="outline"
-              full
-              className="mt-6"
-              onClick={async () => {
-                await updateUser({ plan: 'free' })
-                toast.info(t('sub.reverted'))
-              }}
-            >
-              {t('sub.cancel')}
-            </Button>
+            <p className="mt-6 rounded-2xl bg-ink-50 p-4 text-sm leading-relaxed text-ink-600">
+              {t('sub.manageNote')}
+            </p>
           ) : (
             <Button size="lg" full className="mt-6" icon="crown" onClick={() => setPayment(true)}>
               {t('sub.cta')}
@@ -142,7 +142,7 @@ export default function SubscriptionPage() {
         title={t('sub.paymentPending')}
         size="sm"
         footer={
-          <Button full loading={busy} onClick={activate}>
+          <Button full loading={busy} onClick={demander}>
             {t('sub.activate')}
           </Button>
         }
@@ -152,11 +152,9 @@ export default function SubscriptionPage() {
           <p className="font-display text-2xl font-extrabold text-ink-900">{price(PRO_PRICE)}</p>
           <p className="mt-0.5 text-xs font-semibold text-ink-500">{t('plan.perMonth')}</p>
         </div>
-        {!FEATURE_FLAGS.payments && (
-          <p className="hint mt-3 text-center">
-            Prestataire de paiement à connecter — voir FEATURE_FLAGS.payments.
-          </p>
-        )}
+        <p className="hint mt-3 text-center">
+          Aucun montant n'est prélevé ici.
+        </p>
       </Modal>
     </div>
   )

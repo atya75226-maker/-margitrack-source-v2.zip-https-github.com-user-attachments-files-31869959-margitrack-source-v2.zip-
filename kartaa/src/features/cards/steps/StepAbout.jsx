@@ -2,6 +2,9 @@ import { useRef, useState } from 'react'
 import { Button, Field, Input, Panel, Textarea, EmptyState } from '../../../components/ui'
 import { Icon } from '../../../components/ui/Icons'
 import { uploadImage, removeImage } from '../../../lib/storage'
+import { useProLock, ProBadge } from '../../../components/ProLock'
+import { useAuth } from '../../../state/AuthContext'
+import { can } from '../../../config/app.config'
 import { randomId } from '../../../lib/crypto'
 
 const GALERIE_MAX = 12
@@ -10,12 +13,18 @@ const SUGGESTIONS = ['Marketing digital', 'Création de sites web', 'Formation',
 
 export default function StepAbout({ draft, update }) {
   const [activity, setActivity] = useState('')
+  const { user } = useAuth()
+  const { requirePro } = useProLock()
   const activities = draft.activities || []
   const gallery = draft.gallery || []
+  const plusieursActivites = can(user, 'multipleActivities')
 
   const addActivity = (value) => {
     const clean = (value || '').trim()
     if (!clean || activities.includes(clean)) return
+    // Une activité pour tout le monde ; au-delà, c'est l'abonnement Pro. La base
+    // applique la même règle : ce verrou est un raccourci, pas la protection.
+    if (activities.length >= 1 && !requirePro('multipleActivities')) return
     update({ activities: [...activities, clean] })
     setActivity('')
   }
@@ -94,6 +103,8 @@ export default function StepAbout({ draft, update }) {
 
       <Galerie
         photos={gallery}
+        autorisee={can(user, 'gallery')}
+        onDemande={() => requirePro('gallery')}
         onChange={(photos) => update({ gallery: photos })}
       />
     </div>
@@ -106,7 +117,7 @@ export default function StepAbout({ draft, update }) {
  * profil et les logos — elles s'affichent pour un visiteur non connecté. Rien
  * de privé n'a sa place ici : c'est le Coffre Sécurité qui sert à cela.
  */
-function Galerie({ photos, onChange }) {
+function Galerie({ photos, onChange, autorisee = true, onDemande }) {
   const champ = useRef(null)
   const [busy, setBusy] = useState(false)
 
@@ -136,22 +147,31 @@ function Galerie({ photos, onChange }) {
     <Panel>
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
-          <p className="font-display text-base font-bold text-ink-900">Ma galerie</p>
+          <p className="flex items-center gap-2 font-display text-base font-bold text-ink-900">
+            Ma galerie
+            {!autorisee && <ProBadge />}
+          </p>
           <p className="hint mt-0.5">
             Vos réalisations, vos produits, votre local. Jusqu'à {GALERIE_MAX} photos, visibles sur votre
             mini-site.
           </p>
         </div>
-        <Button
-          size="sm"
-          variant="outline"
-          icon="plus"
-          loading={busy}
-          disabled={photos.length >= GALERIE_MAX}
-          onClick={() => champ.current?.click()}
-        >
-          Ajouter
-        </Button>
+        {autorisee ? (
+          <Button
+            size="sm"
+            variant="outline"
+            icon="plus"
+            loading={busy}
+            disabled={photos.length >= GALERIE_MAX}
+            onClick={() => champ.current?.click()}
+          >
+            Ajouter
+          </Button>
+        ) : (
+          <Button size="sm" variant="outline" icon="lock" onClick={onDemande}>
+            Voir Pro
+          </Button>
+        )}
       </div>
 
       <input

@@ -4,6 +4,9 @@ import { Icon, SocialIcon } from '../../../components/ui/Icons'
 import { SOCIAL_NETWORKS } from '../../../config/app.config'
 import { uploadImage, removeImage } from '../../../lib/storage'
 import { randomId } from '../../../lib/crypto'
+import { useProLock, ProBadge } from '../../../components/ProLock'
+import { useAuth } from '../../../state/AuthContext'
+import { can } from '../../../config/app.config'
 
 const EMPTY_COMPANY = {
   name: '', description: '', phone: '', whatsapp: '', address: '', website: '',
@@ -14,8 +17,13 @@ const EMPTY_SERVICE = { name: '', description: '', price: '', photoUrl: null, ph
 export default function StepCompanies({ draft, update }) {
   const [companyDraft, setCompanyDraft] = useState(null)
   const [serviceDraft, setServiceDraft] = useState(null)
+  const { user } = useAuth()
+  const { requirePro } = useProLock()
   const companies = draft.companies || []
   const services = draft.services || []
+  // Une entreprise pour tout le monde ; la suivante est incluse dans Pro. Les
+  // services, eux, restent libres : c'est le cœur d'une carte professionnelle.
+  const plusieursEntreprises = can(user, 'multipleCompanies')
 
   const saveCompany = () => {
     const value = { ...companyDraft, name: companyDraft.name.trim() }
@@ -42,11 +50,26 @@ export default function StepCompanies({ draft, update }) {
       <Panel>
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
-            <p className="font-display text-base font-bold text-ink-900">Mes entreprises</p>
-            <p className="hint mt-0.5">Ajoutez une ou plusieurs structures. La première apparaît sur la carte.</p>
+            <p className="flex items-center gap-2 font-display text-base font-bold text-ink-900">
+              Mes entreprises
+              {companies.length >= 1 && !plusieursEntreprises && <ProBadge />}
+            </p>
+            <p className="hint mt-0.5">
+              {plusieursEntreprises
+                ? 'Ajoutez une ou plusieurs structures. La première apparaît sur la carte.'
+                : 'Une structure sur l’offre Gratuit. La suivante est incluse dans Pro.'}
+            </p>
           </div>
-          <Button size="sm" variant="outline" icon="plus" onClick={() => setCompanyDraft({ ...EMPTY_COMPANY, id: randomId('cmp') })}>
-            Ajouter
+          <Button
+            size="sm"
+            variant="outline"
+            icon={companies.length >= 1 && !plusieursEntreprises ? 'lock' : 'plus'}
+            onClick={() => {
+              if (companies.length >= 1 && !requirePro('multipleCompanies')) return
+              setCompanyDraft({ ...EMPTY_COMPANY, id: randomId('cmp') })
+            }}
+          >
+            {companies.length >= 1 && !plusieursEntreprises ? 'Voir Pro' : 'Ajouter'}
           </Button>
         </div>
         {companies.length ? (

@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useMemo, useState } from 'react
 import { useNavigate } from 'react-router-dom'
 import { Button, Modal } from './ui'
 import { Icon } from './ui/Icons'
-import { can } from '../config/app.config'
+import { can, PRO_CAPABILITIES, formatPrice } from '../config/app.config'
 import { useAuth } from '../state/AuthContext'
 import { useTranslation } from '../i18n'
 
@@ -16,18 +16,28 @@ const ProLockContext = createContext(null)
 
 export function ProLockProvider({ children }) {
   const { user } = useAuth()
-  const [open, setOpen] = useState(false)
+  // On retient quelle fonctionnalité a été demandée : « Fonctionnalité Pro »
+  // tout court n'apprend rien, alors que nommer ce qu'on vient de toucher et ce
+  // qu'elle apporte se lit en une seconde.
+  const [demandee, setDemandee] = useState(null)
   const navigate = useNavigate()
-  const { t } = useTranslation()
+  const { t, language } = useTranslation()
 
   /** Retourne true si l'accès est permis ; sinon affiche le message et retourne false. */
   const requirePro = useCallback((capability) => {
     if (can(user, capability)) return true
-    setOpen(true)
+    setDemandee(capability)
     return false
   }, [user])
 
-  const value = useMemo(() => ({ requirePro, showProLock: () => setOpen(true) }), [requirePro])
+  const value = useMemo(
+    () => ({ requirePro, showProLock: (capability = null) => setDemandee(capability || 'multipleCards') }),
+    [requirePro],
+  )
+
+  const details = demandee ? PRO_CAPABILITIES[demandee] : null
+  const open = !!demandee
+  const setOpen = (valeur) => { if (!valeur) setDemandee(null) }
 
   return (
     <ProLockContext.Provider value={value}>
@@ -37,7 +47,13 @@ export function ProLockProvider({ children }) {
           <span className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-gold-100 text-gold-700">
             <Icon name="lock" size={26} />
           </span>
-          <p className="text-sm leading-relaxed text-ink-600">{t('pro.lockedText')}</p>
+          {details && <p className="font-display text-base font-bold text-ink-900">{details.label}</p>}
+          <p className="mt-1.5 text-sm leading-relaxed text-ink-600">
+            {details ? details.value : t('pro.lockedText')}
+          </p>
+          <p className="mt-3 text-sm font-semibold text-ink-800">
+            {formatPrice(undefined, language)} {t('plan.perMonth')}
+          </p>
           <div className="mt-6 space-y-2">
             <Button
               full

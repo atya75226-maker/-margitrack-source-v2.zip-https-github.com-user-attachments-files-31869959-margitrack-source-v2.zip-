@@ -94,20 +94,69 @@ export function isPro(user) {
   return planOf(user).id === 'pro'
 }
 
-/** Fonctionnalités réservées à l'abonnement Pro. */
+/**
+ * Ce que l'abonnement Pro débloque, et ce que chaque option apporte.
+ *
+ * Une seule liste pour toute l'application : c'est elle que lisent les écrans
+ * pour savoir s'il faut verrouiller, et c'est elle qui fournit la phrase
+ * affichée quand on le fait. Disperser ces conditions dans les pages, c'est
+ * garantir qu'elles finiront par se contredire.
+ *
+ * Ce qui est ici n'est qu'un guide d'affichage : la base refuse de son côté
+ * (déclencheurs sur cards, plan_limits, contrôle du plan). Cacher un bouton ne
+ * protège rien.
+ */
+export const PRO_CAPABILITIES = {
+  multipleCards: {
+    label: 'Plusieurs cartes',
+    value: "Une carte personnelle, une carte entreprise, une par activité : chacune avec son mini-site et son QR Code.",
+  },
+  premiumTemplates: {
+    label: 'Modèles Premium et VIP',
+    value: "Des cartes qui ressemblent à de vraies cartes de visite, pas à un modèle par défaut.",
+  },
+  advancedDesign: {
+    label: 'Personnalisation avancée',
+    value: "Couleurs, typographies et mise en page : votre carte à vos codes, pas aux nôtres.",
+  },
+  gallery: {
+    label: 'Galerie photos',
+    value: "Vos réalisations, vos produits, votre local : ce qui donne du crédit à une carte.",
+  },
+  multipleCompanies: {
+    label: 'Plusieurs entreprises',
+    value: "Présentez chacune de vos structures sur la même carte.",
+  },
+  multipleActivities: {
+    label: 'Plusieurs activités',
+    value: "Quand un seul métier ne suffit pas à vous décrire.",
+  },
+  advancedStats: {
+    label: 'Statistiques avancées',
+    value: "Analysez les performances de vos cartes : qui appelle, qui écrit, quels réseaux sont ouverts.",
+  },
+  customDomain: {
+    label: 'Domaine personnalisé',
+    value: "Votre mini-site à votre propre adresse, au lieu d'une adresse fournie par l'application.",
+  },
+  multipleVaults: {
+    label: 'Plusieurs coffres',
+    value: "Un coffre par usage — documents, famille, souvenirs — et bien plus d'espace.",
+  },
+  advancedQr: {
+    label: 'QR Code personnalisé',
+    value: "Aux couleurs de votre carte, toujours aussi facile à scanner.",
+  },
+  removeBranding: {
+    label: 'Mini-site sans mention Kartaa',
+    value: "Votre page, votre nom, rien d'autre en bas.",
+  },
+}
+
+/** Vrai si l'offre de la personne couvre cette fonctionnalité. */
 export function can(user, capability) {
-  const pro = isPro(user)
-  switch (capability) {
-    case 'customDomain':
-    case 'advancedStats':
-    case 'removeBranding':
-    case 'premiumTemplates':
-    case 'multipleCards':
-    case 'multipleVaults':
-      return pro
-    default:
-      return true
-  }
+  if (!(capability in PRO_CAPABILITIES)) return true
+  return isPro(user)
 }
 
 /* ------------------------------------------------- réseaux sociaux et liens */
