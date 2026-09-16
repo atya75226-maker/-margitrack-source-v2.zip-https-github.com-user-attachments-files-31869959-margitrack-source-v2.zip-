@@ -84,7 +84,18 @@ async function openStatus(name, params, fallback) {
 
 /* -------------------------------------------------------------- création */
 
-export async function createVault({ name, password, useBiometrics = false, userLabel }) {
+/**
+ * Création d'un coffre.
+ *
+ * Rien d'autre n'est tenté ici — et surtout pas l'enrôlement biométrique.
+ * Celui-ci passe la main au système du téléphone, en plein écran : sur Android,
+ * l'application peut être détruite pendant ce temps et redémarrer sur son écran
+ * d'accueil. Le code de récupération, qui n'existe alors que dans cette
+ * fonction, serait perdu alors même que le coffre vient d'être créé. Il est donc
+ * rendu à l'appelant tout de suite, affiché, puis sauvegardé — l'empreinte
+ * s'ajoute après, quand une interruption ne coûte plus rien.
+ */
+export async function createVault({ name, password }) {
   const vaultKey = await generateVaultKey()
   const recoveryCode = generateRecoveryCode()
 
@@ -102,24 +113,10 @@ export async function createVault({ name, password, useBiometrics = false, userL
     p_recovery_wrap: recovery_.wrap,
   }, "Le coffre n'a pas pu être créé.")
 
-  let vault = await repo.vaults.get(vaultId)
-
-  // Un refus du capteur ne doit pas faire échouer la création : le mot de passe
-  // suffit, la biométrie s'ajoute plus tard. En revanche l'échec est remonté —
-  // le taire laissait croire à un coffre protégé par l'empreinte alors qu'il ne
-  // l'était pas.
-  let biometricError = null
-  if (useBiometrics) {
-    try {
-      vault = await addBiometrics(vault, vaultKey, userLabel)
-    } catch (error) {
-      biometricError = error?.message || "L'enrôlement biométrique n'a pas abouti."
-      vault = await repo.vaults.get(vaultId)
-    }
-  }
+  const vault = await repo.vaults.get(vaultId)
 
   notifyChange()
-  return { vault, recoveryCode, vaultKey, biometricError }
+  return { vault, recoveryCode, vaultKey }
 }
 
 /* --------------------------------------------------------- déverrouillage */

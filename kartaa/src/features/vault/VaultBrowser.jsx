@@ -1,15 +1,20 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Badge, Button, ConfirmDialog, Field, FileDrop, Input, Modal, Panel, Progress, Spinner } from '../../components/ui'
 import { Icon } from '../../components/ui/Icons'
 import { addFile, createFolder, openFile, removeFile, removeFolder, usedBytesOf } from '../../lib/vaultService'
 import { formatBytes, formatDateTime } from '../../lib/format'
 import { downloadBlob } from '../../lib/download'
 import { useToast } from '../../state/ToastContext'
+import { useProLock } from '../../components/ProLock'
 
 const CATEGORY_ICON = { image: 'image', video: 'video', audio: 'video', pdf: 'file', document: 'file' }
 
 /** Explorateur de fichiers d'un coffre déverrouillé. */
-export default function VaultBrowser({ vault, vaultKey, token = null, onChange, readOnly = false, quotaBytes }) {
+export default function VaultBrowser({
+  vault, vaultKey, token = null, onChange, readOnly = false,
+  quotaBytes, usedBytes = null, quotaLabel = null,
+}) {
   const [folderId, setFolderId] = useState(null)
   const [uploading, setUploading] = useState(null)
   const [preview, setPreview] = useState(null)
@@ -17,27 +22,60 @@ export default function VaultBrowser({ vault, vaultKey, token = null, onChange, 
   const [folderName, setFolderName] = useState('')
   const [toDelete, setToDelete] = useState(null)
   const toast = useToast()
+  const { showProLock } = useProLock()
+  const navigate = useNavigate()
 
   const files = useMemo(
     () => (vault.files || []).filter((file) => (folderId ? file.folderId === folderId : !file.folderId)),
     [vault.files, folderId],
   )
-  const used = usedBytesOf(vault)
+  // L'espace compté est celui de tout le compte, comme la règle appliquée par la
+  // base : le quota ne se divise pas entre les coffres.
+  const used = usedBytes ?? usedBytesOf(vault)
+  const restant = quotaBytes ? Math.max(0, quotaBytes - used) : null
+  const plein = quotaBytes ? used >= quotaBytes : false
 
   const upload = async (list) => {
     let current = vault
+    // Le total suit les ajouts au fur et à mesure : une série de petits fichiers
+    // ne doit pas passer sous prétexte qu'aucun ne dépasse à lui seul.
+    let cumul = used
+    let ajoutes = 0
+    let refuses = 0
+
     for (let index = 0; index < list.length; index += 1) {
       const file = list[index]
+
+      if (quotaBytes && cumul + file.size > quotaBytes) {
+        refuses += 1
+        continue
+      }
+
       setUploading({ name: file.name, index: index + 1, total: list.length })
       try {
         current = await addFile(current, vaultKey, file, folderId)
+        cumul += file.size
+        ajoutes += 1
       } catch (error) {
         toast.error(error.message || `« ${file.name} » n'a pas pu être ajouté.`)
       }
     }
     setUploading(null)
     onChange(current)
-    toast.success(list.length > 1 ? `${list.length} fichiers ajoutés et chiffrés.` : 'Fichier ajouté et chiffré.')
+
+    if (refuses) {
+      // Un seul chemin pour l'abonnement : la fenêtre Pro, qui mène à « Mon abonnement ».
+      showProLock('storage')
+      toast.error(
+        refuses > 1
+          ? `${refuses} fichiers dépassent l'espace disponible.`
+          : "Ce fichier dépasse l'espace disponible.",
+      )
+    }
+    if (ajoutes) {
+      toast.success(ajoutes > 1 ? `${ajoutes} fichiers ajoutés et chiffrés.` : 'Fichier ajouté et chiffré.')
+    }
+    return
   }
 
   return (
@@ -47,8 +85,7 @@ export default function VaultBrowser({ vault, vaultKey, token = null, onChange, 
           <div>
             <p className="font-display text-base font-bold text-ink-900">Contenu du coffre</p>
             <p className="hint mt-0.5">
-              {(vault.files || []).length} fichier{(vault.files || []).length > 1 ? 's' : ''} • {formatBytes(used)}
-              {quotaBytes ? ` sur ${formatBytes(quotaBytes)}` : ''}
+              {(vault.files || []).length} fichier{(vault.files || []).length > 1 ? 's' : ''}
             </p>
           </div>
           {!readOnly && (
@@ -58,7 +95,41 @@ export default function VaultBrowser({ vault, vaultKey, token = null, onChange, 
           )}
         </div>
 
-        {quotaBytes ? <Progress value={(used / quotaBytes) * 100} tone={used / quotaBytes > 0.85 ? 'danger' : 'brand'} className="mb-4" /> : null}
+        {/* L'espace disponible se lit d'un coup d'œil : c'est lui qui décide si
+            un fichier de plus pourra être ajouté. */}
+        {quotaBytes ? (
+          <div className="mb-4 rounded-2xl bg-ink-50 p-4">
+            <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+              <span className="font-display text-sm font-bold text-ink-900">Stockage</span>
+              <span className="text-sm font-semibold text-ink-700">
+                {formatBytes(used)} / {formatBytes(quotaBytes)} utilisés
+              </span>
+            </div>
+            <Progress value={Math.min(100, (used / quotaBytes) * 100)} tone={used / quotaBytes > 0.85 ? 'danger' : 'brand'} />
+            <p className="hint mt-2">
+              {plein ? 'Espace saturé.' : `Il reste ${formatBytes(restant)}.`}
+              {quotaLabel ? ` Offre ${quotaLabel}.` : ''}
+            </p>
+          </div>
+        ) : null}
+
+        {/* Quota atteint : on le dit ici, en plus du refus au moment de l'ajout. */}
+        {!readOnly && plein && (
+          <div className="mb-4 rounded-2xl border border-gold-200 bg-gold-50/70 p-4">
+            <p className="flex items-center gap-2 font-display text-sm font-bold text-ink-900">
+              <Icon name="lock" size={16} className="text-gold-700" />
+              Espace de stockage gratuit atteint
+            </p>
+            <p className="mt-1.5 text-sm leading-relaxed text-ink-700">
+              Votre Coffre Sécurité gratuit est limité à {formatBytes(quotaBytes)}. Passez à Pro pour obtenir
+              davantage d'espace.
+            </p>
+            {/* Un seul bouton, un seul chemin : la page « Mon abonnement ». */}
+            <Button size="sm" icon="crown" className="mt-3" onClick={() => navigate('/app/abonnement')}>
+              Passer à Pro
+            </Button>
+          </div>
+        )}
 
         <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
           <FolderChip active={!folderId} label="Tous les fichiers" icon="grid" onClick={() => setFolderId(null)} />

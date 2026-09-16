@@ -83,7 +83,7 @@ export const PLANS = {
   free: {
     id: 'free',
     price: 0,
-    limits: { cards: 1, vaults: 1, storageMb: 200, templates: ['standard'] },
+    limits: { cards: 1, vaults: 1, storageMb: 20, templates: ['standard'] },
   },
   pro: {
     id: 'pro',
@@ -159,6 +159,10 @@ export const PRO_CAPABILITIES = {
   multipleActivities: {
     label: 'Plusieurs activités',
     value: "Quand un seul métier ne suffit pas à vous décrire.",
+  },
+  storage: {
+    label: 'Stockage du Coffre Sécurité',
+    value: "Votre Coffre Sécurité gratuit est limité à 20 Mo. Passez à Pro pour obtenir davantage d'espace : 20 Go pour vos photos, vos vidéos et vos documents.",
   },
   advancedStats: {
     label: 'Statistiques avancées',

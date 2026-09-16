@@ -16,6 +16,7 @@ import { copyToClipboard, downloadUrl } from '../../lib/download'
 import { formatDateTime } from '../../lib/format'
 import { isPlatformAuthenticatorAvailable } from '../../lib/webauthn'
 import * as vaultSession from '../../lib/vaultSession'
+import { isPro } from '../../config/app.config'
 
 const LOG_LABELS = {
   'vault.created': 'Coffre créé',
@@ -126,7 +127,14 @@ export default function VaultDetailPage() {
       />
 
       {tab === 'files' && (
-        <VaultBrowser vault={vault} vaultKey={vaultKey} onChange={setVault} quotaBytes={stats.quotaBytes} />
+        <VaultBrowser
+          vault={vault}
+          vaultKey={vaultKey}
+          onChange={setVault}
+          quotaBytes={stats.quotaBytes}
+          usedBytes={stats.usedBytes}
+          quotaLabel={isPro(user) ? 'Pro' : 'gratuite'}
+        />
       )}
 
       {tab === 'qr' && <VaultQrPanel vault={vault} />}
