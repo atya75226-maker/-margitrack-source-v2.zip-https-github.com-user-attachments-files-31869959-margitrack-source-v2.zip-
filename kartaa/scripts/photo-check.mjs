@@ -47,6 +47,10 @@ const COULEURS = [
   { nom: 'vert', octets: imageUnie(0, 255, 0), test: (p) => p[0] < 40 && p[1] > 230 && p[2] < 40 },
 ]
 
+/** Photo fournie par Google : elle n'est pas dans notre stockage, seulement dans le jeton. */
+const PHOTO_FOURNISSEUR = 'https://lh3.exemple.test/moi=s96-c'
+const BLEU = { octets: imageUnie(0, 0, 255), test: (p) => p[0] < 40 && p[1] < 40 && p[2] > 230 }
+
 const dossier = mkdtempSync(join(tmpdir(), 'kartaa-photo-'))
 const fichiers = COULEURS.map((couleur, index) => {
   const chemin = join(dossier, `${couleur.nom}.png`)
@@ -70,13 +74,15 @@ const carte = {
   created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
 }
 
+let metaAvatar = ''
+
 function session() {
   return {
     access_token: 'a.b.c', refresh_token: 'r',
     expires_at: Math.floor(Date.now() / 1000) + 3600, expires_in: 3600, token_type: 'bearer',
     user: {
       id: COMPTE, email: 'awa@example.com',
-      user_metadata: { first_name: 'Awa', last_name: 'Diallo' },
+      user_metadata: { first_name: 'Awa', last_name: 'Diallo', avatar_url: metaAvatar, picture: metaAvatar },
       app_metadata: {}, aud: 'authenticated', created_at: new Date().toISOString(),
     },
   }
@@ -88,6 +94,10 @@ const json = (route, corps) => route.fulfill({
   headers: { 'Access-Control-Allow-Origin': '*' },
   body: JSON.stringify(corps),
 })
+
+// Le jeton est déposé dans le navigateur à la création du contexte : la photo du
+// fournisseur doit s'y trouver dès maintenant, comme après une connexion Google.
+metaAvatar = PHOTO_FOURNISSEUR
 
 const browser = await chromium.launch()
 const context = await browser.newContext({
@@ -134,7 +144,20 @@ await context.route('**/rest/v1/profiles*', (route) => {
     phone: '', avatar_url: avatarUrl, plan: 'pro',
   })
 })
-await context.route('**/auth/v1/user*', (route) => json(route, session().user))
+await context.route(PHOTO_FOURNISSEUR, (route) => route.fulfill({
+  status: 200, contentType: 'image/png',
+  headers: { 'Access-Control-Allow-Origin': '*' },
+  body: BLEU.octets,
+}))
+
+// Les métadonnées du jeton vivent ici : l'application les écrit, puis les relit.
+await context.route('**/auth/v1/user*', (route) => {
+  if (route.request().method() === 'PUT') {
+    const corps = JSON.parse(route.request().postData() || '{}')
+    if (corps.data && corps.data.avatar_url !== undefined) metaAvatar = corps.data.avatar_url
+  }
+  return json(route, session().user)
+})
 await context.route('**/rest/v1/cards*', (route) => json(route, carte))
 await context.route('**/rest/v1/social_links*', (route) => json(route, []))
 await context.route('**/rest/v1/card_scans*', (route) => json(route, []))
@@ -159,6 +182,7 @@ async function couleurDeLaPhotoDuVerso() {
   const capture = PNG.sync.read(await photo.screenshot())
   const milieu = (capture.height >> 1) * capture.width * 4 + (capture.width >> 1) * 4
   const pixel = [capture.data[milieu], capture.data[milieu + 1], capture.data[milieu + 2]]
+  if (BLEU.test(pixel)) return 'fournisseur'
   return fichiers.find((f) => f.test(pixel))?.nom || `inconnue(${pixel.join(',')})`
 }
 
@@ -168,6 +192,13 @@ async function deposerPhoto(fichier) {
   await page.setInputFiles('input[type=file]', fichier.chemin)
   await page.waitForSelector('text=Photo mise à jour', { timeout: 15000 })
 }
+
+console.log('\nCas 0 — photo donnée par Google, jamais recopiée dans le profil')
+// C'est la situation d'un compte dont l'identité Google a été rattachée après
+// la création du profil : la photo n'existe que dans le jeton.
+verifier('la carte affiche la photo du fournisseur', (await couleurDeLaPhotoDuVerso()) === 'fournisseur')
+verifier('le profil est réparé pour le mini-site public', avatarUrl === PHOTO_FOURNISSEUR,
+  `→ ${avatarUrl || '(vide)'}`)
 
 console.log('\nCas 1 — le compte a une photo, la carte n’en a pas')
 await deposerPhoto(fichiers[0])
