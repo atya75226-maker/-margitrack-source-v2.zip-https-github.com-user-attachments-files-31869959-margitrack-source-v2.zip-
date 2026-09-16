@@ -59,15 +59,26 @@ export function AuthProvider({ children }) {
     const profile = await repo.users.get(authUser.id).catch(() => null)
     const meta = authUser.user_metadata || {}
     const complet = (meta.full_name || meta.name || '').trim()
+    const photoDuJeton = meta.avatar_url || meta.picture || ''
     const merged = profile || {
       id: authUser.id,
       firstName: meta.first_name || meta.given_name || complet.split(' ')[0] || '',
       lastName: meta.last_name || meta.family_name || complet.split(' ').slice(1).join(' ') || '',
       email: authUser.email || '',
       phone: meta.phone || authUser.phone || '',
-      avatarUrl: meta.avatar_url || meta.picture || '',
+      avatarUrl: photoDuJeton,
       plan: 'free',
     }
+
+    // Photo présente dans le jeton mais absente du profil : Google l'a fournie
+    // après la création du compte. On la reprend tout de suite, et on la range
+    // dans le profil — le mini-site public, lui, ne lit pas le jeton, et sans
+    // cela il resterait avec les initiales.
+    if (profile && !profile.avatarUrl && photoDuJeton) {
+      merged.avatarUrl = photoDuJeton
+      repo.users.update(authUser.id, { avatarUrl: photoDuJeton }).catch(() => null)
+    }
+
     setUser(merged)
     return merged
   }, [])
@@ -250,13 +261,24 @@ export function AuthProvider({ children }) {
    */
   const updateAvatar = useCallback(async (url) => {
     const valeur = url || ''
+
+    // Au retrait, les métadonnées passent d'abord. L'application reprend une
+    // photo présente dans le jeton quand le profil n'en a pas : si cette
+    // écriture échouait après avoir vidé le profil, l'ancienne photo
+    // reviendrait d'elle-même au chargement suivant.
+    if (!valeur) {
+      const { error } = await supabase.auth.updateUser({ data: { avatar_url: '', picture: '' } })
+      if (error) throw new Error(readableError(error, "La photo n'a pas pu être retirée."))
+    }
+
     const updated = await repo.users.update(user.id, { avatarUrl: valeur })
     setUser(updated)
-    try {
-      await supabase.auth.updateUser({ data: { avatar_url: valeur, picture: valeur } })
-    } catch {
-      // Les métadonnées se resynchroniseront à la prochaine connexion : le
-      // profil, lui, est déjà enregistré, et c'est lui qui fait foi.
+
+    if (valeur) {
+      // Le profil fait foi, mais le jeton sert à l'ouverture immédiate, avant
+      // même que le profil soit chargé : les laisser diverger ferait
+      // réapparaître l'ancienne photo une seconde au démarrage suivant.
+      await supabase.auth.updateUser({ data: { avatar_url: valeur, picture: valeur } }).catch(() => null)
     }
     return updated
   }, [user])
