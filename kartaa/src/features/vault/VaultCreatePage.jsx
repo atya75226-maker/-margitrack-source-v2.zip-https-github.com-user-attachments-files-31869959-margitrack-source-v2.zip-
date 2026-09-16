@@ -5,12 +5,21 @@ import { Icon } from '../../components/ui/Icons'
 import RecoveryCodeScreen from './RecoveryCodeScreen'
 import { useAuth } from '../../state/AuthContext'
 import { useToast } from '../../state/ToastContext'
-import { createVault } from '../../lib/vaultService'
+import { addBiometrics, createVault } from '../../lib/vaultService'
 import { passwordStrength, STRENGTH_LABELS } from '../../lib/crypto'
 import { isPlatformAuthenticatorAvailable } from '../../lib/webauthn'
 import { unlock as rememberVaultKey } from '../../lib/vaultSession'
 
 const STEPS = ['Nom du coffre', 'Protection', 'Code de récupération']
+
+/**
+ * Message affiché quand l'enrôlement de l'empreinte échoue.
+ * Le coffre, lui, est déjà créé et protégé par son mot de passe : il faut le
+ * dire, sinon l'échec se lit comme une perte de données.
+ */
+const ECHEC_BIOMETRIE =
+  "Une erreur technique empêche actuellement d'activer cette protection. Vos données n'ont pas été " +
+  'supprimées : votre coffre est créé et protégé par son mot de passe.'
 
 const SUGGESTIONS = ['Mes souvenirs', 'Documents importants', 'Diplômes et certificats', 'Photos de famille']
 
@@ -27,6 +36,9 @@ export default function VaultCreatePage() {
   const [errors, setErrors] = useState({})
   const [busy, setBusy] = useState(false)
   const [result, setResult] = useState(null)
+  // Étape séparée, volontairement placée après le code de récupération.
+  const [enrolement, setEnrolement] = useState(null) // null | 'attente' | 'encours' | 'echec'
+  const [erreurBiometrie, setErreurBiometrie] = useState(null)
 
   useEffect(() => {
     isPlatformAuthenticatorAvailable().then(setBiometricsAvailable)
@@ -43,18 +55,10 @@ export default function VaultCreatePage() {
 
     setBusy(true)
     try {
-      const created = await createVault({
-        name: name.trim(),
-        password,
-        useBiometrics: useBiometrics && biometricsAvailable,
-        userLabel: user.email,
-      })
+      // Aucune opération biométrique ici : le code de récupération doit être
+      // affiché avant tout ce qui peut faire passer l'application au second plan.
+      const created = await createVault({ name: name.trim(), password })
       rememberVaultKey(created.vault.id, created.vaultKey)
-      // Le coffre existe, mais l'empreinte n'a pas été enrôlée : le dire tout de
-      // suite, sans quoi l'utilisateur croirait pouvoir l'ouvrir au doigt.
-      if (created.biometricError) {
-        toast.error(`Coffre créé, mais sans empreinte : ${created.biometricError} Vous pourrez l'activer depuis la page du coffre.`)
-      }
       setResult(created)
       setPassword('')
       setConfirm('')
@@ -66,13 +70,47 @@ export default function VaultCreatePage() {
     }
   }
 
+  const ouvrirLeCoffre = () => navigate(`/app/coffres/${result.vault.id}`, { replace: true })
+
+  /**
+   * Enrôlement de l'empreinte, une fois le code de récupération sauvegardé.
+   * Un échec ne fait jamais quitter l'écran : il s'affiche, et on peut réessayer.
+   */
+  const activerBiometrie = async () => {
+    setEnrolement('encours')
+    setErreurBiometrie(null)
+    try {
+      await addBiometrics(result.vault, result.vaultKey, user.email)
+      toast.success('Sécurité renforcée activée sur cet appareil.')
+      ouvrirLeCoffre()
+    } catch (error) {
+      setErreurBiometrie(error?.message || null)
+      setEnrolement('echec')
+    }
+  }
+
   if (step === 2 && result) {
+    if (enrolement) {
+      return (
+        <EcranBiometrie
+          etat={enrolement}
+          detail={erreurBiometrie}
+          onActiver={activerBiometrie}
+          onPasser={ouvrirLeCoffre}
+        />
+      )
+    }
     return (
       <RecoveryCodeScreen
         vaultName={result.vault.name}
         code={result.recoveryCode}
-        onDone={() => navigate(`/app/coffres/${result.vault.id}`, { replace: true })}
-        doneLabel="Ouvrir mon coffre"
+        onDone={() => {
+          // L'empreinte n'est demandée qu'ici : le code est noté, une
+          // interruption du système ne peut plus rien faire perdre.
+          if (useBiometrics && biometricsAvailable) setEnrolement('attente')
+          else ouvrirLeCoffre()
+        }}
+        doneLabel={useBiometrics && biometricsAvailable ? "J'ai conservé mon code" : 'Ouvrir mon coffre'}
       />
     )
   }
@@ -170,7 +208,7 @@ export default function VaultCreatePage() {
                 <span className="block font-display text-sm font-bold text-ink-900">Ajouter le déverrouillage biométrique</span>
                 <span className="mt-1 block text-xs leading-relaxed text-ink-500">
                   {biometricsAvailable
-                    ? "Utilise l'empreinte ou le visage géré par votre téléphone. Aucune donnée biométrique n'entre dans l'application."
+                    ? "Utilise l'empreinte ou le visage géré par votre téléphone. Elle vous sera demandée après votre code de récupération, pour qu'aucune interruption ne l'efface. Aucune donnée biométrique n'entre dans l'application."
                     : "Cet appareil ne propose pas de capteur compatible. Vous pourrez l'activer plus tard depuis un autre appareil."}
                 </span>
               </span>
@@ -183,6 +221,46 @@ export default function VaultCreatePage() {
           </Button>
         </>
       )}
+    </div>
+  )
+}
+
+/**
+ * Dernière étape, facultative : l'empreinte.
+ * Le coffre est déjà créé, le code de récupération déjà sauvegardé. Rien ne se
+ * perd si le système reprend la main pendant la demande du capteur — et si elle
+ * échoue, on le dit au lieu de renvoyer l'utilisateur ailleurs.
+ */
+function EcranBiometrie({ etat, detail, onActiver, onPasser }) {
+  const echec = etat === 'echec'
+  return (
+    <div className="mx-auto max-w-xl space-y-5">
+      <div className="text-center">
+        <span className={`mx-auto mb-4 grid h-16 w-16 place-items-center rounded-3xl ${echec ? 'bg-rose-50 text-rose-600' : 'bg-ink-900 text-white'}`}>
+          <Icon name={echec ? 'alert' : 'fingerprint'} size={30} />
+        </span>
+        <h1 className="font-display text-2xl font-extrabold text-ink-900">
+          {echec ? "Impossible d'activer la sécurité renforcée" : 'Dernière étape : votre empreinte'}
+        </h1>
+        <p className="mt-2 text-sm leading-relaxed text-ink-500">
+          {echec
+            ? ECHEC_BIOMETRIE
+            : "Votre téléphone va demander votre empreinte ou votre visage. Votre coffre est déjà créé et votre code de récupération sauvegardé : même si cette étape est interrompue, vous ne perdez rien."}
+        </p>
+        {echec && detail && <p className="mt-2 text-xs text-ink-400">Détail : {detail}</p>}
+      </div>
+
+      <Panel className="space-y-3">
+        <Button full size="lg" icon="fingerprint" loading={etat === 'encours'} onClick={onActiver}>
+          {echec ? 'Réessayer' : 'Activer la sécurité renforcée'}
+        </Button>
+        <Button full variant="ghost" onClick={onPasser} disabled={etat === 'encours'}>
+          Ouvrir mon coffre sans l'empreinte
+        </Button>
+        <p className="hint text-center">
+          Vous pourrez l'activer à tout moment depuis la page du coffre, onglet Sécurité.
+        </p>
+      </Panel>
     </div>
   )
 }
