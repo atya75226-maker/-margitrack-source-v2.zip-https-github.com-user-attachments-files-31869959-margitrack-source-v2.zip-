@@ -1,14 +1,23 @@
 import React from "react";
 import { usePreferences } from "../../contexts/PreferencesContext";
 
-// Indicateur circulaire. `value` est un ratio entre 0 et 1, ou null quand
-// la donnée n'existe pas encore — dans ce cas on affiche un état vide
-// plutôt qu'un pourcentage inventé.
+const NEGATIVE = "#F43F5E";
+
+// Indicateur circulaire. `value` est un ratio — 0,25 pour 25 % — ou null
+// quand la donnée n'existe pas encore : on affiche alors un état vide plutôt
+// qu'un pourcentage inventé.
+//
+// Le pourcentage affiché est toujours le vrai : une marge negative se lit
+// « -104 % » en rouge, et des depenses superieures au chiffre d'affaires
+// « 140 % ». Seul l'arc est borne au tour complet, faute de place pour
+// dessiner davantage. Arrondir ces valeurs a 0 ou a 100 % revenait a cacher
+// exactement ce qu'il fallait voir.
 export function CircularGauge({ value, label, caption, color = "#7C5CFF", size = 92 }) {
   const { palette } = usePreferences();
 
   const hasValue = typeof value === "number" && Number.isFinite(value);
-  const ratio = hasValue ? Math.min(Math.max(value, 0), 1) : 0;
+  const negative = hasValue && value < 0;
+  const ratio = hasValue ? Math.min(Math.abs(value), 1) : 0;
 
   const stroke = 8;
   const radius = (size - stroke) / 2;
@@ -33,7 +42,7 @@ export function CircularGauge({ value, label, caption, color = "#7C5CFF", size =
               cy={size / 2}
               r={radius}
               fill="none"
-              stroke={color}
+              stroke={negative ? NEGATIVE : color}
               strokeWidth={stroke}
               strokeLinecap="round"
               strokeDasharray={`${dash} ${circumference - dash}`}
@@ -43,8 +52,11 @@ export function CircularGauge({ value, label, caption, color = "#7C5CFF", size =
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           {hasValue ? (
-            <span className="text-lg font-bold font-display" style={{ color: palette.ink }}>
-              {Math.round(ratio * 100)}%
+            <span
+              className="text-lg font-bold font-display"
+              style={{ color: negative ? NEGATIVE : palette.ink }}
+            >
+              {Math.round(value * 100)}%
             </span>
           ) : (
             <span className="text-xs" style={{ color: palette.muted }}>

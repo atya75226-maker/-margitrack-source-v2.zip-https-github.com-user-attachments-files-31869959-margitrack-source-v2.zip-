@@ -97,6 +97,12 @@ export function Dashboard({ products, sales, expenses, stock }) {
     const marginRatio = hasCogs && revenue > 0 ? grossMargin / revenue : null;
 
     const profit = revenue - expenseTotal;
+
+    // Taux de marge de repli, calculable des qu'il y a du chiffre d'affaires :
+    // sans lien entre produits vendus et articles de stock, le cout des
+    // marchandises reste inconnu et le taux de marge brute affichait un tiret
+    // pour toujours. La marge nette, elle, se lit des la premiere vente.
+    const netMarginRatio = revenue > 0 ? profit / revenue : null;
     const prevProfit = prevRevenue - prevExpenseTotal;
 
     // Série journalière sur la période affichée (min. 7 points pour la courbe)
@@ -132,12 +138,14 @@ export function Dashboard({ products, sales, expenses, stock }) {
       .slice(0, 5);
 
     // Part des dépenses dans le chiffre d'affaires — uniquement calculable
-    // lorsqu'il y a du chiffre d'affaires sur la période.
-    const expenseRatio = revenue > 0 ? Math.min(expenseTotal / revenue, 1) : null;
+    // lorsqu'il y a du chiffre d'affaires sur la période. Au-delà de 100 %,
+    // la valeur réelle est conservée : des dépenses supérieures aux recettes
+    // sont précisément ce qu'il faut voir.
+    const expenseRatio = revenue > 0 ? expenseTotal / revenue : null;
 
     return {
       revenue, prevRevenue, expenseTotal, prevExpenseTotal, profit, prevProfit,
-      cogs, hasCogs, grossMargin, marginRatio, expenseRatio,
+      cogs, hasCogs, grossMargin, marginRatio, netMarginRatio, expenseRatio,
       purchasesDrinks: purchases.drinks,
       purchasesIngredients: purchases.ingredients,
       otherExpenses: Math.max(expenseTotal - purchases.drinks - purchases.ingredients, 0),
@@ -206,7 +214,10 @@ export function Dashboard({ products, sales, expenses, stock }) {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-[11px]" style={{ color: palette.muted }}>Marge brute (stock déduit)</p>
-              <p className="text-xl font-bold font-display mt-0.5" style={{ color: palette.ink }}>
+              <p
+                className="text-xl font-bold font-display mt-0.5"
+                style={{ color: stats.grossMargin < 0 ? RED : palette.ink }}
+              >
                 {formatMoney(stats.grossMargin)}
               </p>
               <p className="text-[11px] mt-0.5" style={{ color: palette.muted }}>
@@ -220,6 +231,22 @@ export function Dashboard({ products, sales, expenses, stock }) {
               size={80}
             />
           </div>
+
+          {/* Une marge negative n'est presque jamais la realite du restaurant :
+              c'est le plus souvent une quantite liee trop grande, ou une sortie
+              de stock saisie en trop. Le dire ici evite de chercher longtemps. */}
+          {stats.grossMargin < 0 && (
+            <p
+              className="text-[11px] mt-3 rounded-xl p-2.5 leading-relaxed"
+              style={{ backgroundColor: `${RED}1A`, color: palette.ink }}
+            >
+              Le coût du stock sorti dépasse votre chiffre d'affaires sur cette
+              période. À vérifier : la quantité déduite à chaque vente
+              (Stock → un article → Ventes liées) et les sorties de stock
+              enregistrées à la main, qui s'ajoutent aux déductions
+              automatiques.
+            </p>
+          )}
         </div>
       )}
 
@@ -246,9 +273,15 @@ export function Dashboard({ products, sales, expenses, stock }) {
             size={84}
           />
           <CircularGauge
-            value={stats.marginRatio}
-            label="Marge"
-            caption={stats.hasCogs ? "Sur le CA" : "Stock non renseigné"}
+            value={stats.hasCogs ? stats.marginRatio : stats.netMarginRatio}
+            label={stats.hasCogs ? "Marge brute" : "Marge nette"}
+            caption={
+              stats.hasCogs
+                ? "CA − coût du stock"
+                : stats.revenue > 0
+                  ? "CA − dépenses"
+                  : "Pas de vente"
+            }
             color={VIOLET}
             size={84}
           />
