@@ -91,34 +91,17 @@ export function InstallBanner() {
 }
 
 /**
- * Accès permanent à l'installation depuis l'accueil : contrairement à la
- * notification, il ne se masque jamais tant que le navigateur propose
- * l'installation. Chaque compte y a donc toujours accès.
+ * Accès permanent à l'installation depuis l'accueil, tant que le navigateur
+ * la propose. Chaque compte y a donc toujours accès.
+ *
+ * Rien ne s'affiche dans les autres cas — application déjà installée, ou
+ * navigateur qui ne sait pas l'installer. L'accueil doit montrer l'activité
+ * du restaurant, pas un encadré sur l'application elle-même.
  */
 export function InstallCard() {
   const { palette } = usePreferences();
-  const { canInstall, installed, promptInstall, platform } = useInstallPrompt();
+  const { canInstall, promptInstall, platform } = useInstallPrompt();
 
-  if (installed) {
-    return (
-      <div
-        className="rounded-2xl p-4 mb-3"
-        style={{ backgroundColor: palette.card, border: `1px solid ${palette.line}` }}
-      >
-        <p className="text-sm font-semibold" style={{ color: palette.ink }}>
-          Application installée
-        </p>
-        <p className="text-xs mt-1" style={{ color: palette.muted }}>
-          Margitrack est présent sur cet appareil : ouvrez-le depuis votre écran
-          d'accueil. L'installation vaut pour le téléphone, elle n'est pas à
-          refaire pour chaque compte.
-        </p>
-      </div>
-    );
-  }
-
-  // Ni installable ni installée : le navigateur ne sait pas le faire (iPhone,
-  // par exemple). Rien à afficher — l'ajout se fait alors par son menu.
   if (!canInstall) return null;
 
   return (
