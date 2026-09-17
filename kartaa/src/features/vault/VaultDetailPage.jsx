@@ -115,6 +115,29 @@ export default function VaultDetailPage() {
         </Button>
       </header>
 
+      {/* Un coffre dont le code n'a jamais été conservé : on le dit ici, une fois
+          le coffre ouvert, plutôt que de le laisser découvrir le jour d'un oubli
+          de mot de passe. */}
+      {!vault.recoverySeenAt && (
+        <Panel className="border-gold-200 bg-gold-50/70">
+          <div className="flex gap-3">
+            <Icon name="alert" size={20} className="mt-0.5 shrink-0 text-gold-700" />
+            <div className="min-w-0 flex-1">
+              <p className="font-display text-sm font-bold text-ink-900">
+                Votre code de récupération n'a pas été conservé
+              </p>
+              <p className="mt-1 text-sm leading-relaxed text-ink-700">
+                La création a été interrompue avant que vous ne le notiez. Sans lui, un mot de passe oublié
+                rend les fichiers illisibles. Générez-en un nouveau maintenant : l'ancien sera remplacé.
+              </p>
+              <Button size="sm" className="mt-3" icon="refresh" onClick={() => setTab('security')}>
+                Générer un nouveau code
+              </Button>
+            </div>
+          </div>
+        </Panel>
+      )}
+
       <Tabs
         className="max-w-md"
         tabs={[
@@ -222,7 +245,11 @@ function SecurityPanel({ vault, vaultKey, user, onChange, onDeleted }) {
         vaultName={vault.name}
         code={newRecovery}
         doneLabel="Revenir au coffre"
-        onDone={() => setNewRecovery(null)}
+        onDone={async () => {
+          const frais = await repo.vaults.markRecoverySeen(vault.id)
+          if (frais) onChange(frais)
+          setNewRecovery(null)
+        }}
       />
     )
   }
