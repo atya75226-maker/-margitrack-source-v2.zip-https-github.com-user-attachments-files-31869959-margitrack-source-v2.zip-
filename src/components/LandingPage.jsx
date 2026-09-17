@@ -1,8 +1,7 @@
-import React, { useState } from "react";
+import React from "react";
 import { COLOR } from "../lib/theme";
 import { useLegal } from "../contexts/LegalContext";
 import { useInstallPrompt } from "../lib/pwa";
-import { InstallSheet } from "./InstallSheet";
 
 const FEATURES = [
   { icon: "📦", title: "Produits", text: "Ajoutez vos produits et leurs prix en quelques secondes, sans matériel spécial." },
@@ -49,15 +48,12 @@ function SectionTitle({ eyebrow, title, subtitle }) {
 
 export function LandingPage({ onStart, onLogin }) {
   const { openPrivacy, openTerms } = useLegal();
-  const { installed } = useInstallPrompt();
-  const [showInstall, setShowInstall] = useState(false);
+  const { canInstall, installed, promptInstall } = useInstallPrompt();
 
-  // « Commencer gratuitement » ouvre l'écran d'installation plutôt que de
-  // déclencher la proposition du navigateur en aveugle : celle-ci n'existe
-  // pas partout, et quand elle manque il ne se passait rien de visible.
-  // L'écran, lui, propose toujours une voie — bouton natif, marche à suivre
-  // manuelle, ou simplement continuer sans installer.
-  const handleStart = () => setShowInstall(true);
+  // « Commencer gratuitement » mène à la création de compte, rien d'autre :
+  // s'interposer avec un écran d'installation retardait la seule chose que
+  // le visiteur était venu faire.
+  const handleStart = onStart;
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: COLOR.bg }}>
@@ -102,13 +98,14 @@ export function LandingPage({ onStart, onLogin }) {
         </div>
         <p className="text-xs text-gray-500 mt-4">7 jours d'essai gratuit — sans carte bancaire, sans engagement.</p>
 
-        {/* Toujours proposé, y compris quand le navigateur n'émet aucune
-            proposition : l'écran d'installation sait alors expliquer la
-            marche à suivre. Seul le cas « déjà installée » le masque. */}
-        {!installed && (
+        {/* Installation en un geste, par la proposition du navigateur
+            lui-même. Quand celui-ci n'en émet pas — iPhone, ou application
+            déjà installée sur l'appareil — le bouton disparaît plutôt que
+            d'ouvrir un écran d'explications que personne ne lit. */}
+        {canInstall && (
           <div className="mt-6 inline-flex flex-col items-center gap-2">
             <button
-              onClick={() => setShowInstall(true)}
+              onClick={promptInstall}
               className="rounded-full text-sm font-semibold px-6 py-3 border"
               style={{ borderColor: COLOR.violet, color: COLOR.ink }}
             >
@@ -246,13 +243,6 @@ export function LandingPage({ onStart, onLogin }) {
           <p className="text-xs text-gray-500">© {new Date().getFullYear()} Margitrack. Tous droits réservés.</p>
         </div>
       </footer>
-
-      {showInstall && (
-        <InstallSheet
-          onClose={() => setShowInstall(false)}
-          onContinue={() => { setShowInstall(false); onStart(); }}
-        />
-      )}
     </div>
   );
 }
