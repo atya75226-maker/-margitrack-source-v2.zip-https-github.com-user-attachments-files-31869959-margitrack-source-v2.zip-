@@ -160,6 +160,10 @@ export const PRO_CAPABILITIES = {
     label: 'Plusieurs activités',
     value: "Quand un seul métier ne suffit pas à vous décrire.",
   },
+  multipleVaults: {
+    label: 'Plusieurs coffres',
+    value: "Un coffre par usage — papiers, souvenirs, documents professionnels — au lieu d'un seul.",
+  },
   storage: {
     label: 'Stockage du Coffre Sécurité',
     value: "Votre Coffre Sécurité gratuit est limité à 20 Mo. Passez à Pro pour obtenir davantage d'espace : 20 Go pour vos photos, vos vidéos et vos documents.",

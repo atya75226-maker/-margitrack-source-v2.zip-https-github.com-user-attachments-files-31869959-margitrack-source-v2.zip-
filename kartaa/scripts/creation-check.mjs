@@ -48,10 +48,13 @@ async function scenario({ capteurAccepte }) {
 
   let coffreCree = false
   let biometrieEnregistree = false
+  let codeConserve = false
 
   const browser = await chromium.launch()
   const context = await browser.newContext({
     viewport: { width: 420, height: 950 },
+    // L'application suit la langue du navigateur : on teste en français.
+    locale: 'fr-FR',
     storageState: { cookies: [], origins: [{ origin: BASE, localStorage: [{ name: KEY, value: JSON.stringify(session) }] }] },
   })
 
@@ -68,7 +71,8 @@ async function scenario({ capteurAccepte }) {
       id: COFFRE, user_id: COMPTE, name: 'Mes souvenirs',
       protection: biometrieEnregistree ? 'password+biometric' : 'password',
       folders: [], failed_attempts: 0, locked_until: null, last_opened_at: null,
-      recovery_issued_at: null, recovery_used_at: null,
+      recovery_issued_at: new Date().toISOString(), recovery_used_at: null,
+      recovery_seen_at: codeConserve ? new Date().toISOString() : null,
       created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
     }
     // « user_id=eq. » contient « id=eq. » : on teste la liste en premier.
@@ -85,6 +89,10 @@ async function scenario({ capteurAccepte }) {
     }
     if (nom === 'vault_set_biometric') {
       biometrieEnregistree = true
+      return json(route, null)
+    }
+    if (nom === 'vault_recovery_seen') {
+      codeConserve = true
       return json(route, null)
     }
     return json(route, null)
@@ -145,6 +153,8 @@ async function scenario({ capteurAccepte }) {
 
     await page.check('input[type=checkbox]')
     await page.click("button:has-text(\"J'ai conservé mon code\")")
+    await page.waitForTimeout(900)
+    verifier('la confirmation du code est enregistrée', codeConserve)
 
     // L'empreinte n'est demandée qu'ici, le code désormais sauvegardé.
     const etapeEmpreinte = await page
@@ -190,8 +200,58 @@ async function scenario({ capteurAccepte }) {
   await browser.close()
 }
 
+/**
+ * Limite atteinte : l'application expliquait sa limite en déportant vers la page
+ * Profil, sans un mot. Vu du téléphone, c'est une sortie du parcours.
+ */
+async function scenarioLimite() {
+  console.log('\nLimite de coffres atteinte sur un compte gratuit')
+  const browser = await chromium.launch()
+  const context = await browser.newContext({
+    viewport: { width: 420, height: 950 },
+    // L'application suit la langue du navigateur : on teste en français.
+    locale: 'fr-FR',
+    storageState: { cookies: [], origins: [{ origin: BASE, localStorage: [{ name: KEY, value: JSON.stringify(session) }] }] },
+  })
+  const ligne = {
+    id: COFFRE, user_id: COMPTE, name: 'Mes souvenirs', protection: 'password',
+    folders: [], failed_attempts: 0, locked_until: null, last_opened_at: null,
+    recovery_issued_at: new Date().toISOString(), recovery_used_at: null,
+    recovery_seen_at: new Date().toISOString(),
+    created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+  }
+  await context.route('**://*.supabase.co/**', (route) => route.abort('failed'))
+  await context.route('**/rest/v1/profiles*', (route) => json(route, {
+    id: COMPTE, first_name: 'Awa', last_name: 'Diallo', email: 'awa@example.com',
+    phone: '', avatar_url: '', plan: 'free',
+  }))
+  await context.route('**/rest/v1/cards*', (route) => json(route, []))
+  await context.route('**/rest/v1/vault_files*', (route) => json(route, []))
+  await context.route('**/rest/v1/vault_access_log*', (route) => json(route, []))
+  await context.route('**/rest/v1/vaults*', (route) => json(route, [ligne]))
+  await context.route('**/rest/v1/rpc/**', (route) => json(route, null))
+
+  const page = await context.newPage()
+  await page.goto(`${BASE}/app`, { waitUntil: 'domcontentloaded' })
+  await page.waitForSelector('button[aria-label="Créer"]', { timeout: 20000 })
+  await page.waitForTimeout(1200)
+  await page.click('button[aria-label="Créer"]')
+  await page.waitForSelector('text=Que voulez-vous créer', { timeout: 20000 })
+  await page.click('text=Un Coffre Sécurité')
+  await page.waitForTimeout(1200)
+
+  verifier("l'application n'est pas déportée vers le profil", !page.url().includes('/app/profil'),
+    `→ ${page.url()}`)
+  verifier('la limite est expliquée', (await page.locator('text=Plusieurs coffres').count()) > 0)
+  verifier('le chemin mène à Mon abonnement',
+    (await page.locator('button:has-text("Voir Pro"), button:has-text("Passer à Pro")').count()) > 0)
+
+  await browser.close()
+}
+
 await scenario({ capteurAccepte: true })
 await scenario({ capteurAccepte: false })
+await scenarioLimite()
 
 console.log(echecs.length ? `\n${echecs.length} échec(s).` : '\nTout est conforme.')
 process.exit(echecs.length ? 1 : 0)

@@ -115,6 +115,8 @@ const toVault = (row, files = [], accessLog = []) => row && {
   lastOpenedAt: row.last_opened_at,
   recoveryIssuedAt: row.recovery_issued_at,
   recoveryUsedAt: row.recovery_used_at,
+  // Date à laquelle le propriétaire a confirmé avoir conservé son code.
+  recoverySeenAt: row.recovery_seen_at,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
   files,
@@ -376,6 +378,14 @@ export const vaults = {
     const { error } = await supabase.from('vaults').delete().eq('id', id)
     if (error) fail(error, 'Suppression impossible.')
     notifyChange()
+  },
+
+  /** Le propriétaire confirme avoir mis son code de récupération à l'abri. */
+  async markRecoverySeen(id) {
+    const { error } = await supabase.rpc('vault_recovery_seen', { p_vault_id: id })
+    if (error) return null
+    notifyChange()
+    return vaults.get(id)
   },
 
   async appendLog(id, entry) {

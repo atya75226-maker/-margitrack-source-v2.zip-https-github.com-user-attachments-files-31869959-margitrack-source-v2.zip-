@@ -6,6 +6,7 @@ import RecoveryCodeScreen from './RecoveryCodeScreen'
 import { useAuth } from '../../state/AuthContext'
 import { useToast } from '../../state/ToastContext'
 import { addBiometrics, createVault } from '../../lib/vaultService'
+import { repo } from '../../lib/storage'
 import { passwordStrength, STRENGTH_LABELS } from '../../lib/crypto'
 import { isPlatformAuthenticatorAvailable } from '../../lib/webauthn'
 import { unlock as rememberVaultKey } from '../../lib/vaultSession'
@@ -105,6 +106,9 @@ export default function VaultCreatePage() {
         vaultName={result.vault.name}
         code={result.recoveryCode}
         onDone={() => {
+          // L'accusé part sans bloquer : tant qu'il n'est pas enregistré, le
+          // coffre continue d'avertir que le code n'a pas été conservé.
+          repo.vaults.markRecoverySeen(result.vault.id)
           // L'empreinte n'est demandée qu'ici : le code est noté, une
           // interruption du système ne peut plus rien faire perdre.
           if (useBiometrics && biometricsAvailable) setEnrolement('attente')
