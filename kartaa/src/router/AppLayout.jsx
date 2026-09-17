@@ -6,6 +6,7 @@ import { useAuth } from '../state/AuthContext'
 import { useData } from '../state/DataContext'
 import { isPro } from '../config/app.config'
 import { useTranslation } from '../i18n'
+import { useProLock } from '../components/ProLock'
 import { initialsOf } from '../lib/format'
 
 const NAV = [
@@ -30,6 +31,7 @@ export default function AppLayout() {
   const navigate = useNavigate()
   const [createOpen, setCreateOpen] = useState(false)
   const { t } = useTranslation()
+  const { showProLock } = useProLock()
   const pro = isPro(user)
 
   return (
@@ -107,6 +109,9 @@ export default function AppLayout() {
 
       <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Que voulez-vous créer ?" size="sm">
         <div className="space-y-3">
+          {/* Limite atteinte : on explique, on ne déporte pas ailleurs sans un mot.
+              Être renvoyé sur la page Profil sans explication se lit comme une
+              sortie du parcours de création. */}
           <CreateChoice
             icon="card"
             title="Une carte de visite"
@@ -114,7 +119,8 @@ export default function AppLayout() {
             badge={stats.canCreateCard ? null : 'Limite atteinte'}
             onClick={() => {
               setCreateOpen(false)
-              navigate(stats.canCreateCard ? '/app/cartes/nouvelle' : '/app/profil')
+              if (stats.canCreateCard) navigate('/app/cartes/nouvelle')
+              else showProLock('multipleCards')
             }}
           />
           <CreateChoice
@@ -124,7 +130,8 @@ export default function AppLayout() {
             badge={stats.canCreateVault ? null : 'Limite atteinte'}
             onClick={() => {
               setCreateOpen(false)
-              navigate(stats.canCreateVault ? '/app/coffres/nouveau' : '/app/profil')
+              if (stats.canCreateVault) navigate('/app/coffres/nouveau')
+              else showProLock('multipleVaults')
             }}
           />
         </div>
