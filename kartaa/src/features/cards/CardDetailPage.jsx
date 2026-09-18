@@ -11,7 +11,7 @@ import { exportCard } from '../../lib/cardExport'
 import { copyToClipboard, downloadUrl } from '../../lib/download'
 import { publicUrl } from '../../lib/slug'
 import { formatDate, formatNumber } from '../../lib/format'
-import { can, PRO_CAPABILITIES } from '../../config/app.config'
+import { FEATURE_FLAGS, can, PRO_CAPABILITIES } from '../../config/app.config'
 
 export default function CardDetailPage() {
   const { cardId } = useParams()
@@ -92,7 +92,7 @@ export default function CardDetailPage() {
         />
         <div className="overflow-hidden rounded-2xl shadow-lift">
           <CardScaler>
-            <CardArtwork card={card} side={side} qr={assets.qr} photoUrl={assets.photoUrl} branded={!can(user, 'removeBranding')} />
+            <CardArtwork card={card} side={side} qr={assets.qr} photoUrl={assets.photoUrl} logoUrl={assets.logoUrl} branded={!can(user, 'removeBranding')} />
           </CardScaler>
         </div>
         <div className="mt-5 grid gap-2 sm:grid-cols-3">
@@ -166,26 +166,38 @@ export default function CardDetailPage() {
       </div>
 
       <div className="grid gap-5 lg:grid-cols-2">
-        <ActionCard
-          icon="globe"
-          title="Nom de domaine personnalisé"
-          description={
-            card.customDomain
-              ? `${card.customDomain.value} — ${card.customDomain.status === 'verified' ? 'vérifié' : 'en attente de vérification'}`
-              : "Remplacez l'adresse par la vôtre : www.votre-nom.com"
-          }
-          badge={can(user, 'customDomain') ? null : 'Pro'}
-          action="Connecter mon domaine"
-          onClick={() => setDomainOpen(true)}
-        />
-        <ActionCard
-          icon="printer"
-          title="Commander ma carte physique"
-          description="Recevez des cartes imprimées reprenant ce design et votre QR Code."
-          badge="Bientôt"
-          action="Préparer ma commande"
-          onClick={() => setPrintOpen(true)}
-        />
+        {/* Domaine personnalisé et carte physique : les deux dépendent de services
+            qui ne sont pas connectés (FEATURE_FLAGS.domainRegistrar,
+            FEATURE_FLAGS.physicalPrinting). Tant qu'ils ne le sont pas, ces
+            entrées ne sont pas proposées — enregistrer une demande qui n'aboutit
+            nulle part revient à promettre une fonctionnalité qui n'existe pas.
+            Le code, les modales et les données restent en place, prêtes à
+            resservir le jour où le service existe. */}
+        {FEATURE_FLAGS.domainRegistrar && (
+          <ActionCard
+            icon="globe"
+            title="Nom de domaine personnalisé"
+            description={
+              card.customDomain
+                ? `${card.customDomain.value} — ${card.customDomain.status === 'verified' ? 'vérifié' : 'en attente de vérification'}`
+                : "Remplacez l'adresse par la vôtre : www.votre-nom.com"
+            }
+            badge={can(user, 'customDomain') ? null : 'Pro'}
+            action="Connecter mon domaine"
+            onClick={() => setDomainOpen(true)}
+          />
+        )}
+
+        {FEATURE_FLAGS.physicalPrinting && (
+          <ActionCard
+            icon="printer"
+            title="Commander ma carte physique"
+            description="Recevez des cartes imprimées reprenant ce design et votre QR Code."
+            badge="Bientôt"
+            action="Préparer ma commande"
+            onClick={() => setPrintOpen(true)}
+          />
+        )}
       </div>
 
       <Panel className="border-rose-100">
@@ -203,10 +215,10 @@ export default function CardDetailPage() {
       {/* Rendu hors écran, à taille réelle, utilisé pour l'export des fichiers. */}
       <div aria-hidden className="pointer-events-none fixed -left-[4000px] top-0">
         <div ref={frontRef}>
-          <CardArtwork card={card} qr={assets.qr} />
+          <CardArtwork card={card} qr={assets.qr} photoUrl={photoExport} logoUrl={assets.logoUrl} />
         </div>
         <div ref={backRef}>
-          <CardArtwork card={card} side="back" qr={assets.qr} photoUrl={photoExport} branded={!can(user, 'removeBranding')} />
+          <CardArtwork card={card} side="back" qr={assets.qr} photoUrl={photoExport} logoUrl={assets.logoUrl} branded={!can(user, 'removeBranding')} />
         </div>
       </div>
 

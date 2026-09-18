@@ -194,7 +194,7 @@ await step('password recovery with code', async () => {
 
 await step('dashboard + stats', async () => {
   await page.goto(`${BASE}/app`, { waitUntil: 'networkidle' })
-  await page.waitForSelector('text=Votre tableau de bord')
+  await page.waitForSelector('text=identité professionnelle numérique')
   await page.screenshot({ path: `${out}/08-dashboard.png`, fullPage: true })
   await page.goto(`${BASE}/app/statistiques`, { waitUntil: 'networkidle' })
   await page.waitForSelector('text=Scans par jour')

@@ -1,4 +1,5 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { Icon } from '../ui/Icons'
 import { prettyUrl } from '../../lib/format'
 import { publicUrl } from '../../lib/slug'
 import { APP } from '../../config/app.config'
@@ -27,6 +28,17 @@ export const CARD_HEIGHT = 600
  * donc une découpe légèrement décalée ne coupe jamais le nom ni le QR Code.
  */
 export const CARD_SAFE = 64
+
+/** Coordonnées réellement renseignées, sans doublon entre téléphone et WhatsApp. */
+function contactLines(card) {
+  const p = card.profile || {}
+  return [
+    p.phone && { icon: 'phone', value: p.phone },
+    p.whatsapp && p.whatsapp !== p.phone && { icon: 'whatsapp', value: p.whatsapp },
+    p.email && { icon: 'mail', value: p.email },
+    (p.city || p.country) && { icon: 'pin', value: [p.city, p.country].filter(Boolean).join(', ') },
+  ].filter(Boolean)
+}
 
 const FONT_STACK = {
   sans: "'Plus Jakarta Sans', system-ui, sans-serif",
@@ -105,7 +117,7 @@ function skinOf(template, theme) {
  * doit pas laisser un cadre vide ou une icône de fichier cassé sur une carte
  * qu'on va imprimer : elle s'efface, et la carte reste propre.
  */
-function Photo({ url, borderColor }) {
+function Photo({ url, borderColor, taille = 104, marge = true }) {
   const [echec, setEchec] = useState(false)
   if (!url || echec) return null
   return (
@@ -113,51 +125,48 @@ function Photo({ url, borderColor }) {
       src={url}
       alt=""
       onError={() => setEchec(true)}
-      style={{ width: 104, height: 104, border: `3px solid ${borderColor}` }}
-      className="mb-7 rounded-full object-cover"
+      style={{ width: taille, height: taille, border: `3px solid ${borderColor}` }}
+      className={`rounded-full object-cover ${marge ? 'mb-7' : ''}`}
     />
-  )
-}
-
-/**
- * Le logo Kartaa, dessiné ici plutôt qu'importé : `html-to-image` doit pouvoir le
- * rasteriser sans dépendre d'un fichier externe, et chaque instance a son propre
- * identifiant de dégradé pour ne pas perdre son fond quand plusieurs cartes coexistent.
- */
-function KartaaMark({ size = 140 }) {
-  const gradientId = useId()
-  return (
-    <svg viewBox="0 0 64 64" width={size} height={size} className="shrink-0">
-      <defs>
-        <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#9b77ff" />
-          <stop offset="1" stopColor="#4a1d93" />
-        </linearGradient>
-      </defs>
-      <rect width="64" height="64" rx="16" fill={`url(#${gradientId})`} />
-      <rect x="14" y="14" width="14" height="14" rx="3.5" fill="#fff" />
-      <rect x="36" y="14" width="14" height="14" rx="3.5" fill="#f5b229" />
-      <rect x="14" y="36" width="14" height="14" rx="3.5" fill="#f5b229" />
-      <rect x="36" y="36" width="6" height="6" rx="1.5" fill="#fff" />
-      <rect x="44" y="44" width="6" height="6" rx="1.5" fill="#fff" />
-      <rect x="36" y="44" width="6" height="6" rx="1.5" fill="#fff" />
-      <rect x="44" y="36" width="6" height="6" rx="1.5" fill="#fff" />
-    </svg>
   )
 }
 
 /* ------------------------------------------------------------------ recto */
 
+/** Logo du propriétaire. Absent, il ne laisse aucun trou : la mise en page se resserre. */
+function Logo({ url, hauteur = 68 }) {
+  const [echec, setEchec] = useState(false)
+  if (!url || echec) return null
+  return (
+    <img
+      src={url}
+      alt=""
+      onError={() => setEchec(true)}
+      style={{ height: hauteur, maxWidth: 260, objectFit: 'contain' }}
+    />
+  )
+}
+
 /**
- * Recto : la marque, rien d'autre.
- * Pas de QR Code ici — celui du propriétaire est au verso, seul et bien lisible,
- * pour qu'aucun lecteur n'hésite entre deux codes sur la même carte.
+ * Recto : l'identité du propriétaire, et rien d'autre.
+ *
+ * Aucun logo n'est imposé — ni celui de Kartaa, ni un autre. Le propriétaire met
+ * le sien s'il en a un, sa photo s'il le souhaite, les deux ou aucun des deux :
+ * la mise en page tient dans les quatre cas.
+ *
+ * Le QR Code reste au verso : deux codes sur une même carte feraient hésiter
+ * celui qui la scanne.
  */
-function Front({ card, theme }) {
+function Front({ card, theme, photoUrl, logoUrl }) {
   const font = FONT_STACK[theme.font] || FONT_STACK.sans
   const template = card.template || 'standard'
   const skin = skinOf(template, theme)
-  const plated = skin.markPlate !== 'transparent'
+  const p = card.profile || {}
+  const fullName = [p.firstName, p.lastName].filter(Boolean).join(' ') || 'Votre nom'
+  const profession = (p.profession || '').trim()
+  const company = (card.companies?.[0]?.name || '').trim()
+  const contacts = contactLines(card)
+  const nameSize = fullName.length > 24 ? 44 : fullName.length > 17 ? 52 : 60
 
   return (
     <div
@@ -173,32 +182,42 @@ function Front({ card, theme }) {
         </>
       )}
 
-      <div className="relative flex h-full flex-col items-center justify-center" style={{ padding: CARD_SAFE }}>
-        <div
-          style={{
-            background: skin.markPlate,
-            border: skin.markPlateBorder === 'transparent' ? 'none' : `1px solid ${skin.markPlateBorder}`,
-            padding: plated ? 22 : 0,
-          }}
-          className="rounded-[34px]"
-        >
-          <KartaaMark size={132} />
-        </div>
-        <h1 style={{ fontSize: 68, fontWeight: 800, letterSpacing: '-.02em', lineHeight: 1 }} className="mt-9">
-          Kartaa
-        </h1>
-        <div style={{ background: skin.accent }} className="mt-7 h-px w-24" />
-        <p style={{ fontSize: 18, letterSpacing: '.3em', color: skin.muted }} className="mt-7 font-semibold uppercase">
-          Carte de visite numérique
-        </p>
-      </div>
+      <div className="relative flex h-full flex-col justify-between" style={{ padding: CARD_SAFE }}>
+        <div className="flex items-start justify-between gap-10">
+          <div className="min-w-0 flex-1">
+            <h1 style={{ fontSize: nameSize, fontWeight: 800, lineHeight: 1.06, letterSpacing: '-.015em' }}>
+              {fullName}
+            </h1>
+            <div style={{ background: skin.accent }} className="mt-5 h-1 w-20 rounded-full" />
+            {profession && (
+              <p style={{ fontSize: 25, color: skin.soft, fontWeight: 600 }} className="mt-5 leading-snug">
+                {profession.slice(0, 48)}
+              </p>
+            )}
+            {company && (
+              <p style={{ fontSize: 20, color: skin.muted }} className="mt-1.5 leading-snug">
+                {company.slice(0, 44)}
+              </p>
+            )}
+          </div>
 
-      <p
-        style={{ fontSize: 15, color: skin.muted, bottom: 44 }}
-        className="absolute inset-x-0 text-center font-medium"
-      >
-        {APP.publicDomain}
-      </p>
+          <div className="flex shrink-0 flex-col items-end gap-5">
+            <Logo url={logoUrl} />
+            <Photo url={photoUrl} borderColor={skin.accent} taille={132} marge={false} />
+          </div>
+        </div>
+
+        {!!contacts.length && (
+          <div className="grid grid-cols-2 gap-x-10 gap-y-3">
+            {contacts.slice(0, 4).map((line) => (
+              <div key={line.value} className="flex items-center gap-3" style={{ fontSize: 19, color: skin.soft }}>
+                <Icon name={line.icon} size={19} style={{ color: skin.accent }} />
+                <span className="truncate">{line.value}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -210,7 +229,7 @@ function Front({ card, theme }) {
  * Le nom vient du profil déjà saisi (aucune ressaisie), et le QR Code ne contient
  * qu'une URL publique — jamais une donnée personnelle, jamais un fichier.
  */
-function Back({ card, theme, qr, photoUrl, branded = true }) {
+function Back({ card, theme, qr, photoUrl, logoUrl, branded = true }) {
   const font = FONT_STACK[theme.font] || FONT_STACK.sans
   const template = card.template || 'standard'
   const skin = skinOf(template, theme)
@@ -235,8 +254,14 @@ function Back({ card, theme, qr, photoUrl, branded = true }) {
       <div className="relative flex h-full items-center gap-12" style={{ padding: CARD_SAFE }}>
         {/* ------------------------------------------------ identité */}
         <div className="flex min-w-0 flex-1 flex-col justify-center">
-          {/* La photo vient du profil déjà renseigné : rien à saisir en plus. */}
-          <Photo url={photoUrl} borderColor={skin.accent} />
+          {/* Logo et photo sont facultatifs et indépendants : la colonne se
+              resserre d'elle-même quand l'un des deux manque, ou les deux. */}
+          {(logoUrl || photoUrl) && (
+            <div className="mb-7 flex items-center gap-5">
+              <Photo url={photoUrl} borderColor={skin.accent} marge={false} />
+              <Logo url={logoUrl} hauteur={56} />
+            </div>
+          )}
           <h1 style={{ fontSize: nameSize, fontWeight: 800, lineHeight: 1.06, letterSpacing: '-.015em' }}>{fullName}</h1>
           <div style={{ background: skin.accent }} className="mt-6 h-1 w-20 rounded-full" />
           {profession && (
@@ -274,11 +299,11 @@ function Back({ card, theme, qr, photoUrl, branded = true }) {
   )
 }
 
-export function CardArtwork({ card, side = 'front', qr, photoUrl, branded = true }) {
+export function CardArtwork({ card, side = 'front', qr, photoUrl, logoUrl, branded = true }) {
   const theme = { primary: '#6d28d9', accent: '#f5b229', font: 'sans', layout: 'left', ...(card.theme || {}) }
   return side === 'back'
-    ? <Back card={card} theme={theme} qr={qr} photoUrl={photoUrl} branded={branded} />
-    : <Front card={card} theme={theme} />
+    ? <Back card={card} theme={theme} qr={qr} photoUrl={photoUrl} logoUrl={logoUrl} branded={branded} />
+    : <Front card={card} theme={theme} photoUrl={photoUrl} logoUrl={logoUrl} />
 }
 
 /** Conteneur responsive : met la carte à l'échelle sans déformer le rendu. */

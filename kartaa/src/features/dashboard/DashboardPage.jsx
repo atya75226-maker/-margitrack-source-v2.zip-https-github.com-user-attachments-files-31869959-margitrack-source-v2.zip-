@@ -3,7 +3,6 @@ import { Button, EmptyState, SectionTitle, Badge } from '../../components/ui'
 import { Icon } from '../../components/ui/Icons'
 import StatTile from './StatTile'
 import CardMiniature from '../cards/CardMiniature'
-import VaultTile from '../vault/VaultTile'
 import { useAuth } from '../../state/AuthContext'
 import { useData } from '../../state/DataContext'
 import { isPro } from '../../config/app.config'
@@ -15,32 +14,53 @@ export default function DashboardPage() {
   const { cards, vaults, stats } = useData()
   const { t } = useTranslation()
   const pro = isPro(user)
-  const storagePercent = stats.quotaBytes ? (stats.usedBytes / stats.quotaBytes) * 100 : 0
 
   return (
     <div className="space-y-8">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
           <p className="text-sm font-semibold text-ink-400">Bonjour {user?.firstName},</p>
-          <h1 className="font-display text-2xl font-extrabold text-ink-900 sm:text-3xl">Votre tableau de bord</h1>
+          <h1 className="mt-0.5 font-display text-2xl font-extrabold text-ink-900 sm:text-3xl">
+            Votre identité professionnelle numérique
+          </h1>
+          <p className="mt-2 max-w-xl text-sm leading-relaxed text-ink-500">
+            Créez votre carte, partagez votre QR Code et permettez à vos clients de vous retrouver en un
+            seul geste.
+          </p>
         </div>
         <Badge tone={pro ? 'gold' : 'neutral'} icon={pro ? 'crown' : null}>
           {pro ? t('plan.pro') : t('plan.free')}
         </Badge>
       </header>
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+      {/* Le geste principal d'abord, les chiffres ensuite : c'est la carte qui
+          fait le produit, pas le tableau de bord. */}
+      <div className="flex flex-wrap gap-3">
+        {stats.canCreateCard ? (
+          <Button as={Link} to="/app/cartes/nouvelle" size="lg" icon="plus">
+            Créer ma carte
+          </Button>
+        ) : (
+          <Button as={Link} to={`/app/cartes/${cards[0]?.id || ''}`} size="lg" icon="card">
+            Voir ma carte
+          </Button>
+        )}
+        {!!cards.length && stats.canCreateCard && (
+          <Button as={Link} to={`/app/cartes/${cards[0].id}`} size="lg" variant="outline" icon="card">
+            Voir ma carte
+          </Button>
+        )}
+        <Button as={Link} to="/app/scanner" size="lg" variant="outline" icon="scan">
+          Scanner un QR
+        </Button>
+      </div>
+
+      {/* Deux chiffres, tous deux réels. Une troisième tuile « ouvertures du
+          mini-site » afficherait aujourd'hui la même valeur que les scans : le
+          détail des ouvertures existe en base, mais il n'est pas remonté ici. */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         <StatTile icon="card" label="Cartes créées" value={formatNumber(stats.cards)} sub={`Limite : ${stats.cardsLimit === Infinity ? 'illimitée' : stats.cardsLimit}`} />
         <StatTile icon="qr" label="Scans de QR Code" value={formatNumber(stats.scans)} tone="emerald" sub="Toutes cartes confondues" />
-        <StatTile icon="vault" label="Coffres Sécurité" value={formatNumber(stats.vaults)} tone="ink" sub={`${formatNumber(stats.files)} fichier${stats.files > 1 ? 's' : ''}`} />
-        <StatTile
-          icon="upload"
-          label="Espace utilisé"
-          value={formatBytes(stats.usedBytes)}
-          tone="gold"
-          progress={storagePercent}
-          sub={`sur ${formatBytes(stats.quotaBytes)}`}
-        />
       </div>
 
       <section>
@@ -85,42 +105,26 @@ export default function DashboardPage() {
         )}
       </section>
 
-      <section>
-        <SectionTitle
-          icon="vault"
-          title="Mes Coffres Sécurité"
-          subtitle="Vos photos, vidéos et documents protégés."
-          action={
-            stats.canCreateVault ? (
-              <Button as={Link} to="/app/coffres/nouveau" size="sm" variant="dark" icon="plus">
-                Créer un Coffre
-              </Button>
-            ) : (
-              <Button as={Link} to="/app/abonnement" size="sm" variant="outline" icon="crown">
-                Passer à Pro
-              </Button>
-            )
-          }
-        />
-        {vaults.length ? (
-          <div className="grid gap-4 sm:grid-cols-2">
-            {vaults.slice(0, 4).map((vault) => (
-              <VaultTile key={vault.id} vault={vault} />
-            ))}
-          </div>
-        ) : (
-          <EmptyState
-            icon="vault"
-            title="Aucun coffre pour l'instant"
-            description="Créez un espace privé pour vos souvenirs, diplômes et documents importants — protégé par mot de passe ou biométrie."
-            action={
-              <Button as={Link} to="/app/coffres/nouveau" variant="dark" icon="plus">
-                Créer un Coffre
-              </Button>
-            }
-          />
-        )}
-      </section>
+      {/* Fonctionnalité secondaire : une seule ligne, sans vignettes, pour ne pas
+          concurrencer les cartes sur l'écran d'accueil. */}
+      <Link
+        to="/app/coffres"
+        className="flex items-center gap-4 rounded-3xl border border-ink-100 bg-white p-4 shadow-soft transition-colors hover:border-brand-200"
+      >
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-ink-900 text-white">
+          <Icon name="vault" size={20} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-display text-sm font-bold text-ink-900">Coffre Sécurité</span>
+          <span className="mt-0.5 block text-xs text-ink-500">
+            {vaults.length
+              ? `${formatNumber(vaults.length)} coffre${vaults.length > 1 ? 's' : ''} • ${formatBytes(stats.usedBytes)} sur ${formatBytes(stats.quotaBytes)}`
+              : 'Vos documents privés, chiffrés sur votre appareil.'}
+          </span>
+        </span>
+        <Icon name="chevronRight" size={18} className="shrink-0 text-ink-300" />
+      </Link>
+
     </div>
   )
 }
