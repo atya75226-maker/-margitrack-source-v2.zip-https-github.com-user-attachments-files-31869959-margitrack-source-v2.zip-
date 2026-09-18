@@ -28,7 +28,10 @@ export function useCardAssets(card, photoDuCompte) {
     : (estSaCarte(card, user) ? user.avatarUrl || null : null)
 
   const photoUrl = card?.profile?.photoUrl || photoProprietaire
-  const logoUrl = card?.companies?.[0]?.logoUrl || null
+  // Logo et photo sont indépendants : on peut n'avoir que l'un, les deux, ou
+  // aucun des deux. Celui de la carte prime ; à défaut, celui de l'entreprise
+  // déjà saisie sert de logo par défaut plutôt que d'être ignoré.
+  const logoUrl = card?.profile?.logoUrl || card?.companies?.[0]?.logoUrl || null
   const slug = card?.slug || ''
   const qr = useQrCode(slug ? publicUrl(slug) : null)
   return { photoUrl, logoUrl, qr }

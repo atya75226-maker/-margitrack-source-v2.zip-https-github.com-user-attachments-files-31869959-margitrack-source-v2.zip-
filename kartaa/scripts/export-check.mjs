@@ -221,7 +221,10 @@ verifier('le QR Code du verso ouvre le profil public de production',
 const photoVerso = comptePhoto(imageVerso.png)
 verifier('le verso téléchargé contient la photo du compte', photoVerso > 20000,
   `→ ${photoVerso} pixels`)
-verifier('le recto ne porte pas la photo du propriétaire', comptePhoto(imageRecto.png) === 0)
+// Le recto porte désormais l'identité du propriétaire, photo comprise : aucun
+// logo ni aucune marque ne lui est imposé.
+verifier('le recto porte aussi la photo du propriétaire', comptePhoto(imageRecto.png) > 20000,
+  `→ ${comptePhoto(imageRecto.png)} pixels`)
 
 // Le contenu du verso doit correspondre à ce que l'écran affiche.
 await page.click('button:has-text("Verso")')

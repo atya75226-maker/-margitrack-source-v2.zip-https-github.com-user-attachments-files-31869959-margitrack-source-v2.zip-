@@ -19,11 +19,16 @@ const NAV = [
 ]
 
 /**
- * Barre du bas : les entrées principales plus le bouton « Créer ».
- * Le profil n'y figure pas — la photo de compte, en haut à droite, y mène déjà,
- * et le répéter en bas prenait une place utile aux six autres icônes.
+ * Barre du bas : le chemin principal du produit, et lui seul.
+ *
+ * Accueil, Mes cartes, Créer, Scanner, Profil. Le coffre reste accessible — menu
+ * latéral sur grand écran, page Profil sur téléphone — mais il ne tient plus le
+ * même rang que les cartes : ce n'est pas par lui qu'on découvre Kartaa.
+ *
+ * C'est « Créer » qui porte le bouton mis en avant, puisque c'est le geste que
+ * l'application existe pour provoquer.
  */
-const NAV_MOBILE = [NAV[0], NAV[1], { action: 'create', label: 'Créer', icon: 'plus' }, NAV[2], NAV[3], NAV[4]]
+const NAV_MOBILE = [NAV[0], NAV[1], { action: 'create', label: 'Créer', icon: 'plus' }, NAV[2], NAV[5]]
 
 export default function AppLayout() {
   const { user } = useAuth()
@@ -96,12 +101,12 @@ export default function AppLayout() {
 
       {/* --------------------------------------------- navigation mobile */}
       <nav className="safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-ink-100 bg-white/95 backdrop-blur lg:hidden">
-        <div className="mx-auto grid max-w-lg grid-cols-6 items-center px-0.5 pb-2 pt-2.5">
+        <div className="mx-auto grid max-w-lg grid-cols-5 items-center px-1 pb-2 pt-2.5">
           {NAV_MOBILE.map((item) =>
             item.action === 'create' ? (
               <MobileAction key="create" item={item} onClick={() => setCreateOpen(true)} />
             ) : (
-              <MobileLink key={item.to} item={item} scanner={item.to === '/app/scanner'} />
+              <MobileLink key={item.to} item={item} />
             ),
           )}
         </div>
@@ -145,7 +150,7 @@ export default function AppLayout() {
  * Le nom reste porté par aria-label et title — indispensable pour les lecteurs
  * d'écran, puisque plus rien ne l'écrit à l'écran.
  */
-function MobileLink({ item, scanner = false }) {
+function MobileLink({ item }) {
   return (
     <NavLink
       to={item.to}
@@ -160,19 +165,7 @@ function MobileLink({ item, scanner = false }) {
     >
       {({ isActive }) => (
         <>
-          {scanner ? (
-            // Le scanner reste reconnaissable au premier coup d'œil, sans dépasser
-            // de la barre : toutes les icônes tiennent désormais sur la même ligne.
-            <span
-              className={`grid h-10 w-10 place-items-center rounded-2xl text-white transition-colors ${
-                isActive ? 'bg-ink-900' : 'bg-brand-600'
-              }`}
-            >
-              <Icon name={item.icon} size={21} strokeWidth={1.9} />
-            </span>
-          ) : (
-            <Icon name={item.icon} size={23} strokeWidth={isActive ? 2.2 : 1.7} />
-          )}
+          <Icon name={item.icon} size={23} strokeWidth={isActive ? 2.2 : 1.7} />
           {/* Un point remplace le libellé pour signaler l'onglet ouvert. */}
           <span className={`h-1.5 w-1.5 rounded-full transition-colors ${isActive ? 'bg-brand-600' : 'bg-transparent'}`} />
         </>
@@ -194,8 +187,9 @@ function MobileAction({ item, onClick }) {
       title={item.label}
       className="flex flex-col items-center gap-1.5 rounded-xl py-1 text-ink-400 transition-colors active:text-brand-700"
     >
-      <span className="grid h-10 w-10 place-items-center rounded-2xl border border-ink-200 text-ink-600 transition-transform active:scale-95">
-        <Icon name={item.icon} size={21} strokeWidth={2} />
+      {/* Le geste que l'application existe pour provoquer : créer sa carte. */}
+      <span className="grid h-11 w-11 place-items-center rounded-2xl bg-brand-600 text-white shadow-soft transition-transform active:scale-95">
+        <Icon name={item.icon} size={23} strokeWidth={2.2} />
       </span>
       <span className="h-1.5 w-1.5 rounded-full bg-transparent" />
     </button>

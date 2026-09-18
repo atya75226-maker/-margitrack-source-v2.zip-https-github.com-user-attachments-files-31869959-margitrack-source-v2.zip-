@@ -3,6 +3,7 @@ import { Button, Field, Input, Panel } from '../../../components/ui'
 import { Avatar } from '../../../components/ui'
 import { Icon } from '../../../components/ui/Icons'
 import { uploadImage, removeImage } from '../../../lib/storage'
+import { Button as Bouton } from '../../../components/ui'
 import { initialsOf } from '../../../lib/format'
 import { useToast } from '../../../state/ToastContext'
 import { useAuth } from '../../../state/AuthContext'
@@ -10,7 +11,9 @@ import { useAuth } from '../../../state/AuthContext'
 export default function StepIdentity({ draft, update, errors }) {
   const profile = draft.profile
   const fileRef = useRef(null)
+  const logoRef = useRef(null)
   const [busy, setBusy] = useState(false)
+  const [busyLogo, setBusyLogo] = useState(false)
   const toast = useToast()
   const { user } = useAuth()
   // Par défaut, la carte reprend la photo du compte : personne n'a à la redonner.
@@ -38,6 +41,33 @@ export default function StepIdentity({ draft, update, errors }) {
     } finally {
       setBusy(false)
     }
+  }
+
+  const choisirLogo = async (file) => {
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      toast.error('Choisissez une image.')
+      return
+    }
+    setBusyLogo(true)
+    try {
+      const { path, url } = await uploadImage(file, { maxSize: 600 })
+      const ancien = profile.logoPath
+      update({ profile: { ...profile, logoUrl: url, logoPath: path } })
+      if (ancien) await removeImage(ancien)
+      toast.success('Logo ajouté.')
+    } catch (error) {
+      toast.error(error.message || "Impossible d'envoyer ce logo.")
+    } finally {
+      setBusyLogo(false)
+    }
+  }
+
+  const retirerLogo = async () => {
+    const ancien = profile.logoPath
+    update({ profile: { ...profile, logoUrl: null, logoPath: null } })
+    if (ancien) await removeImage(ancien)
+    toast.success('Logo retiré.')
   }
 
   return (
@@ -75,6 +105,45 @@ export default function StepIdentity({ draft, update, errors }) {
                 }}>
                   Retirer
                 </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </Panel>
+
+      {/* Le logo est indépendant de la photo : l'un, l'autre, les deux, ou aucun.
+          Aucun logo n'est imposé — ni celui de Kartaa, ni un autre. */}
+      <Panel>
+        <div className="flex flex-wrap items-center gap-5">
+          <span className="grid h-[88px] w-[88px] shrink-0 place-items-center overflow-hidden rounded-3xl border border-ink-100 bg-ink-50 text-ink-300">
+            {profile.logoUrl
+              ? <img src={profile.logoUrl} alt="" className="h-full w-full object-contain p-2" />
+              : <Icon name="image" size={26} />}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="font-display text-sm font-bold text-ink-900">Votre logo</p>
+            <p className="mt-1 hint">
+              Facultatif, et indépendant de votre photo. Il apparaît sur votre carte et sur votre
+              mini-site. Sans logo, la carte reste parfaitement lisible.
+            </p>
+            <input
+              ref={logoRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(event) => {
+                choisirLogo(event.target.files?.[0])
+                event.target.value = ''
+              }}
+            />
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Bouton size="sm" variant="outline" icon="image" loading={busyLogo} onClick={() => logoRef.current?.click()}>
+                {profile.logoUrl ? 'Changer de logo' : 'Ajouter un logo'}
+              </Bouton>
+              {profile.logoUrl && (
+                <Bouton size="sm" variant="ghost" icon="trash" disabled={busyLogo} onClick={retirerLogo}>
+                  Retirer
+                </Bouton>
               )}
             </div>
           </div>

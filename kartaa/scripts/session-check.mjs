@@ -110,14 +110,22 @@ console.log('\nJeton encore valable, réseau coupé — ouverture immédiate')
   await page.goto(`${BASE}/app`, { waitUntil: 'domcontentloaded' })
   await page.waitForSelector('nav a[aria-label="Accueil"]', { timeout: 8000 }).catch(() => null)
   const texte = await page.innerText('body')
-  verifier('le tableau de bord est affiché', /tableau de bord/i.test(texte), `→ ${texte.slice(0, 90)}`)
+  verifier('le tableau de bord est affiché', /identité professionnelle numérique/i.test(texte), `→ ${texte.slice(0, 90)}`)
 
   const barre = page.locator('nav').last()
   const libelles = await barre.locator('[aria-label]').evaluateAll((n) => n.map((e) => e.getAttribute('aria-label')))
-  verifier('six emplacements dans la barre du bas', libelles.length === 6, `→ ${libelles.join(', ')}`)
-  verifier('« Créer » est descendu dans la barre', libelles.includes('Créer'))
+  // La barre du bas porte le chemin principal du produit : créer sa carte, la
+  // partager, scanner. Le coffre en sort — il reste accessible depuis l'accueil
+  // et le menu latéral, mais il ne tient plus le même rang que les cartes.
+  verifier('cinq emplacements dans la barre du bas', libelles.length === 5, `→ ${libelles.join(', ')}`)
+  verifier('« Créer » y figure', libelles.includes('Créer'))
+  verifier('« Mes cartes » y figure', libelles.includes('Mes cartes'))
   verifier('« Scanner » y figure', libelles.includes('Scanner'))
-  verifier('« Profil » n\'y figure plus', !libelles.includes('Profil'), `→ ${libelles.join(', ')}`)
+  verifier('« Profil » y figure', libelles.includes('Profil'), `→ ${libelles.join(', ')}`)
+  verifier('le coffre n\'occupe plus la barre du bas', !libelles.includes('Mes coffres'),
+    `→ ${libelles.join(', ')}`)
+  verifier('le coffre reste accessible depuis l\'accueil',
+    (await page.locator('a[href="/app/coffres"]').count()) > 0)
 
   const entete = page.locator('header').first()
   const creerEnHaut = await entete.locator('[aria-label="Créer"]').count()
@@ -155,12 +163,12 @@ console.log('\nStockage local refusé — les cookies prennent le relais')
   await page.goto(`${BASE}/app`, { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(2000)
   const app = await page.innerText('body')
-  verifier('la session survit sans stockage local', /tableau de bord/i.test(app), `→ ${app.slice(0, 90)}`)
+  verifier('la session survit sans stockage local', /identité professionnelle numérique/i.test(app), `→ ${app.slice(0, 90)}`)
 
   await page.reload({ waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(2000)
   const apres = await page.innerText('body')
-  verifier('elle survit aussi au rechargement', /tableau de bord/i.test(apres), `→ ${apres.slice(0, 90)}`)
+  verifier('elle survit aussi au rechargement', /identité professionnelle numérique/i.test(apres), `→ ${apres.slice(0, 90)}`)
   await context.close()
 }
 
@@ -174,7 +182,7 @@ console.log('\nLes quatre cas demandés')
   await page.reload({ waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(1500)
   verifier('1. actualisation : toujours dans l\'application',
-    /tableau de bord/i.test(await page.innerText('body')) && new URL(page.url()).pathname === '/app',
+    /identité professionnelle numérique/i.test(await page.innerText('body')) && new URL(page.url()).pathname === '/app',
     `→ ${page.url()}`)
 
   // Test 2 — retour sur le site après fermeture : un onglet neuf, même stockage.
@@ -183,7 +191,7 @@ console.log('\nLes quatre cas demandés')
   await onglet.waitForTimeout(1800)
   verifier('2. retour sur l\'adresse du site : pas de page vitrine',
     new URL(onglet.url()).pathname === '/app', `→ ${onglet.url()}`)
-  verifier('2. le tableau de bord est bien affiché', /tableau de bord/i.test(await onglet.innerText('body')))
+  verifier('2. le tableau de bord est bien affiché', /identité professionnelle numérique/i.test(await onglet.innerText('body')))
 
   // Test 3 — navigation dans plusieurs pages puis actualisation.
   await page.goto(`${BASE}/app/coffres`, { waitUntil: 'domcontentloaded' })

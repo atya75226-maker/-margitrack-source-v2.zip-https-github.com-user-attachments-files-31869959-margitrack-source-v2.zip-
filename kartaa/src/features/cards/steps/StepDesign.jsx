@@ -32,7 +32,7 @@ export default function StepDesign({ draft, update, assets, slugError }) {
               >
                 <div className="relative bg-ink-100">
                   <CardScaler>
-                    <CardArtwork card={{ ...draft, template: template.id, theme: { ...draft.theme, ...template.defaults } }} side="back" qr={assets.qr} photoUrl={assets.photoUrl} />
+                    <CardArtwork card={{ ...draft, template: template.id, theme: { ...draft.theme, ...template.defaults } }} side="back" qr={assets.qr} photoUrl={assets.photoUrl} logoUrl={assets.logoUrl} />
                   </CardScaler>
                   {locked && (
                     <span className="absolute inset-0 grid place-items-center bg-ink-950/50 text-white">
