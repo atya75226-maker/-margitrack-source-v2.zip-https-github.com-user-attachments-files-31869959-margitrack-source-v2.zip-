@@ -221,7 +221,7 @@ console.log('\nSession conservée après installation')
   await page.waitForTimeout(2500)
   verifier("la session ouverte mène au tableau de bord",
     new URL(page.url()).pathname === '/app', `→ ${page.url()}`)
-  verifier('le tableau de bord est bien affiché', /identité professionnelle numérique/i.test(await page.innerText('body')))
+  verifier('le tableau de bord est bien affiché', /tableau de bord/i.test(await page.innerText('body')))
   await context.close()
 }
 
