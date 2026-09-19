@@ -21,7 +21,7 @@ const AVANTAGES = [
 
 const FAQ = [
   { q: "Ai-je besoin d'un matériel spécial ?", a: "Non. Margitrack fonctionne directement dans le navigateur de votre téléphone ou ordinateur — aucune caisse enregistreuse ni imprimante n'est nécessaire." },
-  { q: "Comment fonctionne l'essai gratuit ?", a: "Dès votre inscription, vous avez accès à toutes les fonctionnalités de Margitrack pendant 7 jours, sans engagement et sans carte bancaire." },
+  { q: "Comment fonctionne l'essai gratuit ?", a: "Dès votre inscription, vous avez accès à toutes les fonctionnalités de Margitrack pendant 30 jours, sans engagement et sans carte bancaire." },
   { q: "Que se passe-t-il après l'essai gratuit ?", a: "Si vous ne passez pas à l'abonnement Pro, l'accès aux fonctionnalités est suspendu jusqu'à votre passage à Pro — vos données restent en sécurité et ne sont jamais supprimées." },
   { q: "Mes données sont-elles partagées avec d'autres restaurants ?", a: "Non, jamais. Chaque restaurant a un espace totalement isolé — personne d'autre ne peut voir vos ventes, dépenses ou produits." },
   { q: "Puis-je ajouter plusieurs membres de mon équipe ?", a: "Oui. Vous pouvez inviter des gérants, secrétaires et serveurs, chacun avec des permissions adaptées à son rôle." },
@@ -96,7 +96,7 @@ export function LandingPage({ onStart, onLogin }) {
             Découvrir les fonctionnalités
           </a>
         </div>
-        <p className="text-xs text-gray-500 mt-4">7 jours d'essai gratuit — sans carte bancaire, sans engagement.</p>
+        <p className="text-xs text-gray-500 mt-4">30 jours d'essai gratuit — sans carte bancaire, sans engagement.</p>
 
         {/* Installation en un geste, par la proposition du navigateur
             lui-même. Quand celui-ci n'en émet pas — iPhone, ou application
@@ -164,9 +164,9 @@ export function LandingPage({ onStart, onLogin }) {
       <Section className="py-8">
         <div className="rounded-3xl p-6 sm:p-8" style={{ backgroundColor: COLOR.violetSoft, border: `1px solid ${COLOR.violet}40` }}>
           <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: COLOR.violet }}>Essai gratuit</p>
-          <h3 className="text-xl sm:text-2xl font-bold text-white font-display mb-2">7 jours pour tout tester, sans risque</h3>
+          <h3 className="text-xl sm:text-2xl font-bold text-white font-display mb-2">30 jours pour tout tester, sans risque</h3>
           <p className="text-sm sm:text-base text-gray-300 max-w-2xl">
-            Créez votre compte et accédez immédiatement à toutes les fonctionnalités de Margitrack pendant 7 jours —
+            Créez votre compte et accédez immédiatement à toutes les fonctionnalités de Margitrack pendant 30 jours —
             sans carte bancaire. À la fin de l'essai, passez à l'abonnement Pro pour continuer ; vos données, elles,
             ne sont jamais supprimées.
           </p>
