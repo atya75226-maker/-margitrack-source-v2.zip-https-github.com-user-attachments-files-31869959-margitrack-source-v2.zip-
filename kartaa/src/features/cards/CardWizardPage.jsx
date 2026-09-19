@@ -12,6 +12,9 @@ import { useAuth } from '../../state/AuthContext'
 import { useToast } from '../../state/ToastContext'
 import { useCardAssets } from '../../hooks/useCardAssets'
 import { repo } from '../../lib/storage'
+import {
+  ATTENTE_ECRITURE, chargerCarte, depuisServeur, enregistrerCarte, estPanneReseau, verifierAdresse,
+} from '../../lib/offline/donnees'
 import { normalizeSlug, suggestSlug } from '../../lib/slug'
 import { TEMPLATES, can } from '../../config/app.config'
 import { ensureRows } from '../../lib/socialLinks'
@@ -63,9 +66,11 @@ export default function CardWizardPage() {
   useEffect(() => {
     if (!cardId) return
     let cancelled = false
-    Promise.all([repo.cards.get(cardId), repo.cards.socialLinks(cardId)]).then(([card, links]) => {
+    // Sans réseau, la carte est relue depuis la copie locale : on peut donc
+    // corriger une information même hors connexion.
+    chargerCarte(cardId).then(({ carte }) => {
       if (cancelled) return
-      if (card) setDraft({ ...card, socialLinks: ensureRows(links) })
+      if (carte) setDraft({ ...carte, socialLinks: ensureRows(carte.socialLinks) })
       setLoading(false)
     })
     return () => {
@@ -114,8 +119,10 @@ export default function CardWizardPage() {
       return
     }
     const slug = normalizeSlug(draft.slug, draft.profile.firstName, draft.profile.lastName)
-    const available = await repo.cards.slugAvailable(slug, cardId || null)
-    if (!available) {
+    // Hors connexion la vérification est impossible : on n'invente pas de
+    // réponse, on laisse passer et c'est la base qui tranchera à l'envoi.
+    const { libre, verifie } = await verifierAdresse(slug, cardId || null)
+    if (verifie && !libre) {
       setSlugError('Cette adresse est déjà utilisée. Choisissez-en une autre.')
       setStep(STEPS.length - 1)
       return
@@ -126,11 +133,31 @@ export default function CardWizardPage() {
     setSaving(true)
     try {
       const payload = { ...draft, slug, template }
-      const card = cardId ? await repo.cards.update(cardId, payload) : await repo.cards.create(user.id, payload)
-      await repo.cards.saveSocialLinks(card.id, draft.socialLinks)
-      toast.success(cardId ? 'Carte mise à jour.' : 'Votre carte est prête !')
+
+      if (cardId) {
+        // Modification d'une carte existante : elle peut être enregistrée sur
+        // l'appareil si le réseau manque, puis envoyée à son retour.
+        const { carte, enAttente } = await enregistrerCarte(cardId, payload, draft.socialLinks)
+        toast.success(enAttente
+          ? 'Modification enregistrée sur cet appareil. Elle sera envoyée dès le retour du réseau.'
+          : 'Carte mise à jour.')
+        navigate(`/app/cartes/${carte?.id || cardId}`, { replace: true })
+        return
+      }
+
+      // Création : elle a besoin du serveur, qui attribue l'identifiant et
+      // vérifie que l'adresse est libre. Rien ne sert de faire croire le
+      // contraire — on le dit et la saisie est conservée à l'écran.
+      const card = await depuisServeur(() => repo.cards.create(user.id, payload), ATTENTE_ECRITURE)
+      await depuisServeur(() => repo.cards.saveSocialLinks(card.id, draft.socialLinks), ATTENTE_ECRITURE)
+      toast.success('Votre carte est prête !')
       navigate(`/app/cartes/${card.id}`, { replace: true })
     } catch (error) {
+      if (!cardId && estPanneReseau(error)) {
+        toast.error("Créer une première carte demande une connexion : le serveur lui attribue son adresse. Vos informations restent saisies.")
+        setSaving(false)
+        return
+      }
       toast.error(error.message)
     } finally {
       setSaving(false)

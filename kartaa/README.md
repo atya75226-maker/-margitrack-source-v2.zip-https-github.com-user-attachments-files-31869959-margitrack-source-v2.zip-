@@ -390,6 +390,94 @@ sinon, à la connexion.
 `npm run test:pwa` vérifie tout cela dans un navigateur, à commencer par
 l'absence de toute ressource externe dans les caches.
 
+## Sans réseau
+
+Kartaa s'ouvre et reste utilisable sans connexion. Pas complètement : une partie
+du produit a réellement besoin du serveur, et l'application le dit au lieu de
+faire semblant.
+
+### Ce qui fonctionne sans réseau
+
+| | Sans réseau |
+| --- | --- |
+| Ouvrir l'application | oui, elle démarre |
+| Voir ses cartes et leur QR Code | oui — le QR est dessiné sur l'appareil |
+| Modifier une carte existante | oui : enregistrée ici, envoyée au retour du réseau |
+| Rouvrir un mini-site **déjà consulté** sur cet appareil | oui, avec un bandeau |
+| Ouvrir l'écran du scanner | oui |
+| Créer une **première** carte | non : le serveur attribue l'adresse publique |
+| Ouvrir un mini-site **jamais consulté** ici | non : il n'a jamais été téléchargé |
+| Statistiques, paiement, téléversement d'images | non |
+
+Les deux derniers cas ne sont pas silencieux : l'écran explique qu'une connexion
+est nécessaire, et la saisie en cours n'est jamais perdue.
+
+### Où les données sont rangées
+
+Dans **IndexedDB** (`src/lib/offline/db.js`), pas dans `localStorage` : trois
+magasins, `cartes`, `profils` (les mini-sites déjà ouverts) et `attente` (les
+modifications pas encore parties).
+
+N'y entrent jamais : aucun mot de passe, aucun code de récupération, aucun
+fichier privé. Ce qui y est rangé est exactement ce que la personne connectée a
+déjà sous les yeux, et les mini-sites sont publics par nature.
+
+Le service worker garde en plus les images de l'espace public `card-assets`
+(soixante au maximum, les plus anciennes partent en premier). Rien d'autre du
+serveur n'entre dans un cache : ni appels d'API, ni jetons, ni URL signées.
+
+### Le serveur reste la source de vérité
+
+Chaque lecture réussie écrit au passage ce qu'elle a obtenu ; chaque lecture
+impossible relit cette copie et le signale (`local: true`), ce qui allume le
+bandeau « Mode hors connexion — dernières données disponibles ». Rien n'est
+inventé : si rien n'a jamais été enregistré, l'écran affiche qu'une connexion
+est nécessaire.
+
+Une requête partie vers un serveur injoignable ne revient parfois **jamais** —
+ni réponse, ni erreur. Toute lecture est donc bornée (huit secondes, vingt pour
+une écriture), et quand le navigateur annonce lui-même l'absence de réseau, rien
+n'est envoyé du tout. Sans cette borne, l'écran attendait indéfiniment une
+réponse qui ne viendrait pas au lieu d'afficher la copie locale.
+
+### La file d'attente, et les conflits
+
+Une modification faite sans réseau est rangée dans `attente` avec l'heure à
+laquelle elle a été faite, puis appliquée à la copie locale — ce que l'écran
+montre est donc vrai : c'est bien enregistré sur l'appareil.
+
+Au retour du réseau (évènement `online`, ou simple retour au premier plan), la
+file est vidée dans l'ordre. Chaque opération part, puis est **retirée** : elle
+ne peut pas être envoyée deux fois. Le premier échec réseau arrête la boucle —
+on réessaiera plutôt que de marteler un serveur injoignable. Remplacer la liste
+complète des liens est idempotent : la rejouer donne le même résultat.
+
+La règle de conflit est volontairement simple :
+
+- si la carte a été modifiée **ailleurs après** la modification locale, la
+  version du serveur est gardée et l'opération est marquée « conflit ». Rien
+  n'est écrasé en silence ;
+- si le serveur **refuse** (droits, validation, adresse déjà prise), l'opération
+  est marquée « refusée » avec son motif : la garder ne servirait à rien,
+  elle serait refusée à l'identique.
+
+L'indicateur d'en-tête ne dit que ce qui est vrai : « Hors connexion »,
+« À synchroniser (n) », « Synchronisation… », et « Synchronisé » seulement quand
+la file est réellement vide.
+
+À la déconnexion, la base locale est effacée : rien ne reste lisible sur
+l'appareil.
+
+### Vérification
+
+`npm run test:offline` rejoue les huit scénarios dans un vrai navigateur avec
+une vraie coupure (`context.setOffline`) : démarrage, cartes, QR Code,
+modification, retour du réseau (envoyée **une seule fois**), mini-site déjà
+consulté, mini-site jamais consulté, scanner. La photo du mini-site est servie
+par un vrai serveur, parce que les requêtes d'un service worker échappent aux
+interceptions de Playwright : le test vérifie qu'elle est réellement rangée dans
+son cache, et pas seulement affichée.
+
 ## Gratuit et Pro
 
 Un seul produit payant : **Pro, 5 000 FCFA par mois**. Premium et VIP sont des
@@ -584,6 +672,14 @@ l'aiguillage : carte, coffre, page interne, site extérieur, numéro, texte libr
 et fiche contact.
 
 ### Test de bout en bout
+
+> **Ce script est périmé et ne passe plus.** Il a été écrit avant le passage à
+> Supabase : il lit encore la base locale du prototype (`kartaa.db.v1`), attend
+> des identifiants `crd_`/`vlt_`, et déroule le Coffre Sécurité, retiré de
+> l'application depuis. Il est conservé pour mémoire, à réécrire. Les contrôles
+> qui font foi aujourd'hui sont les suivants (`test:offline`, `test:pwa`,
+> `test:session`, `test:plan`, `test:export`, `test:photo`, `test:scanner`,
+> `test:maj`).
 
 `scripts/e2e-smoke.mjs` rejoue tout le parcours dans un vrai navigateur — compte,
 carte, QR Code, mini-site, téléchargement PNG/PDF, coffre, fichier chiffré,

@@ -102,6 +102,11 @@ metaAvatar = PHOTO_FOURNISSEUR
 const browser = await chromium.launch()
 const context = await browser.newContext({
   viewport: { width: 1280, height: 1000 },
+  // Le service worker met en cache les images publiques : ses requêtes à lui
+  // échappent aux interceptions de Playwright, et ce contrôle porte sur la
+  // photo, pas sur le cache. On le neutralise ici — le cache des images est
+  // vérifié par pwa-check et offline-check.
+  serviceWorkers: 'block',
   storageState: { cookies: [], origins: [{ origin: BASE, localStorage: [{ name: KEY, value: JSON.stringify(session()) }] }] },
 })
 

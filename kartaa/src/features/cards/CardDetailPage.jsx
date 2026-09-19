@@ -7,6 +7,7 @@ import { useCardAssets, usePhotoEmbarquee } from '../../hooks/useCardAssets'
 import { useAuth } from '../../state/AuthContext'
 import { useToast } from '../../state/ToastContext'
 import { repo } from '../../lib/storage'
+import { chargerCarte } from '../../lib/offline/donnees'
 import { exportCard } from '../../lib/cardExport'
 import { copyToClipboard, downloadUrl } from '../../lib/download'
 import { publicUrl } from '../../lib/slug'
@@ -28,8 +29,11 @@ export default function CardDetailPage() {
   const backRef = useRef(null)
 
   useEffect(() => {
-    repo.cards.get(cardId).then(setCard)
-    return repo.subscribe(() => repo.cards.get(cardId).then(setCard))
+    // chargerCarte rend la copie locale quand le serveur ne répond pas : la
+    // carte et son QR Code restent affichables sans réseau.
+    const lire = () => chargerCarte(cardId).then(({ carte }) => setCard(carte))
+    lire()
+    return repo.subscribe(lire)
   }, [cardId])
 
   const assets = useCardAssets(card || {})

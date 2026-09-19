@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './state/AuthContext'
 import { DataProvider } from './state/DataContext'
+import { ReseauProvider } from './state/ReseauContext'
 import { ToastProvider } from './state/ToastContext'
 import { LanguageProvider } from './i18n'
 import { ProLockProvider } from './components/ProLock'
@@ -84,6 +85,7 @@ export default function App() {
     <LanguageProvider>
       <ToastProvider>
         <AuthProvider>
+          <ReseauProvider>
           <DataProvider>
             <ProLockProvider>
           <Routes>
@@ -119,6 +121,7 @@ export default function App() {
           <PwaBanners />
             </ProLockProvider>
           </DataProvider>
+          </ReseauProvider>
         </AuthProvider>
       </ToastProvider>
     </LanguageProvider>

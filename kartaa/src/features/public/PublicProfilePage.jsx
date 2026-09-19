@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { Button, Panel, Spinner, Modal } from '../../components/ui'
 import { Icon, Logo, SocialIcon } from '../../components/ui/Icons'
 import { repo } from '../../lib/storage'
+import { chargerProfilPublic } from '../../lib/offline/donnees'
 import { useCardAssets } from '../../hooks/useCardAssets'
 import { downloadVCard } from '../../lib/vcard'
 import { toDataUrl } from '../../lib/storage'
@@ -21,13 +22,20 @@ export default function PublicProfilePage() {
   const [qrOpen, setQrOpen] = useState(false)
   const counted = useRef(false)
 
+  // Vrai quand la page vient de la copie enregistrée lors d'une visite
+  // précédente : on l'annonce, on ne la fait pas passer pour fraîche.
+  const [horsLigne, setHorsLigne] = useState(false)
+
   useEffect(() => {
     let cancelled = false
-    repo.cards.getBySlug(slug).then(async (found) => {
+    chargerProfilPublic(slug).then(async ({ profil: found, local }) => {
       if (cancelled) return
       setCard(found)
+      setHorsLigne(local && !!found)
       setLoading(false)
-      if (found && !counted.current) {
+      // Sans réseau, rien n'est compté : le serveur n'a pas eu connaissance de
+      // cette visite, et un compteur que l'on gonflerait ici serait faux.
+      if (found && !local && !counted.current) {
         counted.current = true
         const key = `kartaa.seen.${found.id}`
         if (!sessionStorage.getItem(key)) {
@@ -39,7 +47,7 @@ export default function PublicProfilePage() {
         // bien une visite de plus.
         repo.cards.registerEvent(found.slug, 'view')
       }
-    })
+    }).catch(() => null)
     return () => {
       cancelled = true
     }
@@ -58,12 +66,23 @@ export default function PublicProfilePage() {
   }
 
   if (!card) {
+    // Deux situations très différentes, et il serait malhonnête de les
+    // confondre : une page qui n'existe pas, et une page jamais ouverte sur cet
+    // appareil alors que le réseau manque. Elle existe peut-être, mais elle n'a
+    // jamais été téléchargée ici : rien ne permet de l'afficher.
+    const sansReseau = typeof navigator !== 'undefined' && navigator.onLine === false
     return (
       <div className="grid min-h-screen place-items-center bg-ink-50 px-5">
         <Panel className="max-w-sm text-center">
-          <Icon name="search" size={28} className="mx-auto mb-3 text-ink-300" />
-          <p className="font-display font-bold text-ink-900">Cette page n'existe pas</p>
-          <p className="mt-1.5 text-sm text-ink-500">Aucune carte ne correspond à l'adresse « /{slug} ».</p>
+          <Icon name={sansReseau ? 'cloudOff' : 'search'} size={28} className="mx-auto mb-3 text-ink-300" />
+          <p className="font-display font-bold text-ink-900">
+            {sansReseau ? 'Connexion nécessaire' : "Cette page n'existe pas"}
+          </p>
+          <p className="mt-1.5 text-sm leading-relaxed text-ink-500">
+            {sansReseau
+              ? `Cette page n'a jamais été ouverte sur cet appareil : il faut une connexion pour la récupérer une première fois.`
+              : `Aucune carte ne correspond à l'adresse « /${slug} ».`}
+          </p>
           <Button as={Link} to="/" className="mt-5" variant="outline">
             Découvrir Kartaa
           </Button>
@@ -98,6 +117,12 @@ export default function PublicProfilePage() {
   return (
     <div className="min-h-screen bg-ink-50 pb-16">
       <div className="mx-auto w-full max-w-lg">
+        {horsLigne && (
+          <p className="flex items-center justify-center gap-2 bg-gold-50 px-4 py-2 text-center text-xs font-semibold text-gold-800">
+            <Icon name="cloudOff" size={14} />
+            Mode hors connexion — dernières données disponibles
+          </p>
+        )}
         {/* ------------------------------------------------------------ en-tête */}
         <header className="relative overflow-hidden px-6 pb-20 pt-12 text-center text-white" style={{ background: `linear-gradient(160deg, ${theme.primary} 0%, ${theme.primary}dd 45%, #0a0c18 100%)` }}>
           <span className="grain absolute inset-0 opacity-25" />

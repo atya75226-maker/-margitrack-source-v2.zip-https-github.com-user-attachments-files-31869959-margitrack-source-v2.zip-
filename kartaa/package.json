@@ -16,7 +16,8 @@
     "test:export": "node scripts/export-check.mjs",
     "test:photo": "node scripts/photo-check.mjs",
     "test:coffre": "node scripts/verif-coffre.mjs",
-    "test:maj": "node scripts/maj-check.mjs"
+    "test:maj": "node scripts/maj-check.mjs",
+    "test:offline": "node scripts/offline-check.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",
