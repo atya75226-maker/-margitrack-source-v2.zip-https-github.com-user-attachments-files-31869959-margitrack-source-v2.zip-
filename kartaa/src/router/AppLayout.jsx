@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { Icon, Logo } from '../components/ui/Icons'
-import { Avatar, Badge, Button, Modal } from '../components/ui'
+import { Avatar, Badge, Button } from '../components/ui'
 import { useAuth } from '../state/AuthContext'
 import { useData } from '../state/DataContext'
 import { isPro } from '../config/app.config'
@@ -13,7 +13,6 @@ const NAV = [
   { to: '/app', label: 'Accueil', icon: 'home', end: true },
   { to: '/app/cartes', label: 'Mes cartes', icon: 'card' },
   { to: '/app/scanner', label: 'Scanner', icon: 'scan' },
-  { to: '/app/coffres', label: 'Mes coffres', icon: 'vault' },
   { to: '/app/statistiques', label: 'Statistiques', icon: 'chart' },
   { to: '/app/profil', label: 'Profil', icon: 'user' },
 ]
@@ -21,23 +20,36 @@ const NAV = [
 /**
  * Barre du bas : le chemin principal du produit, et lui seul.
  *
- * Accueil, Mes cartes, Créer, Scanner, Profil. Le coffre reste accessible — menu
- * latéral sur grand écran, page Profil sur téléphone — mais il ne tient plus le
- * même rang que les cartes : ce n'est pas par lui qu'on découvre Kartaa.
- *
- * C'est « Créer » qui porte le bouton mis en avant, puisque c'est le geste que
- * l'application existe pour provoquer.
+ * Accueil, Mes cartes, Créer, Scanner, Profil. « Créer » porte le bouton mis en
+ * avant, puisque c'est le geste que l'application existe pour provoquer.
  */
-const NAV_MOBILE = [NAV[0], NAV[1], { action: 'create', label: 'Créer', icon: 'plus' }, NAV[2], NAV[5]]
+// Désigné par libellé, et non par position : retirer une entrée de NAV ne doit
+// pas décaler silencieusement la barre du bas.
+const entree = (label) => NAV.find((item) => item.label === label)
+
+const NAV_MOBILE = [
+  entree('Accueil'),
+  entree('Mes cartes'),
+  { action: 'create', label: 'Créer', icon: 'plus' },
+  entree('Scanner'),
+  entree('Profil'),
+]
 
 export default function AppLayout() {
   const { user } = useAuth()
   const { stats } = useData()
   const navigate = useNavigate()
-  const [createOpen, setCreateOpen] = useState(false)
   const { t } = useTranslation()
   const { showProLock } = useProLock()
   const pro = isPro(user)
+
+  /**
+   * Le bouton « Créer » mène à la création de carte, sans détour.
+   */
+  const creerUneCarte = () => {
+    if (stats.canCreateCard) navigate('/app/cartes/nouvelle')
+    else showProLock('multipleCards')
+  }
 
   return (
     <div className="min-h-screen bg-ink-50">
@@ -63,8 +75,8 @@ export default function AppLayout() {
             </NavLink>
           ))}
         </nav>
-        <Button icon="plus" full className="mb-4" onClick={() => setCreateOpen(true)}>
-          Créer
+        <Button icon="plus" full className="mb-4" onClick={creerUneCarte}>
+          Créer ma carte
         </Button>
         <Link to="/app/profil" className="flex items-center gap-3 rounded-2xl p-2 hover:bg-ink-50">
           <Avatar src={user?.avatarUrl} initials={initialsOf(user?.firstName, user?.lastName)} size={40} />
@@ -104,7 +116,7 @@ export default function AppLayout() {
         <div className="mx-auto grid max-w-lg grid-cols-5 items-center px-1 pb-2 pt-2.5">
           {NAV_MOBILE.map((item) =>
             item.action === 'create' ? (
-              <MobileAction key="create" item={item} onClick={() => setCreateOpen(true)} />
+              <MobileAction key="create" item={item} onClick={creerUneCarte} />
             ) : (
               <MobileLink key={item.to} item={item} />
             ),
@@ -112,35 +124,6 @@ export default function AppLayout() {
         </div>
       </nav>
 
-      <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Que voulez-vous créer ?" size="sm">
-        <div className="space-y-3">
-          {/* Limite atteinte : on explique, on ne déporte pas ailleurs sans un mot.
-              Être renvoyé sur la page Profil sans explication se lit comme une
-              sortie du parcours de création. */}
-          <CreateChoice
-            icon="card"
-            title="Une carte de visite"
-            description="Vos coordonnées, votre mini-site et votre QR Code."
-            badge={stats.canCreateCard ? null : 'Limite atteinte'}
-            onClick={() => {
-              setCreateOpen(false)
-              if (stats.canCreateCard) navigate('/app/cartes/nouvelle')
-              else showProLock('multipleCards')
-            }}
-          />
-          <CreateChoice
-            icon="vault"
-            title="Un Coffre Sécurité"
-            description="Photos, vidéos et documents protégés."
-            badge={stats.canCreateVault ? null : 'Limite atteinte'}
-            onClick={() => {
-              setCreateOpen(false)
-              if (stats.canCreateVault) navigate('/app/coffres/nouveau')
-              else showProLock('multipleVaults')
-            }}
-          />
-        </div>
-      </Modal>
     </div>
   )
 }
@@ -192,28 +175,6 @@ function MobileAction({ item, onClick }) {
         <Icon name={item.icon} size={23} strokeWidth={2.2} />
       </span>
       <span className="h-1.5 w-1.5 rounded-full bg-transparent" />
-    </button>
-  )
-}
-
-function CreateChoice({ icon, title, description, badge, onClick }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex w-full items-center gap-4 rounded-2xl border border-ink-200 p-4 text-left transition-colors hover:border-brand-300 hover:bg-brand-50/50"
-    >
-      <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-brand-50 text-brand-600">
-        <Icon name={icon} size={22} />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="flex items-center gap-2 font-display text-sm font-bold text-ink-900">
-          {title}
-          {badge && <Badge tone="gold">{badge}</Badge>}
-        </span>
-        <span className="mt-0.5 block text-xs leading-relaxed text-ink-500">{description}</span>
-      </span>
-      <Icon name="chevronRight" size={18} className="shrink-0 text-ink-300" />
     </button>
   )
 }

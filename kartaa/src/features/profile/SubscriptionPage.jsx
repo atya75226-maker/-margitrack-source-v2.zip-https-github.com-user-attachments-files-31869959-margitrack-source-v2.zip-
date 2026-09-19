@@ -8,8 +8,10 @@ import { useTranslation, LANGUAGES } from '../../i18n'
 import { CHECKOUT_URL, isPro, PRO_PRICE, subscriptionStatus } from '../../config/app.config'
 import { repo } from '../../lib/storage'
 
-const PRO_FEATURES = ['sub.f1', 'sub.f2', 'sub.f3', 'sub.f4', 'sub.f5', 'sub.f6', 'sub.f7', 'sub.f8', 'sub.f9', 'sub.f10']
-const FREE_FEATURES = ['free.f1', 'free.f2', 'free.f3', 'free.f4', 'free.f5', 'free.f6', 'free.f7', 'free.f8', 'free.f9']
+// Ce que Pro apporte réellement aujourd'hui : le domaine personnalisé n'y
+// figure pas, il n'est connecté à aucun service.
+const PRO_FEATURES = ['sub.f1', 'sub.f2', 'sub.f3', 'sub.f4', 'sub.f5', 'sub.f6', 'sub.f7']
+const FREE_FEATURES = ['free.f1', 'free.f2', 'free.f3', 'free.f4', 'free.f5', 'free.f6', 'free.f8', 'free.f9']
 
 /**
  * Page unique d'abonnement. Tous les chemins de l'application y mènent, et il

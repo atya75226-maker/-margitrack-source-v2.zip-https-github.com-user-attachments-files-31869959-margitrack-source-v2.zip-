@@ -54,10 +54,7 @@ const DICTIONARY = {
     'sub.f4': 'Personnalisation avancée',
     'sub.f5': 'Mini-site avancé : galerie, plusieurs entreprises, plusieurs activités',
     'sub.f6': 'Statistiques avancées',
-    'sub.f7': 'Domaine personnalisé',
-    'sub.f8': 'Plusieurs Coffres Sécurité',
-    'sub.f9': 'Stockage supérieur',
-    'sub.f10': 'QR Code personnalisé',
+    'sub.f7': 'Suppression de la mention Kartaa sur vos cartes',
 
     'free.f1': 'Une carte professionnelle',
     'free.f2': 'Modèle Standard',
@@ -65,7 +62,6 @@ const DICTIONARY = {
     'free.f4': 'Réseaux sociaux et liens illimités',
     'free.f5': 'Scanner QR universel',
     'free.f6': 'Historique des scans',
-    'free.f7': 'Un Coffre Sécurité (200 Mo)',
     'free.f8': 'Application installable',
     'free.f9': 'Français et anglais',
 
@@ -114,10 +110,7 @@ const DICTIONARY = {
     'sub.f4': 'Advanced personalisation',
     'sub.f5': 'Advanced mini-site: gallery, several companies, several activities',
     'sub.f6': 'Advanced statistics',
-    'sub.f7': 'Custom domain',
-    'sub.f8': 'Multiple Secure Vaults',
-    'sub.f9': 'More storage',
-    'sub.f10': 'Custom QR Code',
+    'sub.f7': 'No Kartaa mention on your cards',
 
     'free.f1': 'One business card',
     'free.f2': 'Standard template',
@@ -125,7 +118,6 @@ const DICTIONARY = {
     'free.f4': 'Unlimited social accounts and links',
     'free.f5': 'Universal QR scanner',
     'free.f6': 'Scan history',
-    'free.f7': 'One Secure Vault (200 MB)',
     'free.f8': 'Installable app',
     'free.f9': 'French and English',
 

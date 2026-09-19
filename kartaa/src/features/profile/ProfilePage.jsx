@@ -13,7 +13,7 @@ import { useData } from '../../state/DataContext'
 import { useToast } from '../../state/ToastContext'
 import { FEATURE_FLAGS, isPro, PRO_PRICE } from '../../config/app.config'
 import { useTranslation, LANGUAGES } from '../../i18n'
-import { formatBytes, initialsOf } from '../../lib/format'
+import { initialsOf } from '../../lib/format'
 
 export default function ProfilePage() {
   const { user, updateUser, updateAvatar, signOut } = useAuth()
@@ -124,20 +124,7 @@ export default function ProfilePage() {
         </div>
       </Panel>
 
-      {/* Le coffre ne figure plus ni dans la barre du bas ni sur l'accueil : c'est
-          ici qu'on le retrouve sur téléphone. Il reste entier — seul son rang
-          dans la navigation a changé. */}
-      <Panel>
-        <SectionTitle icon="vault" title="Coffre Sécurité" subtitle="Vos documents privés, chiffrés sur votre appareil." />
-        <Progress value={stats.quotaBytes ? (stats.usedBytes / stats.quotaBytes) * 100 : 0} tone={stats.usedBytes / stats.quotaBytes > 0.85 ? 'danger' : 'brand'} />
-        <p className="mt-2 text-sm text-ink-500">
-          {formatBytes(stats.usedBytes)} utilisés sur {formatBytes(stats.quotaBytes)} — {stats.files} fichier
-          {stats.files > 1 ? 's' : ''} dans {stats.vaults} coffre{stats.vaults > 1 ? 's' : ''}.
-        </p>
-        <Button as={Link} to="/app/coffres" variant="outline" icon="vault" className="mt-4">
-          Ouvrir mes coffres
-        </Button>
-      </Panel>
+
 
       <InstallPanel />
 
@@ -170,7 +157,7 @@ export default function ProfilePage() {
             Se déconnecter
           </Button>
           <p className="hint text-center">
-            Vos cartes, coffres et fichiers sont hébergés sur votre projet Supabase et
+            Vos cartes et vos images sont hébergées sur votre projet Supabase et
             vous suivent d'un appareil à l'autre.
           </p>
         </div>

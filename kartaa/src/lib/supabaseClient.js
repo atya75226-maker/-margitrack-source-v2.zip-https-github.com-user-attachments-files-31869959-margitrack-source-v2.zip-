@@ -6,7 +6,7 @@ import { authStorage } from './authStorage'
  *
  * La clé « publishable » est publique par conception : elle part dans le navigateur
  * de chaque visiteur. Ce qui protège les données, ce sont les politiques Row Level
- * Security et les fonctions vault_* définies dans supabase/migrations, pas le secret
+ * Security définies dans supabase/migrations, pas le secret
  * de cette clé.
  */
 

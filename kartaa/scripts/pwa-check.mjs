@@ -6,8 +6,7 @@
  *
  * Ce qui est vérifié, dans cet ordre d'importance :
  *  1. le service worker ne met JAMAIS en cache ce qui vient d'ailleurs — un
- *     fichier de coffre ou une URL signée oubliés dans un cache annuleraient la
- *     protection du coffre ;
+ *     jeton d'authentification oublié dans un cache serait une fuite ;
  *  2. le manifeste est complet et l'application réellement installable ;
  *  3. l'invitation d'installation n'apparaît pas dès la première visite.
  */

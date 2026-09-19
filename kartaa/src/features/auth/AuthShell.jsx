@@ -9,7 +9,7 @@ import { APP } from '../../config/app.config'
 const HIGHLIGHTS = [
   { icon: 'card', text: 'Une carte de visite numérique prête en quelques minutes' },
   { icon: 'qr', text: 'Un QR Code qui ouvre votre mini-site professionnel' },
-  { icon: 'shieldCheck', text: 'Un Coffre Sécurité chiffré pour vos documents' },
+  { icon: 'scan', text: 'Un scanner de QR Code universel' },
 ]
 
 export default function AuthShell({ title, subtitle, children, footer }) {
@@ -41,7 +41,7 @@ export default function AuthShell({ title, subtitle, children, footer }) {
           </ul>
         </div>
         <p className="relative text-xs text-white/40">
-          Les fichiers du Coffre Sécurité sont chiffrés sur votre appareil avant d'être envoyés.
+          Votre QR Code ne contient que l'adresse de votre page : vos informations restent modifiables.
         </p>
       </div>
 
