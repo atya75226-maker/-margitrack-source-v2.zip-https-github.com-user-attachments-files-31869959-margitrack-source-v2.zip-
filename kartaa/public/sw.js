@@ -8,9 +8,8 @@
  * CE QUI N'EST JAMAIS MIS EN CACHE
  *
  *  - tout ce qui ne vient pas de ce domaine : appels à Supabase, URL signées des
- *    fichiers de coffre, jetons d'authentification. Un fichier de coffre déchiffré
- *    ou une URL signée qui traînerait dans un cache du navigateur annulerait la
- *    protection du coffre ;
+ *    jetons d'authentification. Un jeton qui traînerait dans un cache du
+ *    navigateur serait une fuite ;
  *  - toute requête qui n'est pas un GET.
  *
  * DEUX STRATÉGIES
@@ -29,7 +28,7 @@
  * pleine saisie. Il attend que l'application le lui demande, après un clic.
  */
 
-const VERSION = 'kartaa-v1'
+const VERSION = 'kartaa-v2'
 const COQUILLE = `${VERSION}-coquille`
 const RESSOURCES = `${VERSION}-ressources`
 

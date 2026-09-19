@@ -3,7 +3,7 @@
  *
  * Toute l'application passe par `repo` : aucun composant n'écrit de requête SQL
  * ni n'appelle directement le client Supabase. Les règles d'accès, elles, ne sont
- * pas ici mais dans la base (RLS et fonctions vault_*) : un client modifié ne peut
+ * pas ici mais dans la base (RLS et fonctions SQL) : un client modifié ne peut
  * donc pas contourner ce fichier.
  */
 

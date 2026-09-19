@@ -2,7 +2,7 @@ import QRCode from 'qrcode'
 
 /**
  * Un QR Code Kartaa ne contient jamais de données personnelles ni de fichier :
- * uniquement une URL (mini-site public, ou page de déverrouillage d'un coffre).
+ * uniquement l'adresse du mini-site public.
  */
 export async function qrDataUrl(value, { size = 640, dark = '#141728', light = '#ffffff', margin = 1 } = {}) {
   return QRCode.toDataURL(value, {
