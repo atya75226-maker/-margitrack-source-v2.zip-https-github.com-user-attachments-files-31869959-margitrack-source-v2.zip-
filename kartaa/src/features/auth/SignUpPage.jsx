@@ -17,7 +17,7 @@ export default function SignUpPage() {
   const toast = useToast()
   const navigate = useNavigate()
   const [params] = useSearchParams()
-  const nextRoute = params.get('produit') === 'coffre' ? '/app/coffres/nouveau' : '/app/cartes/nouvelle'
+  const nextRoute = '/app/cartes/nouvelle'
 
   const set = (key) => (event) => {
     setForm((current) => ({ ...current, [key]: event.target.value }))
@@ -125,7 +125,7 @@ export default function SignUpPage() {
           Créer mon compte
         </Button>
         <p className="hint text-center">
-          Vos cartes et vos coffres sont hébergés sur votre espace et vous suivent d'un appareil à l'autre.
+          Vos cartes sont hébergées sur votre espace et vous suivent d'un appareil à l'autre.
         </p>
       </form>
     </AuthShell>

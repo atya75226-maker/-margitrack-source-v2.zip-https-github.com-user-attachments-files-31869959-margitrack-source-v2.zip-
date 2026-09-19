@@ -32,7 +32,7 @@ export default function SignInPage() {
   return (
     <AuthShell
       title="Se connecter"
-      subtitle="Retrouvez vos cartes, vos statistiques et vos coffres."
+      subtitle="Retrouvez vos cartes, votre QR Code et vos statistiques."
       footer={
         <>
           Pas encore de compte ?{' '}

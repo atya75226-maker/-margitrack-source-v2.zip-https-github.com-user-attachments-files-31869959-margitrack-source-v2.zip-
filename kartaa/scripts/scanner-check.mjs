@@ -33,9 +33,7 @@ console.log('\nScanner de QR Codes\n')
 
 const cas = [
   ['carte Kartaa',        'https://kartaa-eight.vercel.app/aziz',                 'card',     '/aziz'],
-  ['coffre Kartaa',       'https://kartaa-eight.vercel.app/coffre/88f7b65d-ee2f', 'vault',    '/coffre/88f7b65d-ee2f'],
-  ['coffre, ancien QR',   'https://kartaa-eight.vercel.app/c/88f7b65d-ee2f',      'vault',    '/c/88f7b65d-ee2f'],
-  ['coffre, alias vault', 'https://kartaa-eight.vercel.app/vault/88f7b65d-ee2f',  'vault',    '/vault/88f7b65d-ee2f'],
+  ['carte, autre casse',  'https://kartaa-eight.vercel.app/Awa-Diallo',           'card',     '/Awa-Diallo'],
   ['page interne',        'https://kartaa-eight.vercel.app/app/cartes',           'internal', '/app/cartes'],
   ['site extérieur',      'https://www.orange.ci/offres',                          'url',      null],
   ['numéro de téléphone', '+225 07 00 12 34 56',                                   'phone',    null],
@@ -52,20 +50,13 @@ for (const [intitule, contenu, typeAttendu, routeAttendue] of cas) {
   }
 }
 
-// Un QR Code fabriqué sur une autre adresse de déploiement doit rester interne :
-// c'est ce qui empêchait d'ouvrir un coffre depuis le domaine de production.
-const autreDomaine = 'https://kartaa-git-claude-digital-card-e659f9-atya75226-8842s-projects.vercel.app/c/88f7b65d'
-const lectureAutreDomaine = interpretScan(autreDomaine)
-verifier('coffre scanné depuis un autre domaine Kartaa : reconnu', lectureAutreDomaine.kind === 'vault',
-  `obtenu « ${lectureAutreDomaine.kind} »`)
-verifier("coffre scanné depuis un autre domaine : ouvert sur le domaine courant",
-  lectureAutreDomaine.route === '/c/88f7b65d', `obtenu « ${lectureAutreDomaine.route} »`)
-
+// Un QR Code fabriqué sur une autre adresse de déploiement reste un lien Kartaa :
+// on l'ouvre sur le domaine courant, là où la session existe.
 const carteAutreDomaine = interpretScan('https://kartaa-git-abc-projects.vercel.app/aziz')
 verifier('carte scannée depuis un autre domaine Kartaa : reconnue', carteAutreDomaine.kind === 'card')
 
 // Un site qui n'est pas Kartaa ne doit surtout pas être traité comme interne
-const siteTiers = interpretScan('https://kartaa-eight.exemple.com/c/abc')
+const siteTiers = interpretScan('https://kartaa-eight.exemple.com/awa')
 verifier('domaine imitant Kartaa : traité comme extérieur', siteTiers.kind === 'url',
   `obtenu « ${siteTiers.kind} »`)
 

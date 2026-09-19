@@ -85,25 +85,6 @@ console.log('\nJeton périmé, réseau coupé — la session ne doit pas être p
   await context.close()
 }
 
-console.log('\nCoffre scanné sans réseau — ni déconnexion, ni document')
-{
-  // Le coffre ne dépend plus du compte : la page ne doit donc jamais réclamer
-  // une connexion, et ne doit pas non plus prétendre que le coffre n'existe pas
-  // alors que c'est le réseau qui manque.
-  for (const prefixe of ['coffre', 'vault', 'c']) {
-    const { page, context } = await ouvrir(null)
-    await page.goto(`${BASE}/${prefixe}/22222222-2222-2222-2222-222222222222`, { waitUntil: 'domcontentloaded' })
-    await page.waitForTimeout(3000)
-    const texte = await page.innerText('body')
-    verifier(`/${prefixe}/ : aucune connexion réclamée`, !/Se connecter|Mot de passe oublié/i.test(texte),
-      `→ ${texte.slice(0, 90)}`)
-    verifier(`/${prefixe}/ : panne de réseau annoncée, pas une absence de coffre`,
-      /pas joignable|réessayer/i.test(texte), `→ ${texte.slice(0, 90)}`)
-    verifier(`/${prefixe}/ : aucun fichier montré`, !/Accès autorisé/i.test(texte))
-    await context.close()
-  }
-}
-
 console.log('\nJeton encore valable, réseau coupé — ouverture immédiate')
 {
   const { page, context } = await ouvrir(sessionRangee({ expiresInSeconds: 1800 }))
@@ -124,11 +105,6 @@ console.log('\nJeton encore valable, réseau coupé — ouverture immédiate')
   verifier('« Profil » y figure', libelles.includes('Profil'), `→ ${libelles.join(', ')}`)
   verifier('le coffre n\'occupe plus la barre du bas', !libelles.includes('Mes coffres'),
     `→ ${libelles.join(', ')}`)
-  // Le coffre a quitté la barre du bas et l'accueil : il se retrouve dans Profil.
-  await page.goto(`${BASE}/app/profil`, { waitUntil: 'domcontentloaded' })
-  await page.waitForTimeout(1500)
-  verifier('le coffre reste accessible depuis le profil',
-    (await page.locator('a[href="/app/coffres"]').count()) > 0)
 
   const entete = page.locator('header').first()
   const creerEnHaut = await entete.locator('[aria-label="Créer"]').count()

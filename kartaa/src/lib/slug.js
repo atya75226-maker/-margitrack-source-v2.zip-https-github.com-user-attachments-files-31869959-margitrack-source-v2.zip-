@@ -26,17 +26,3 @@ import { APP } from '../config/app.config'
 export function publicUrl(slug) {
   return `${APP.publicOrigin}/${slug}`
 }
-
-/**
- * Adresse de déverrouillage d'un coffre, visée par son QR Code.
- *
- * Le code ne transporte qu'un identifiant : ni fichier, ni mot de passe, ni
- * clé. Le serveur s'en sert pour retrouver le coffre, qui réclame ensuite son
- * propre mot de passe.
- *
- * Les QR Codes fabriqués avant ce changement visent /c/<id> ; cette adresse
- * reste servie par l'application, ils continuent donc de fonctionner.
- */
-export function vaultUrl(vaultId) {
-  return `${APP.publicOrigin}/coffre/${vaultId}`
-}

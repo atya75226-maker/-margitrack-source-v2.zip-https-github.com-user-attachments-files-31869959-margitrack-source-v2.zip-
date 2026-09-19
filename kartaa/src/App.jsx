@@ -17,10 +17,6 @@ import DashboardPage from './features/dashboard/DashboardPage'
 import CardsPage from './features/cards/CardsPage'
 import CardWizardPage from './features/cards/CardWizardPage'
 import CardDetailPage from './features/cards/CardDetailPage'
-import VaultsPage from './features/vault/VaultsPage'
-import VaultCreatePage from './features/vault/VaultCreatePage'
-import VaultDetailPage from './features/vault/VaultDetailPage'
-import VaultAccessPage from './features/vault/VaultAccessPage'
 import StatsPage from './features/stats/StatsPage'
 import ScannerPage from './features/scanner/ScannerPage'
 import ProfilePage from './features/profile/ProfilePage'
@@ -95,12 +91,6 @@ export default function App() {
             <Route path="/connexion" element={<SiDeconnecte><SignInPage /></SiDeconnecte>} />
             <Route path="/inscription" element={<SiDeconnecte><SignUpPage /></SiDeconnecte>} />
             <Route path="/auth/callback" element={<AuthCallbackPage />} />
-            {/* Trois adresses pour un même écran : /coffre est celle des QR Codes
-                d'aujourd'hui, /c celle des codes déjà imprimés, /vault un alias
-                lisible. Aucune ne demande de compte. */}
-            <Route path="/coffre/:vaultId" element={<VaultAccessPage />} />
-            <Route path="/vault/:vaultId" element={<VaultAccessPage />} />
-            <Route path="/c/:vaultId" element={<VaultAccessPage />} />
             <Route path="/diagnostic" element={<DiagnosticPage />} />
 
             <Route
@@ -116,9 +106,6 @@ export default function App() {
               <Route path="cartes/nouvelle" element={<CardWizardPage />} />
               <Route path="cartes/:cardId/modifier" element={<CardWizardPage />} />
               <Route path="cartes/:cardId" element={<CardDetailPage />} />
-              <Route path="coffres" element={<VaultsPage />} />
-              <Route path="coffres/nouveau" element={<VaultCreatePage />} />
-              <Route path="coffres/:vaultId" element={<VaultDetailPage />} />
               <Route path="scanner" element={<ScannerPage />} />
               <Route path="statistiques" element={<StatsPage />} />
               <Route path="profil" element={<ProfilePage />} />

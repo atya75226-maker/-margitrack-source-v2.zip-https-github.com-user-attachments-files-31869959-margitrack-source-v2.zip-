@@ -8,7 +8,7 @@ import { useData } from '../../state/DataContext'
 import { repo } from '../../lib/storage'
 import { useAuth } from '../../state/AuthContext'
 import { can, PRO_CAPABILITIES } from '../../config/app.config'
-import { formatBytes, formatNumber } from '../../lib/format'
+import { formatNumber } from '../../lib/format'
 
 const DAYS = 14
 const DAYS_INTERACTIONS = 30
@@ -27,7 +27,7 @@ const INTERACTIONS = [
 ]
 
 export default function StatsPage() {
-  const { cards, vaults, stats } = useData()
+  const { cards, stats } = useData()
   const { user } = useAuth()
   const detailed = can(user, 'advancedStats')
 
@@ -90,23 +90,15 @@ export default function StatsPage() {
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl font-extrabold text-ink-900">Statistiques</h1>
-          <p className="mt-1 text-sm text-ink-500">Ce que vos cartes et vos coffres font réellement.</p>
+          <p className="mt-1 text-sm text-ink-500">Ce que vos cartes font réellement.</p>
         </div>
         {!detailed && <Badge tone="gold" icon="crown">Détail complet avec Pro</Badge>}
       </header>
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
         <StatTile icon="qr" label="Scans au total" value={formatNumber(totalScans)} tone="brand" />
         <StatTile icon="clock" label="7 derniers jours" value={formatNumber(last7)} tone="emerald" />
         <StatTile icon="card" label="Cartes actives" value={formatNumber(stats.cards)} tone="ink" />
-        <StatTile
-          icon="vault"
-          label="Espace utilisé"
-          value={formatBytes(stats.usedBytes)}
-          tone="gold"
-          progress={stats.quotaBytes ? (stats.usedBytes / stats.quotaBytes) * 100 : 0}
-          sub={`sur ${formatBytes(stats.quotaBytes)}`}
-        />
       </div>
 
       <Panel>
@@ -187,32 +179,6 @@ export default function StatsPage() {
         )}
       </Panel>
 
-      <Panel>
-        <SectionTitle icon="vault" title="Coffres" subtitle="Fichiers stockés et dernier accès." />
-        {vaults.length ? (
-          <ul className="divide-y divide-ink-100">
-            {vaults.map((vault) => (
-              <li key={vault.id} className="flex items-center gap-3 py-3.5">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-ink-900 text-gold-400">
-                  <Icon name="lock" size={18} />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-bold text-ink-900">{vault.name}</span>
-                  <span className="block text-xs text-ink-400">
-                    {(vault.files || []).length} fichier{(vault.files || []).length > 1 ? 's' : ''} •{' '}
-                    {formatBytes((vault.files || []).reduce((total, file) => total + (file.size || 0), 0))}
-                  </span>
-                </span>
-                <Button as={Link} to={`/app/coffres/${vault.id}`} size="sm" variant="outline">
-                  Ouvrir
-                </Button>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="hint">Aucun coffre pour l'instant.</p>
-        )}
-      </Panel>
 
       {!detailed && (
         <Panel className="border-gold-200 bg-gold-50/50">

@@ -79,7 +79,6 @@ export async function decodeFile(file) {
  * le domaine courant, là où la session de l'utilisateur existe.
  */
 const DOMAINES_KARTAA = /^kartaa[\w-]*\.vercel\.app$/i
-const PREFIXES_COFFRE = ['coffre', 'vault', 'c']
 
 export function isKartaaHost(hostname = '') {
   if (typeof window !== 'undefined' && hostname === window.location.hostname) return true
@@ -89,7 +88,6 @@ export function isKartaaHost(hostname = '') {
 /**
  * Que faire du contenu lu ?
  *  - une carte Kartaa  → on ouvre le mini-site sans quitter l'application
- *  - un coffre Kartaa  → on ouvre son écran de déverrouillage
  *  - une autre adresse → on propose de l'ouvrir
  *  - un contact vCard  → on propose de l'enregistrer
  *  - autre chose       → on affiche le texte, copiable
@@ -116,11 +114,6 @@ export function interpretScan(raw) {
   const interne = isKartaaHost(url.hostname)
   const segments = url.pathname.split('/').filter(Boolean)
 
-  // Trois préfixes mènent au même écran de déverrouillage : /coffre aujourd'hui,
-  // /c sur les QR Codes déjà imprimés, /vault en alias.
-  if (interne && segments.length === 2 && PREFIXES_COFFRE.includes(segments[0])) {
-    return { kind: 'vault', value, route: `/${segments[0]}/${segments[1]}` }
-  }
   if (interne && segments.length === 1 && !['app', 'connexion', 'inscription', 'auth'].includes(segments[0])) {
     return { kind: 'card', value, route: `/${segments[0]}`, label: segments[0] }
   }

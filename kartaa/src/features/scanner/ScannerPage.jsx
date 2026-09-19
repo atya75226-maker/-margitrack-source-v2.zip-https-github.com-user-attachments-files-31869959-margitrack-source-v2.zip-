@@ -13,7 +13,6 @@ const INTERVALLE_MS = 140
 
 const ICONE_PAR_TYPE = {
   card: 'card',
-  vault: 'lock',
   url: 'globe',
   internal: 'link',
   vcard: 'user',
@@ -243,7 +242,6 @@ export default function ScannerPage() {
 function ResultatScan({ lecture, onOuvrir, onRelancer, onCopier }) {
   const TITRES = {
     card: 'Carte Kartaa',
-    vault: 'Coffre Sécurité',
     internal: 'Page Kartaa',
     url: 'Adresse web',
     vcard: 'Fiche contact',
@@ -264,9 +262,9 @@ function ResultatScan({ lecture, onOuvrir, onRelancer, onCopier }) {
       </div>
 
       <div className="space-y-2">
-        {(lecture.kind === 'card' || lecture.kind === 'vault' || lecture.kind === 'internal') && (
+        {(lecture.kind === 'card' || lecture.kind === 'internal') && (
           <Button full icon="arrowRight" onClick={() => onOuvrir(lecture.route)}>
-            {lecture.kind === 'vault' ? 'Ouvrir ce coffre' : 'Voir cette page'}
+            Voir cette page
           </Button>
         )}
         {lecture.kind === 'url' && (

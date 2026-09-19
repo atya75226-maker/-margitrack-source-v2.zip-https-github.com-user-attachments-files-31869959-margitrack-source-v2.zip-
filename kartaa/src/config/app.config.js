@@ -83,15 +83,13 @@ export const PLANS = {
   free: {
     id: 'free',
     price: 0,
-    limits: { cards: 1, vaults: 1, storageMb: 20, templates: ['standard'] },
+    limits: { cards: 1, templates: ['standard'] },
   },
   pro: {
     id: 'pro',
     price: PRO_PRICE,
     limits: {
       cards: Infinity,
-      vaults: Infinity,
-      storageMb: 20000,
       templates: ['standard', 'premium', 'vip'],
     },
   },
@@ -160,14 +158,6 @@ export const PRO_CAPABILITIES = {
     label: 'Plusieurs activités',
     value: "Quand un seul métier ne suffit pas à vous décrire.",
   },
-  multipleVaults: {
-    label: 'Plusieurs coffres',
-    value: "Un coffre par usage — papiers, souvenirs, documents professionnels — au lieu d'un seul.",
-  },
-  storage: {
-    label: 'Stockage du Coffre Sécurité',
-    value: "Votre Coffre Sécurité gratuit est limité à 20 Mo. Passez à Pro pour obtenir davantage d'espace : 20 Go pour vos photos, vos vidéos et vos documents.",
-  },
   advancedStats: {
     label: 'Statistiques avancées',
     value: "Analysez les performances de vos cartes : qui appelle, qui écrit, quels réseaux sont ouverts.",
@@ -175,10 +165,6 @@ export const PRO_CAPABILITIES = {
   customDomain: {
     label: 'Domaine personnalisé',
     value: "Votre mini-site à votre propre adresse, au lieu d'une adresse fournie par l'application.",
-  },
-  multipleVaults: {
-    label: 'Plusieurs coffres',
-    value: "Un coffre par usage — documents, famille, souvenirs — et bien plus d'espace.",
   },
   advancedQr: {
     label: 'QR Code personnalisé',

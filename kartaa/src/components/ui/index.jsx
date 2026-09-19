@@ -355,7 +355,7 @@ export function Tabs({ tabs, value, onChange, className = '' }) {
   )
 }
 
-/** Zone de dépôt de fichiers, réutilisée par les cartes et les coffres. */
+/** Zone de dépôt de fichiers, utilisée pour les images des cartes. */
 export function FileDrop({ onFiles, accept, multiple = true, label = 'Déposez vos fichiers ici', hint, icon = 'upload', disabled }) {
   const inputRef = useRef(null)
   const [over, setOver] = useState(false)

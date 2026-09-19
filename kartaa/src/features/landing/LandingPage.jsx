@@ -20,13 +20,7 @@ const FEATURES = [
     icon: 'globe',
     title: 'Mini-site personnel',
     text: "Votre QR Code ouvre une page personnalisée qui présente votre profil, vos activités, vos services, votre entreprise et vos coordonnées.",
-    points: ['Boutons Appeler, WhatsApp, e-mail', 'Ajout direct aux contacts', 'Nom de domaine personnalisé en option'],
-  },
-  {
-    icon: 'shieldCheck',
-    title: 'Coffre Sécurité',
-    text: "Conservez vos photos, vidéos et documents dans un espace protégé par mot de passe ou par l'authentification biométrique de votre téléphone.",
-    points: ['Fichiers chiffrés avant stockage', 'Code de récupération unique', 'Journal des accès'],
+    points: ['Boutons Appeler, WhatsApp, e-mail', 'Ajout direct aux contacts', 'Une adresse courte à partager'],
   },
 ]
 
@@ -45,14 +39,6 @@ const FAQ = [
     q: 'Que contient exactement le QR Code ?',
     a: "Uniquement l'adresse de votre mini-site. Ni votre numéro, ni vos fichiers n'y sont inscrits : vous pouvez modifier vos informations sans réimprimer quoi que ce soit.",
   },
-  {
-    q: 'Le Coffre Sécurité est-il vraiment privé ?',
-    a: "Vos fichiers sont chiffrés avec une clé dérivée de votre mot de passe avant d'être enregistrés. Sans ce mot de passe — ou sans votre code de récupération — personne ne peut les lire.",
-  },
-  {
-    q: 'Puis-je utiliser mon propre nom de domaine ?',
-    a: "Oui, à partir de l'offre Premium. Vous ajoutez votre domaine dans l'application et suivez les instructions DNS affichées.",
-  },
 ]
 
 export default function LandingPage() {
@@ -64,7 +50,6 @@ export default function LandingPage() {
       <Features />
       <Examples />
       <HowItWorks />
-      <VaultSection />
       <Pricing />
       <Faq />
       <FinalCta />
@@ -81,7 +66,6 @@ function Header({ isAuthenticated }) {
   const links = [
     { href: '#fonctionnalites', label: 'Fonctionnalités' },
     { href: '#exemples', label: 'Exemples' },
-    { href: '#coffre', label: 'Coffre Sécurité' },
     { href: '#offres', label: 'Offres' },
   ]
   return (
@@ -152,7 +136,7 @@ function Hero() {
       <div className="container-app relative grid items-center gap-14 lg:grid-cols-[1.05fr,1fr]">
         <div className="min-w-0 animate-fade-up">
           <Badge tone="dark" className="mb-6 border border-white/15 bg-white/10 text-white">
-            <Icon name="sparkles" size={13} /> Carte de visite • Mini-site • Coffre Sécurité
+            <Icon name="sparkles" size={13} /> Carte de visite • Mini-site • QR Code
           </Badge>
           <h1 className="font-display text-[2.6rem] font-extrabold leading-[1.05] tracking-tight text-balance sm:text-6xl">
             Votre identité.
@@ -163,21 +147,11 @@ function Hero() {
           </h1>
           <p className="mt-6 max-w-xl text-[1.05rem] leading-relaxed text-white/70">
             Créez votre carte de visite numérique, partagez toutes vos coordonnées en un seul scan et protégez vos
-            souvenirs et documents dans un Coffre Sécurité.
+            un seul scan.
           </p>
           <div className="mt-9 flex flex-col gap-3 sm:flex-row">
             <Button as={Link} to="/inscription" size="lg" variant="gold" icon="card">
               Créer ma carte gratuitement
-            </Button>
-            <Button
-              as={Link}
-              to="/inscription?produit=coffre"
-              size="lg"
-              variant="outline"
-              icon="shield"
-              className="border-white/20 bg-white/5 text-white hover:border-white/40 hover:bg-white/10"
-            >
-              Créer un Coffre Sécurité
             </Button>
           </div>
           <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-white/55">
@@ -243,7 +217,7 @@ function Features() {
       <SectionHeading
         eyebrow="Trois produits, une seule application"
         title="Tout ce qu'il faut pour exister en ligne, proprement."
-        subtitle="Pas un générateur de QR Code de plus : une identité professionnelle complète, et un coffre pour ce qui compte."
+        subtitle="Pas un générateur de QR Code de plus : une identité professionnelle complète."
       />
       <div className="grid gap-5 md:grid-cols-3">
         {FEATURES.map((feature, index) => (
@@ -360,74 +334,6 @@ function HowItWorks() {
   )
 }
 
-/* ------------------------------------------------------------------ coffre */
-
-function VaultSection() {
-  const items = [
-    { icon: 'image', label: 'Photos de famille' },
-    { icon: 'video', label: 'Vidéos de souvenirs' },
-    { icon: 'file', label: 'Diplômes et certificats' },
-    { icon: 'briefcase', label: 'Documents professionnels' },
-  ]
-  return (
-    <section id="coffre" className="relative overflow-hidden bg-ink-950 py-20 text-white sm:py-24">
-      <div className="mesh absolute inset-0 opacity-60" />
-      <div className="container-app relative grid items-center gap-14 lg:grid-cols-2">
-        <div>
-          <Badge tone="dark" className="mb-5 border border-white/15 bg-white/10 text-white">
-            <Icon name="lock" size={13} /> Deuxième produit
-          </Badge>
-          <h2 className="font-display text-3xl font-extrabold leading-tight sm:text-4xl">
-            Un Coffre Sécurité pour ce qui ne doit pas circuler.
-          </h2>
-          <p className="mt-5 max-w-xl leading-relaxed text-white/70">
-            Je crée mon coffre, j'ajoute mes fichiers, je le protège. L'application génère un QR Code qui mène à la page
-            de déverrouillage — et à rien d'autre : sans authentification, aucun fichier n'est accessible.
-          </p>
-          <div className="mt-8 grid gap-3 sm:grid-cols-2">
-            {items.map((item) => (
-              <div key={item.label} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3.5 text-sm font-semibold">
-                <Icon name={item.icon} size={18} className="text-gold-400" />
-                {item.label}
-              </div>
-            ))}
-          </div>
-          <Button as={Link} to="/inscription?produit=coffre" variant="gold" size="lg" className="mt-8" icon="shield">
-            Créer un Coffre Sécurité
-          </Button>
-        </div>
-        <div className="relative">
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur">
-            <div className="mb-5 flex items-center gap-3">
-              <span className="grid h-11 w-11 place-items-center rounded-2xl bg-gold-400 text-ink-900">
-                <Icon name="lock" size={20} />
-              </span>
-              <div>
-                <p className="font-display text-base font-bold">Mes souvenirs</p>
-                <p className="text-xs text-white/50">Protégé — 128 fichiers</p>
-              </div>
-            </div>
-            <div className="space-y-2.5">
-              {[
-                { icon: 'shieldCheck', text: 'Fichiers chiffrés avant stockage (AES-256)' },
-                { icon: 'key', text: 'Code de récupération unique, affiché une seule fois' },
-                { icon: 'fingerprint', text: 'Déverrouillage biométrique du téléphone' },
-                { icon: 'clock', text: 'Limitation des tentatives et journal des accès' },
-                { icon: 'link', text: 'Fichiers servis par URL temporaire, jamais publique' },
-              ].map((row) => (
-                <div key={row.text} className="flex items-center gap-3 rounded-xl bg-white/5 px-4 py-3 text-sm text-white/80">
-                  <Icon name={row.icon} size={17} className="shrink-0 text-gold-400" />
-                  {row.text}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  )
-}
-
 /* ------------------------------------------------------------------ offres */
 
 const OFFRES = [
@@ -442,7 +348,7 @@ const OFFRES = [
       'Mini-site public',
       'Réseaux sociaux et liens illimités',
       'Coordonnées, WhatsApp et e-mail',
-      'Un Coffre Sécurité — 200 Mo',
+      'Scanner de QR Code universel',
       'Français et anglais',
     ],
   },
@@ -458,9 +364,7 @@ const OFFRES = [
       'Cartes Premium et VIP',
       'Plusieurs cartes',
       'Mini-site avancé',
-      'Domaine personnalisé',
       'Statistiques avancées',
-      'Plusieurs Coffres et plus de stockage',
       'Suppression du branding Kartaa',
     ],
   },

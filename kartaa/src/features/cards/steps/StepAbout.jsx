@@ -115,7 +115,7 @@ export default function StepAbout({ draft, update }) {
  * Galerie du mini-site : quelques photos de réalisations, de produits ou de
  * lieu. Les images partent dans l'espace public des cartes, comme la photo de
  * profil et les logos — elles s'affichent pour un visiteur non connecté. Rien
- * de privé n'a sa place ici : c'est le Coffre Sécurité qui sert à cela.
+ * de privé n'a sa place ici : tout ce qui y figure est public.
  */
 function Galerie({ photos, onChange, autorisee = true, onDemande }) {
   const champ = useRef(null)

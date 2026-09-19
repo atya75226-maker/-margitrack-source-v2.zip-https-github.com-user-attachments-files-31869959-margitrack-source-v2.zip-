@@ -1,7 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase, readableError, readStoredSession } from '../lib/supabaseClient'
 import { repo } from '../lib/storage'
-import { lockAll } from '../lib/vaultSession'
 
 const AuthContext = createContext(null)
 
@@ -237,7 +236,6 @@ export function AuthProvider({ children }) {
   }, [loadProfile])
 
   const signOut = useCallback(async () => {
-    lockAll()
     clearTimeout(reconnectTimer.current)
     setReconnecting(false)
     await supabase.auth.signOut()

@@ -73,7 +73,7 @@ export function usePhotoEmbarquee(photoUrl) {
   return inline || photoUrl || null
 }
 
-/** QR Code générique (carte, coffre, lien de partage…). */
+/** QR Code générique (carte, lien de partage…). */
 export function useQrCode(value, options) {
   const [qr, setQr] = useState(null)
   const serialized = JSON.stringify(options || {})
