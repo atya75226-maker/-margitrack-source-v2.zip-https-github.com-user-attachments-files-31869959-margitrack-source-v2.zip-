@@ -3,7 +3,7 @@
  *
  * Elles sont volontairement dans un espace public : elles s'affichent sur le
  * mini-site, que le visiteur soit connecté ou non. Les fichiers privés, eux, ne
- * passent jamais par ici — voir vaultService.
+ * Elles sont publiques par nature : elles s'affichent sur le mini-site.
  */
 
 import { supabase, readableError } from '../supabaseClient'

@@ -1,7 +1,7 @@
 {
   "name": "Kartaa — votre identité numérique",
   "short_name": "Kartaa",
-  "description": "Votre carte de visite, votre mini-site, votre scanner QR et votre Coffre Sécurité dans une seule application.",
+  "description": "Votre identité professionnelle numérique : votre carte de visite, votre mini-site et votre QR Code.",
   "lang": "fr",
   "dir": "ltr",
   "start_url": "/app",
@@ -17,8 +17,8 @@
     { "src": "/icone-512-masquable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "shortcuts": [
-    { "name": "Scanner un QR Code", "short_name": "Scanner", "url": "/app/scanner", "icons": [{ "src": "/icone-192.png", "sizes": "192x192" }] },
-    { "name": "Mes coffres", "short_name": "Coffres", "url": "/app/coffres", "icons": [{ "src": "/icone-192.png", "sizes": "192x192" }] },
-    { "name": "Mes cartes", "short_name": "Cartes", "url": "/app/cartes", "icons": [{ "src": "/icone-192.png", "sizes": "192x192" }] }
+    { "name": "Mes cartes", "short_name": "Cartes", "url": "/app/cartes", "icons": [{ "src": "/icone-192.png", "sizes": "192x192" }] },
+    { "name": "Créer ma carte", "short_name": "Créer", "url": "/app/cartes/nouvelle", "icons": [{ "src": "/icone-192.png", "sizes": "192x192" }] },
+    { "name": "Scanner un QR Code", "short_name": "Scanner", "url": "/app/scanner", "icons": [{ "src": "/icone-192.png", "sizes": "192x192" }] }
   ]
 }
