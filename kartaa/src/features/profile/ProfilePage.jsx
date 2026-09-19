@@ -124,13 +124,19 @@ export default function ProfilePage() {
         </div>
       </Panel>
 
+      {/* Le coffre ne figure plus ni dans la barre du bas ni sur l'accueil : c'est
+          ici qu'on le retrouve sur téléphone. Il reste entier — seul son rang
+          dans la navigation a changé. */}
       <Panel>
-        <SectionTitle icon="upload" title="Stockage" subtitle="Espace occupé par vos Coffres Sécurité." />
+        <SectionTitle icon="vault" title="Coffre Sécurité" subtitle="Vos documents privés, chiffrés sur votre appareil." />
         <Progress value={stats.quotaBytes ? (stats.usedBytes / stats.quotaBytes) * 100 : 0} tone={stats.usedBytes / stats.quotaBytes > 0.85 ? 'danger' : 'brand'} />
         <p className="mt-2 text-sm text-ink-500">
           {formatBytes(stats.usedBytes)} utilisés sur {formatBytes(stats.quotaBytes)} — {stats.files} fichier
           {stats.files > 1 ? 's' : ''} dans {stats.vaults} coffre{stats.vaults > 1 ? 's' : ''}.
         </p>
+        <Button as={Link} to="/app/coffres" variant="outline" icon="vault" className="mt-4">
+          Ouvrir mes coffres
+        </Button>
       </Panel>
 
       <InstallPanel />
