@@ -449,11 +449,14 @@ export function useStock(restaurantId) {
   // On se cale sur la même période que le tableau de bord pour que la part
   // « autres dépenses » se déduise sans double comptage.
   const purchaseBreakdownSince = useCallback(
-    (fromDate) => {
+    // toDate est facultatif : sans lui la periode court jusqu'a aujourd'hui.
+    // Il sert a mesurer la periode precedente, pour les comparaisons.
+    (fromDate, toDate) => {
       const kindOf = Object.fromEntries(items.map((i) => [i.id, i.kind]));
       const totals = { boisson: 0, ingredient: 0 };
       for (const m of movements) {
         if (m.kind !== "achat" || String(m.movement_date) < fromDate) continue;
+        if (toDate && String(m.movement_date) > toDate) continue;
         const kind = kindOf[m.stock_item_id];
         if (!kind) continue;
         totals[kind] += Number(m.quantity) * (Number(m.unit_cost) || 0);
@@ -465,12 +468,14 @@ export function useStock(restaurantId) {
 
   // Coût des marchandises vendues sur une période, pour la marge réelle.
   const cogsSince = useCallback(
-    (fromDate) => {
+    (fromDate, toDate) => {
       const byItem = Object.fromEntries(items.map((i) => [i.id, Number(i.unit_cost) || 0]));
       return movements
         .filter(
           (m) =>
-            ["vente", "consommation"].includes(m.kind) && String(m.movement_date) >= fromDate
+            ["vente", "consommation"].includes(m.kind) &&
+            String(m.movement_date) >= fromDate &&
+            (!toDate || String(m.movement_date) <= toDate)
         )
         .reduce((s, m) => s + Math.abs(Number(m.quantity)) * (byItem[m.stock_item_id] ?? 0), 0);
     },

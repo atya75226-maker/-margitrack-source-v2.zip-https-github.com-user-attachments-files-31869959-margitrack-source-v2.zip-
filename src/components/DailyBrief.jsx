@@ -165,12 +165,21 @@ export function DailyBrief({ restaurantId }) {
             }
             palette={palette}
           />
+          {s.usesStock && (
+            <Line
+              label="Marchandises vendues"
+              value={formatMoney(s.cogs ?? 0)}
+              palette={palette}
+            />
+          )}
           <Line
-            label="Dépenses"
+            label={s.usesStock ? "Autres dépenses" : "Dépenses"}
             value={
               <>
-                {formatMoney(s.expenses)}
-                {expenseDelta !== null && (
+                {formatMoney(s.usesStock ? s.otherExpenses ?? 0 : s.expenses)}
+                {/* La moyenne porte sur la dépense totale : la comparer à la
+                    seule dépense hors stock induirait en erreur. */}
+                {!s.usesStock && expenseDelta !== null && (
                   <span
                     className="ml-1.5 text-[11px] font-medium"
                     style={{ color: expenseDelta > 0 ? "#F43F5E" : "#10B981" }}

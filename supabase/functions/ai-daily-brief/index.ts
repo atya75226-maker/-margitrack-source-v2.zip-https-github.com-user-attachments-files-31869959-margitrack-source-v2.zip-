@@ -165,6 +165,17 @@ Deno.serve(async (req) => {
       .filter((m) => ["vente", "consommation"].includes(m.kind))
       .reduce((s, m) => s + Math.abs(Number(m.quantity)) * (costOf[m.stock_item_id] ?? 0), 0);
 
+    // Un achat de stock n'est pas une perte : c'est de l'argent transforme en
+    // marchandise. Il ne pese sur le benefice qu'au fur et a mesure qu'il se
+    // vend, sinon le jour de l'achat paraitrait catastrophique et les
+    // suivants trop beaux. Meme regle que le tableau de bord.
+    const stockPurchases = (dayMovements ?? [])
+      .filter((m) => m.kind === "achat")
+      .reduce((s, m) => s + Number(m.quantity) * (Number(m.unit_cost) || 0), 0);
+    const usesStock = items.length > 0;
+    const otherExpenses = Math.max(expenses - stockPurchases, 0);
+    const profit = usesStock ? revenue - cogs - otherExpenses : revenue - expenses;
+
     const stats = {
       date: day,
       currency,
@@ -172,7 +183,10 @@ Deno.serve(async (req) => {
       revenuePrev,
       expenses,
       expensesPrev,
-      profit: revenue - expenses,
+      usesStock,
+      stockPurchases,
+      otherExpenses,
+      profit,
       grossMargin: cogs > 0 ? revenue - cogs : null,
       cogs,
       avgRevenue,
@@ -195,8 +209,9 @@ Deno.serve(async (req) => {
 
 Chiffres réels de la journée du ${day} (déjà calculés, ne les recalcule pas) :
 - Chiffre d'affaires : ${fmt(revenue)} (veille : ${fmt(revenuePrev)}, moyenne des 7 derniers jours : ${fmt(avgRevenue)})
-- Dépenses : ${fmt(expenses)} (veille : ${fmt(expensesPrev)}, moyenne 7 jours : ${fmt(avgExpenses)})
-- Bénéfice : ${fmt(revenue - expenses)}
+- Dépenses : ${fmt(expenses)} (veille : ${fmt(expensesPrev)}, moyenne 7 jours : ${fmt(avgExpenses)})${usesStock ? `, dont ${fmt(stockPurchases)} d'achats de stock` : ""}
+- Coût des marchandises vendues : ${fmt(cogs)}
+- Bénéfice : ${fmt(profit)}${usesStock ? " (ventes moins marchandises vendues moins dépenses hors stock : un achat de stock ne compte qu'au moment où il se vend)" : ""}
 - Dépenses par catégorie : ${JSON.stringify(byCategory)}
 - Produits les plus vendus : ${topProducts.map((p) => `${p.name} (${p.qty})`).join(", ") || "aucune vente"}
 - Valeur du stock : ${fmt(stockValue)}

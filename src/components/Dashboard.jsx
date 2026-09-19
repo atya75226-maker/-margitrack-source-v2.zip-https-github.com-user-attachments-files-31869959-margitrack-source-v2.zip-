@@ -96,14 +96,45 @@ export function Dashboard({ products, sales, expenses, stock }) {
     const grossMargin = hasCogs ? revenue - cogs : null;
     const marginRatio = hasCogs && revenue > 0 ? grossMargin / revenue : null;
 
-    const profit = revenue - expenseTotal;
+    const stockPurchases = purchases.drinks + purchases.ingredients;
+    const otherExpenses = Math.max(expenseTotal - stockPurchases, 0);
+
+    // ---- Bénéfice ---------------------------------------------------------
+    //
+    // Un restaurateur qui achète 100 sacs de riz n'a rien perdu ce jour-là :
+    // il a transformé de l'argent en marchandise. Compter tout l'achat en
+    // dépense le jour même effondrait le bénéfice de ce jour et le gonflait
+    // les suivants — des chiffres que personne ne peut croire.
+    //
+    // Le stock ne devient donc une dépense qu'au fur et à mesure qu'il sort :
+    //   bénéfice = ventes − marchandises vendues − dépenses hors stock.
+    // Ce qui reste en rayon garde sa valeur et n'entame pas le bénéfice.
+    //
+    // Sans article de stock, il n'y a rien à étaler : on retombe exactement
+    // sur l'ancien calcul, ventes − dépenses.
+    const usesStock = (stock?.stats?.itemCount ?? 0) > 0;
+
+    const prevPurchases = stock?.purchaseBreakdownSince
+      ? stock.purchaseBreakdownSince(prevFrom, prevTo)
+      : { drinks: 0, ingredients: 0 };
+    const prevCogs = stock?.cogsSince ? stock.cogsSince(prevFrom, prevTo) : 0;
+    const prevOtherExpenses = Math.max(
+      prevExpenseTotal - prevPurchases.drinks - prevPurchases.ingredients,
+      0
+    );
+
+    const profit = usesStock
+      ? revenue - cogs - otherExpenses
+      : revenue - expenseTotal;
+    const prevProfit = usesStock
+      ? prevRevenue - prevCogs - prevOtherExpenses
+      : prevRevenue - prevExpenseTotal;
 
     // Taux de marge de repli, calculable des qu'il y a du chiffre d'affaires :
     // sans lien entre produits vendus et articles de stock, le cout des
     // marchandises reste inconnu et le taux de marge brute affichait un tiret
     // pour toujours. La marge nette, elle, se lit des la premiere vente.
     const netMarginRatio = revenue > 0 ? profit / revenue : null;
-    const prevProfit = prevRevenue - prevExpenseTotal;
 
     // Série journalière sur la période affichée (min. 7 points pour la courbe)
     const pointCount = Math.max(period.days, 7);
@@ -137,18 +168,20 @@ export function Dashboard({ products, sales, expenses, stock }) {
       .sort((a, b) => b.qty - a.qty)
       .slice(0, 5);
 
-    // Part des dépenses dans le chiffre d'affaires — uniquement calculable
-    // lorsqu'il y a du chiffre d'affaires sur la période. Au-delà de 100 %,
-    // la valeur réelle est conservée : des dépenses supérieures aux recettes
-    // sont précisément ce qu'il faut voir.
-    const expenseRatio = revenue > 0 ? expenseTotal / revenue : null;
+    // Part des charges dans le chiffre d'affaires — uniquement calculable
+    // lorsqu'il y a du chiffre d'affaires sur la période. On y met ce qui pèse
+    // reellement sur le bénéfice, donc les marchandises vendues et non les
+    // achats de stock. Au-delà de 100 %, la valeur réelle est conservée : des
+    // charges supérieures aux recettes sont précisément ce qu'il faut voir.
+    const charges = usesStock ? cogs + otherExpenses : expenseTotal;
+    const expenseRatio = revenue > 0 ? charges / revenue : null;
 
     return {
       revenue, prevRevenue, expenseTotal, prevExpenseTotal, profit, prevProfit,
       cogs, hasCogs, grossMargin, marginRatio, netMarginRatio, expenseRatio,
+      usesStock, stockPurchases, otherExpenses,
       purchasesDrinks: purchases.drinks,
       purchasesIngredients: purchases.ingredients,
-      otherExpenses: Math.max(expenseTotal - purchases.drinks - purchases.ingredients, 0),
       itemsSold: curSales.reduce((n, s) => n + s.quantity, 0),
       series, topCategories, topProducts,
       hasAnyData: sales.length > 0 || expenses.length > 0,
@@ -165,10 +198,35 @@ export function Dashboard({ products, sales, expenses, stock }) {
     fontSize: 12,
   };
 
+  // Marchandises et bénéfice sont deux choses différentes : le coût de ce qui
+  // a été vendu a sa propre carte, et ne se confond plus avec le loyer ou les
+  // salaires. Sans stock, l'affichage reste celui d'avant.
   const kpis = [
     { label: "Chiffre d'affaires", value: formatMoney(stats.revenue), d: delta(stats.revenue, stats.prevRevenue), accent: VIOLET },
-    { label: "Dépenses", value: formatMoney(stats.expenseTotal), d: delta(stats.expenseTotal, stats.prevExpenseTotal), accent: RED, invert: true },
-    { label: "Bénéfice", value: formatMoney(stats.profit), d: delta(stats.profit, stats.prevProfit), accent: stats.profit >= 0 ? GREEN : RED },
+    ...(stats.usesStock
+      ? [{
+          label: "Marchandises vendues",
+          value: formatMoney(stats.cogs),
+          hint: "Coût du stock sorti",
+          d: null,
+          accent: AMBER,
+        }]
+      : []),
+    {
+      label: stats.usesStock ? "Autres dépenses" : "Dépenses",
+      value: formatMoney(stats.usesStock ? stats.otherExpenses : stats.expenseTotal),
+      hint: stats.usesStock ? "Hors achats de stock" : null,
+      d: stats.usesStock ? null : delta(stats.expenseTotal, stats.prevExpenseTotal),
+      accent: RED,
+      invert: true,
+    },
+    {
+      label: "Bénéfice",
+      value: formatMoney(stats.profit),
+      hint: stats.usesStock ? "Ventes − marchandises − dépenses" : null,
+      d: delta(stats.profit, stats.prevProfit),
+      accent: stats.profit >= 0 ? GREEN : RED,
+    },
     { label: "Articles vendus", value: stats.itemsSold, d: null, accent: AMBER },
   ];
 
@@ -194,15 +252,26 @@ export function Dashboard({ products, sales, expenses, stock }) {
 
       {/* KPI principaux */}
       <div className="grid grid-cols-2 gap-3">
-        {kpis.map((k) => (
-          <div key={k.label} className="rounded-2xl p-4" style={card}>
+        {kpis.map((k, i) => (
+          <div
+            key={k.label}
+            // Un nombre impair de cartes laisserait un trou : la dernière
+            // occupe alors toute la largeur.
+            className={`rounded-2xl p-4 ${i === kpis.length - 1 && kpis.length % 2 === 1 ? "col-span-2" : ""}`}
+            style={card}
+          >
             <div className="h-1 w-8 rounded-full mb-3" style={{ backgroundColor: k.accent }} />
             <p className="text-[11px]" style={{ color: palette.muted }}>{k.label}</p>
             <p className="text-xl font-bold font-display mt-0.5 leading-tight" style={{ color: palette.ink }}>
               {k.value}
             </p>
+            {k.hint && (
+              <p className="text-[10px] mt-0.5 leading-tight" style={{ color: palette.muted }}>
+                {k.hint}
+              </p>
+            )}
             <div className="mt-1.5">
-              <DeltaBadge value={k.d} invert={k.invert} />
+              {k.d === null && k.hint ? null : <DeltaBadge value={k.d} invert={k.invert} />}
             </div>
           </div>
         ))}
@@ -371,11 +440,12 @@ export function Dashboard({ products, sales, expenses, stock }) {
             </div>
           </div>
 
-          {/* Répartition des dépenses de la période : les achats de stock sont
-              déjà comptés dans le total, ils en sont ici isolés. */}
+          {/* Argent sorti de la caisse d'un côté, ce qui pèse réellement sur le
+              bénéfice de l'autre : un achat de stock est une avance, pas une
+              perte, tant qu'il n'est pas vendu. */}
           <div className="rounded-2xl p-4" style={card}>
             <p className="text-sm font-semibold mb-1" style={{ color: palette.ink }}>
-              💰 Répartition des dépenses
+              💰 Où va votre argent
             </p>
             <div className="flex justify-between text-sm py-1">
               <span style={{ color: palette.muted }}>Achats d'ingrédients</span>
@@ -399,10 +469,33 @@ export function Dashboard({ products, sales, expenses, stock }) {
               className="flex justify-between text-sm pt-2 mt-1"
               style={{ borderTop: `1px solid ${palette.line}` }}
             >
-              <span style={{ color: palette.muted }}>Total dépenses</span>
+              <span style={{ color: palette.muted }}>Total sorti de la caisse</span>
               <span className="font-bold font-display" style={{ color: palette.ink }}>
                 {formatMoney(stats.expenseTotal)}
               </span>
+            </div>
+
+            <div className="mt-3 pt-3" style={{ borderTop: `1px solid ${palette.line}` }}>
+              <p className="text-[11px] mb-1.5" style={{ color: palette.muted }}>
+                Ce qui est compté dans le bénéfice
+              </p>
+              <div className="flex justify-between text-sm py-1">
+                <span style={{ color: palette.muted }}>Marchandises vendues</span>
+                <span className="font-semibold" style={{ color: palette.ink }}>
+                  {formatMoney(stats.cogs)}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm py-1">
+                <span style={{ color: palette.muted }}>Encore en stock, pas encore compté</span>
+                <span className="font-semibold" style={{ color: palette.ink }}>
+                  {formatMoney(stockStats.totalValue)}
+                </span>
+              </div>
+              <p className="text-[11px] mt-2 leading-relaxed" style={{ color: palette.muted }}>
+                Un achat de stock ne devient une dépense qu'au fur et à mesure
+                qu'il se vend. Le reste garde sa valeur en rayon : il n'entame
+                pas votre bénéfice.
+              </p>
             </div>
           </div>
 
