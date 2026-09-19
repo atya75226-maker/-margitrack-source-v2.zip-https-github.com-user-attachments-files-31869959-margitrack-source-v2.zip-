@@ -45,7 +45,7 @@ export function TermsOfService() {
 
         <Block title="3. Essai gratuit et abonnement">
           <p>
-            À la création d'un compte, un essai gratuit de 7 jours donne accès à l'ensemble des fonctionnalités,
+            À la création d'un compte, un essai gratuit de 30 jours donne accès à l'ensemble des fonctionnalités,
             sans carte bancaire requise. Passé ce délai, l'accès aux fonctionnalités de gestion est suspendu tant
             qu'un abonnement Margitrack Pro (5 000 FCFA / mois, payable via Chariow) n'a pas été souscrit avec
             l'email associé au compte Margitrack.
