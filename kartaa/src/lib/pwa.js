@@ -291,8 +291,30 @@ export function surMiseAJourDisponible(rappel) {
 }
 
 let enAttente = null
+// Depuis quand l'application est-elle en arrière-plan, et le retour est-il assez
+// espacé pour appliquer la mise à jour sans rien interrompre ?
+let masqueeDepuis = Date.now()
+let retourSilencieux = false
 
-/** Applique la version en attente, puis recharge — jamais sans demande explicite. */
+/**
+ * Une nouvelle version attend.
+ *
+ * Si elle arrive au retour d'une absence, on l'applique tout de suite : la
+ * personne vient de rouvrir l'application, un rechargement à cet instant ne
+ * coupe aucune saisie et lui évite de rester sur un écran périmé. Sinon, le
+ * bandeau propose de l'appliquer, et c'est elle qui choisit le moment.
+ */
+function signalerMiseAJour(worker) {
+  enAttente = worker
+  if (retourSilencieux) {
+    retourSilencieux = false
+    appliquerMiseAJour()
+    return
+  }
+  abonnesMiseAJour.forEach((rappel) => rappel())
+}
+
+/** Applique la version en attente, puis recharge. */
 export function appliquerMiseAJour() {
   if (!enAttente) return
   enAttente.postMessage('appliquer-la-mise-a-jour')
@@ -347,18 +369,42 @@ export function initialiserPwa() {
             // « installed » avec un contrôleur déjà en place = une nouvelle
             // version attend son tour.
             if (worker.state === 'installed' && navigator.serviceWorker.controller) {
-              enAttente = worker
-              abonnesMiseAJour.forEach((rappel) => rappel())
+              signalerMiseAJour(worker)
             }
           })
         }
 
         if (enregistrement.waiting && navigator.serviceWorker.controller) {
-          enAttente = enregistrement.waiting
-          abonnesMiseAJour.forEach((rappel) => rappel())
+          signalerMiseAJour(enregistrement.waiting)
         }
         surveiller(enregistrement.installing)
         enregistrement.addEventListener('updatefound', () => surveiller(enregistrement.installing))
+
+        /**
+         * Revérifier en revenant sur l'application.
+         *
+         * C'est le point qui manquait. Le navigateur ne cherche une nouvelle
+         * version du service worker qu'au moment d'une navigation. Or une
+         * application installée qu'on rouvre depuis l'arrière-plan ne navigue
+         * pas : elle reprend le document déjà chargé. Sans cet appel, elle
+         * pouvait rester indéfiniment sur une version périmée — c'est ainsi
+         * qu'un écran supprimé continuait de s'afficher des jours plus tard.
+         */
+        const verifierAuRetour = () => {
+          if (document.visibilityState !== 'visible') return
+          const absence = Date.now() - masqueeDepuis
+          enregistrement.update().catch(() => null)
+          // Revenir après une minute d'absence : le moment est sûr pour
+          // appliquer la nouvelle version sans interrompre une saisie.
+          retourSilencieux = absence > 60_000
+        }
+
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'hidden') masqueeDepuis = Date.now()
+          else verifierAuRetour()
+        })
+        window.addEventListener('focus', verifierAuRetour)
+        verifierAuRetour()
       })
       .catch((erreur) => {
         // L'application continue de fonctionner, sans hors-ligne ni
