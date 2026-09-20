@@ -7,6 +7,7 @@ import { CardArtwork, CardScaler } from '../../components/card/CardArtwork'
 import { useCardAssets, useQrVectoriel } from '../../hooks/useCardAssets'
 import ProfileView from '../public/ProfileView'
 import { DEMO_CARDS } from './demoCards'
+import SceneBureau from './SceneBureau'
 import { useAuth } from '../../state/AuthContext'
 import { useTranslation, LANGUAGES } from '../../i18n'
 import { InstallButton, useModeInstallation } from '../../components/InstallApp'
@@ -15,10 +16,15 @@ import { InstallButton, useModeInstallation } from '../../components/InstallApp'
  * Page d'accueil publique.
  *
  * Règle qui gouverne tout ce fichier : elle ne présente que ce que
- * l'application fait réellement aujourd'hui. Pas de NFC, pas d'impression de
- * cartes, pas de domaine personnalisé — ces chantiers existent dans le code
- * mais ne sont pas branchés (voir FEATURE_FLAGS), donc ils ne sont pas promis
- * ici. Une vitrine qui vend ce qui n'existe pas se paye au premier client.
+ * l'application fait réellement aujourd'hui. Pas d'impression de cartes, pas de
+ * domaine personnalisé — ces chantiers existent dans le code mais ne sont pas
+ * branchés (voir FEATURE_FLAGS), donc ils ne sont pas promis ici. Une vitrine
+ * qui vend ce qui n'existe pas se paye au premier client.
+ *
+ * Le NFC, lui, est bien là : l'application programme la puce avec l'adresse du
+ * profil, et la puce s'ouvre ensuite sur n'importe quel téléphone. La vitrine
+ * dit aussi la limite — l'écriture depuis le navigateur demande Chrome sur
+ * Android.
  *
  * Le profil montré dans le téléphone n'est pas une image : c'est `ProfileView`,
  * le composant qui affiche les vrais mini-sites, nourri de données d'exemple
@@ -30,9 +36,10 @@ import { InstallButton, useModeInstallation } from '../../components/InstallApp'
 const SOLUTIONS = [
   { icon: 'globe', tone: 'brand', title: 'Profil professionnel', text: 'Votre vitrine en ligne, à votre adresse' },
   { icon: 'qr', tone: 'sky', title: 'QR Code personnel', text: 'Il ouvre votre profil, et reste valable' },
-  { icon: 'card', tone: 'violet', title: 'Carte à imprimer', text: 'PNG, JPG ou PDF, recto et verso' },
+  { icon: 'nfc', tone: 'violet', title: 'Carte NFC', text: 'On approche le téléphone, la page s’ouvre' },
+  { icon: 'card', tone: 'rose', title: 'Carte à imprimer', text: 'PNG, JPG ou PDF, recto et verso' },
   { icon: 'scan', tone: 'amber', title: 'Scanner universel', text: 'Tous les QR Codes, un seul outil' },
-  { icon: 'share', tone: 'rose', title: 'Réseaux et liens', text: 'Plusieurs comptes, plusieurs liens' },
+  { icon: 'share', tone: 'brand', title: 'Réseaux et liens', text: 'Plusieurs comptes, plusieurs liens' },
   { icon: 'download', tone: 'emerald', title: 'Installable et hors connexion', text: 'Sur votre écran d’accueil, même sans réseau' },
 ]
 
@@ -53,7 +60,7 @@ const ETAPES = [
     icon: 'share',
     tone: 'emerald',
     titre: 'Partagez facilement',
-    texte: 'Montrez votre QR Code, partagez le lien, ou téléchargez votre carte.',
+    texte: 'Montrez votre QR Code, approchez votre carte NFC, ou partagez simplement le lien.',
   },
   {
     icon: 'eye',
@@ -126,6 +133,7 @@ export default function LandingPage({ deconnecte = false }) {
       <Entete isAuthenticated={isAuthenticated} />
       {deconnecte && <Deconnexion />}
       <Hero />
+      <Geste />
       <Fonctionnement />
       <Solution />
       <Profil />
@@ -267,7 +275,7 @@ function Hero() {
         <div className="min-w-0 animate-fade-up">
           <span className="mb-7 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-bold">
             <Icon name="sparkles" size={13} className="text-gold-400" />
-            La carte de visite numérique nouvelle génération
+            La carte de visite numérique : QR Code et NFC
           </span>
           <h1 className="font-display text-[2.5rem] font-extrabold leading-[1.08] tracking-tight text-balance sm:text-[3.4rem]">
             Votre identité professionnelle numérique,
@@ -276,7 +284,8 @@ function Hero() {
           </h1>
           <p className="mt-6 max-w-xl text-[1.05rem] leading-relaxed text-white/70">
             Créez votre profil professionnel, partagez vos <strong className="font-bold text-white">coordonnées</strong> et
-            permettez à vos clients de vous retrouver facilement.
+            permettez à vos clients de vous retrouver facilement. On scanne votre QR Code, ou on approche simplement le
+            téléphone de votre carte NFC : la même page s'ouvre.
           </p>
           <div className="mt-9 flex flex-col gap-3 sm:flex-row">
             <Button
@@ -364,6 +373,69 @@ function Telephone({ card, largeur = 250, hauteur = 500, className = '' }) {
         <ProfileView card={card} assets={{ ...assets, qr: null }} actif={false} publicHref="" onVcard={() => {}} />
       </div>
     </div>
+  )
+}
+
+/* ------------------------------------------------------------------ geste */
+
+/**
+ * Le geste, juste après le hero : on tend sa carte, on la scanne, la page
+ * s'ouvre. La scène est dessinée — aucune photo d'inconnu — et la carte qu'elle
+ * montre est le vrai composant, avec un vrai QR Code.
+ */
+function Geste() {
+  return (
+    <section className="border-b border-ink-100 bg-white py-16 sm:py-20">
+      <div className="container-app grid items-center gap-12 lg:grid-cols-[1.05fr,1fr]">
+        <SceneBureau />
+        <div className="min-w-0">
+          <p className="mb-3 text-xs font-extrabold uppercase tracking-[.2em] text-brand-600">Le geste</p>
+          <h2 className="font-display text-3xl font-extrabold leading-tight text-ink-900 text-balance sm:text-4xl">
+            Vous tendez votre carte. On la scanne — ou on l'approche. Votre profil s'ouvre.
+          </h2>
+          <p className="mt-5 leading-relaxed text-ink-500">
+            Plus de numéro noté sur un coin de table, plus de carte oubliée dans une poche. Un seul geste, et la
+            personne en face a votre métier, vos coordonnées, vos réseaux et vos services — et peut vous enregistrer
+            dans son téléphone dans la foulée.
+          </p>
+          <ul className="mt-7 space-y-3">
+            {[
+              ['card', 'La carte reste la même', 'Changez de numéro, d’entreprise ou de métier : le QR Code imprimé reste valable.'],
+              ['nfc', 'QR Code ou NFC, au choix', 'L’appareil photo suffit ; avec une puce NFC, approcher le téléphone suffit. Dans les deux cas, rien à installer en face.'],
+              ['clock', 'Quelques secondes', 'Le temps d’une poignée de main.'],
+            ].map(([icon, titre, texte]) => (
+              <li key={titre} className="flex items-start gap-3.5">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-600">
+                  <Icon name={icon} size={18} />
+                </span>
+                <span className="min-w-0">
+                  <span className="block font-display text-sm font-bold text-ink-900">{titre}</span>
+                  <span className="mt-0.5 block text-sm leading-relaxed text-ink-500">{texte}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+          {/* La nuance qui évite la mauvaise surprise : la puce fonctionne
+              partout une fois programmée, mais la programmer depuis le
+              navigateur demande Chrome sur Android. */}
+          <div className="mt-7 flex items-start gap-3 rounded-2xl border border-ink-100 bg-ink-50 p-4">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-violet-50 text-violet-600">
+              <Icon name="nfc" size={19} />
+            </span>
+            <p className="text-sm leading-relaxed text-ink-600">
+              <strong className="font-bold text-ink-900">Vous avez des cartes NFC ?</strong> Kartaa écrit l'adresse de
+              votre profil directement sur la puce, depuis votre téléphone. Une fois programmée, elle s'ouvre sur
+              n'importe quel appareil qui lit le NFC, sans application. L'écriture depuis le navigateur demande Chrome
+              sur Android ; ailleurs, l'application vous donne l'adresse exacte à inscrire.
+            </p>
+          </div>
+
+          <Button as={Link} to="/inscription" className="mt-7" iconRight="arrowRight">
+            Créer ma carte gratuitement
+          </Button>
+        </div>
+      </div>
+    </section>
   )
 }
 

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Button, Panel } from '../../components/ui'
 import { Icon } from '../../components/ui/Icons'
 import { useToast } from '../../state/ToastContext'
+import { lireUneEtiquette, nfcDisponible } from '../../lib/nfc'
 import { copyToClipboard } from '../../lib/download'
 import { ensureHttp, telHref } from '../../lib/format'
 import {
@@ -37,6 +38,13 @@ export default function ScannerPage() {
   const navigate = useNavigate()
   const toast = useToast()
 
+  // Une carte NFC porte la même adresse qu'un QR Code : la lire revient à la
+  // scanner. Le bouton n'apparaît que là où le navigateur sait vraiment le
+  // faire — Chrome sur Android — plutôt que d'échouer ailleurs.
+  const [nfcEnCours, setNfcEnCours] = useState(false)
+  const nfcAbandon = useRef(null)
+  const nfcPossible = nfcDisponible()
+
   const arreterCamera = useCallback(() => {
     if (boucleRef.current) {
       clearInterval(boucleRef.current)
@@ -54,6 +62,33 @@ export default function ScannerPage() {
     setResultat(lecture)
     setHistorique(pushHistory({ value: lecture.value, kind: lecture.kind, label: lecture.label || null }))
   }, [arreterCamera])
+
+  const lireNfc = async () => {
+    if (nfcEnCours) {
+      nfcAbandon.current?.abort()
+      setNfcEnCours(false)
+      return
+    }
+    setNfcEnCours(true)
+    nfcAbandon.current = new AbortController()
+    try {
+      const puce = await lireUneEtiquette({ signal: nfcAbandon.current.signal })
+      if (!puce) return // lecture abandonnée
+      if (puce.url) {
+        traiter(puce.url)
+      } else if (puce.texte) {
+        traiter(puce.texte)
+      } else {
+        toast.error(puce.illisible
+          ? "Cette puce n'a pas pu être lue. Réessayez en la gardant immobile."
+          : "Cette puce ne contient aucune adresse.")
+      }
+    } catch (erreur) {
+      toast.error(erreur.message)
+    } finally {
+      setNfcEnCours(false)
+    }
+  }
 
   const demarrerCamera = useCallback(async () => {
     setResultat(null)
@@ -159,6 +194,18 @@ export default function ScannerPage() {
           </div>
         )}
       </div>
+
+      {nfcPossible && (
+        <Button
+          full
+          variant={nfcEnCours ? 'outline' : 'soft'}
+          icon="nfc"
+          onClick={lireNfc}
+          className={nfcEnCours ? 'animate-pulse' : ''}
+        >
+          {nfcEnCours ? 'Approchez la carte NFC — appuyez pour arrêter' : 'Lire une carte NFC'}
+        </Button>
+      )}
 
       <div className="grid grid-cols-2 gap-2">
         <Button variant="outline" icon="refresh" onClick={demarrerCamera}>

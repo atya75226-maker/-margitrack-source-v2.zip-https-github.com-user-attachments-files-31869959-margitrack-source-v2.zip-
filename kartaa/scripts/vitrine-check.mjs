@@ -28,11 +28,14 @@ function verifier(nom, condition, detail = '') {
 /**
  * Ce qui n'est pas branché (voir FEATURE_FLAGS et le README).
  *
+ * Le NFC n'y figure plus : il fonctionne réellement depuis que l'application
+ * écrit l'adresse du profil sur la puce (voir `npm run test:nfc`).
+ *
  * Le mot peut apparaître pour dire qu'il n'est PAS disponible — c'est le rôle
  * du pied de page. Ce qui est interdit, c'est de le présenter comme une
  * fonctionnalité : on vérifie donc son absence des listes et des titres.
  */
-const NON_BRANCHE = ['NFC', 'sans contact', 'domaine personnalisé', 'impression de cartes', 'cartes physiques livrées']
+const NON_BRANCHE = ['domaine personnalisé', 'impression de cartes', 'cartes physiques livrées']
 
 const browser = await chromium.launch()
 const context = await browser.newContext({ viewport: { width: 1280, height: 1000 }, locale: 'fr-FR' })
@@ -71,6 +74,19 @@ verifier('les trois profils d’exemple sont proposés',
 const reseaux = await page.locator('[aria-label], a[href^="#"]').count()
 verifier('la page se charge sans erreur JavaScript', erreurs.length === 0, `→ ${erreurs[0] || ''}`)
 verifier('la page est complète', reseaux > 0 && texte.length > 1500, `→ ${texte.length} caractères`)
+
+console.log('\nLa scène d’accueil')
+verifier('la scène est dessinée, et décrite pour les lecteurs d’écran',
+  (await page.locator('svg[role="img"][aria-label*="bureau"]').count()) > 0)
+// Aucune photo d'inconnu, et rien à télécharger ailleurs : les images de cette
+// page viennent toutes de l'application elle-même.
+const imagesExterieures = await page.evaluate(() => [...document.images]
+  .map((image) => image.currentSrc || image.src)
+  .filter((source) => /^https?:/i.test(source) && !source.startsWith(window.location.origin)))
+verifier('aucune image ne vient d’ailleurs', imagesExterieures.length === 0,
+  `→ ${imagesExterieures.join(', ')}`)
+verifier('la carte de la scène porte un vrai QR Code',
+  (await page.locator('img[alt="QR Code"][src^="data:image/svg+xml"]').count()) > 0)
 
 console.log('\nLes chemins mènent où ils disent')
 const lien = async (texteBouton) => page.locator(`a:has-text("${texteBouton}")`).first().getAttribute('href')

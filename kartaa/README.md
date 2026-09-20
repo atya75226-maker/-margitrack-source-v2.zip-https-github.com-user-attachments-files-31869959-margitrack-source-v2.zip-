@@ -32,6 +32,7 @@ stockage de fichiers et règles d'accès côté serveur.
 | Statistiques (scans, stockage, classement) | fonctionnel |
 | Réseaux et liens | **plusieurs comptes par plateforme**, nommés, réordonnables |
 | Scanner de QR Codes | universel, au centre de la barre de navigation |
+| Cartes NFC | écriture depuis l'application (Chrome/Android), lecture universelle une fois la puce programmée |
 | Offre unique Pro — 5 000 FCFA / mois | limites **appliquées en base**, pas seulement dans l'interface |
 | Langues français / anglais | détection navigateur + choix manuel ; le prix reste en FCFA |
 | Quotas de stockage | appliqués par déclencheur ; le plan Supabase lui-même plafonne l'espace total du projet (1 Go sur l'offre gratuite) |
@@ -394,6 +395,53 @@ explicitement l'emporte (voir « Se déconnecter » ci-dessous).
 `npm run test:pwa` vérifie tout cela dans un navigateur, à commencer par
 l'absence de toute ressource externe dans les caches.
 
+## Les cartes NFC
+
+Une puce NFC ne contient qu'une chose : l'adresse du mini-site, la même que le
+QR Code. Approcher un téléphone revient exactement à scanner — deux gestes, une
+seule destination.
+
+Rien de personnel n'est écrit sur la puce. Ce qui y est inscrit est lisible par
+quiconque l'approche, et ne se corrige pas à distance : le numéro et l'e-mail
+restent donc sur le mini-site, modifiables, et la puce ne porte que le chemin.
+
+### Ce que le navigateur sait faire, et ce qu'il ne sait pas
+
+Écrire une puce depuis une page web s'appelle **Web NFC**, et seul Chrome sur
+Android le propose aujourd'hui. Sur iPhone, aucun navigateur ne peut écrire une
+puce : c'est une limite d'iOS.
+
+L'application ne montre donc un bouton d'écriture que là où il fonctionne.
+Ailleurs, elle affiche l'adresse exacte à inscrire et explique comment faire
+depuis un autre téléphone ou une application NFC — plutôt qu'un bouton qui
+échouerait.
+
+**La lecture, elle, ne dépend pas de nous** : une puce programmée s'ouvre sur les
+iPhone récents comme sur la plupart des Android, sans rien installer. Une carte
+programmée une fois fonctionne partout.
+
+### Où cela se passe
+
+| | |
+| --- | --- |
+| `src/lib/nfc.js` | détection, écriture, lecture, et les messages d'erreur en clair |
+| `src/features/cards/CarteNfc.jsx` | « Ma carte NFC » sur la page d'une carte |
+| `src/features/scanner/ScannerPage.jsx` | « Lire une carte NFC », à côté du scanner de QR Codes |
+| `card_media` | une ligne par support réellement programmé depuis l'application |
+
+### Vérification
+
+```bash
+npm run build && npm run preview -- --port 4173
+npm run test:nfc
+```
+
+Web NFC n'existe pas dans le navigateur de test : le contrôle installe un faux
+lecteur qui note ce qu'on lui demande d'écrire. Ce n'est donc pas l'API du
+navigateur qui est vérifiée, mais ce que Kartaa lui donne — une adresse de type
+`url`, celle du domaine de référence, et aucune donnée personnelle. Les deux
+mondes sont joués : le navigateur qui sait écrire, et celui qui ne sait pas.
+
 ## Se déconnecter
 
 Se déconnecter ramène sur la page d'accueil, et non sur un écran de connexion
@@ -463,10 +511,26 @@ plusieurs — c'est permis — déplie la liste, parce qu'une icône ne peut pas
 à deux endroits. Les sites et autres adresses ont leur propre section, avec leur
 libellé en toutes lettres.
 
+### La scène d'accueil est dessinée, pas photographiée
+
+`src/features/landing/SceneBureau.jsx` montre quelqu'un à son bureau, en
+costume, sa carte à la main. C'est un dessin vectoriel, pas une photographie :
+une photo de banque d'images montrerait un inconnu qui n'a jamais utilisé
+Kartaa. Le dessin ne prétend rien, pèse quelques kilo-octets, s'affiche sans
+réseau et ne devient jamais flou.
+
+La carte tenue dans la main n'est pas dessinée non plus : c'est `CardArtwork`,
+avec un vrai QR Code — celui qui ouvre le site. Ce que la scène montre est donc
+exactement ce que l'application produit.
+
+Les mouvements sont lents et discrets : la carte respire, un reflet la balaie,
+la plante bouge à peine. Ils s'arrêtent tous sous `prefers-reduced-motion`, et
+la scène reste lisible, simplement immobile.
+
 ### La vitrine ne promet que ce qui existe
 
 `npm run test:vitrine` relit la page d'accueil comme un visiteur la reçoit et
-refuse : le NFC, le domaine personnalisé, l'impression de cartes — tout ce que
+refuse : le domaine personnalisé et l'impression de cartes — ce que
 `FEATURE_FLAGS` annonce comme non branché. Le pied de page, lui, dit franchement
 ce qui ne l'est pas encore.
 
@@ -730,7 +794,6 @@ réservé à l'abonnement Pro existant, sans nouvelle offre ni nouveau prix.
 
 | | État |
 | --- | --- |
-| **Carte NFC** | Table `card_media` : un support physique est relié à une carte. Une puce n'est qu'un déclencheur de plus vers le même mini-site ; l'activer demandera d'écrire l'adresse publique sur la puce et d'enregistrer son numéro de série. Aucun parcours ne s'en sert encore. |
 | **Impression** | Table `card_orders` : le formulaire de commande enregistre réellement la demande, sans paiement. L'abonnement Pro reste le seul. |
 | **Notifications** | `src/lib/notifications.js` et un réglage dans le profil. Rien n'est envoyé : l'autorisation n'est demandée que sur un geste explicite, car un refus est définitif pour le navigateur. |
 
@@ -834,8 +897,9 @@ et fiche contact.
 > des identifiants `crd_`/`vlt_`, et déroule le Coffre Sécurité, retiré de
 > l'application depuis. Il est conservé pour mémoire, à réécrire. Les contrôles
 > qui font foi aujourd'hui sont les suivants (`test:profil`, `test:vitrine`,
-> `test:carte`, `test:deconnexion`, `test:offline`, `test:pwa`, `test:session`,
-> `test:plan`, `test:export`, `test:photo`, `test:scanner`, `test:maj`).
+> `test:carte`, `test:nfc`, `test:deconnexion`, `test:offline`, `test:pwa`,
+> `test:session`, `test:plan`, `test:export`, `test:photo`, `test:scanner`,
+> `test:maj`).
 
 `scripts/e2e-smoke.mjs` rejoue tout le parcours dans un vrai navigateur — compte,
 carte, QR Code, mini-site, téléchargement PNG/PDF, coffre, fichier chiffré,

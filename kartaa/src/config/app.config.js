@@ -261,4 +261,5 @@ export const FEATURE_FLAGS = {
   physicalPrinting: false, // impression et livraison de cartes physiques
   domainRegistrar: false,  // vérification réelle d'un domaine
   nativeBiometrics: true,  // WebAuthn si l'appareil le propose
+  nfc: true,               // Web NFC : écriture sur Chrome/Android, lecture universelle une fois la puce programmée
 }
