@@ -138,6 +138,7 @@ export default function ProfilePage() {
             { flag: FEATURE_FLAGS.physicalPrinting, label: 'Impression de cartes physiques', note: 'formulaire de commande disponible' },
             { flag: FEATURE_FLAGS.domainRegistrar, label: 'Vérification de domaine', note: 'instructions DNS affichées, vérification à venir' },
             { flag: FEATURE_FLAGS.nativeBiometrics, label: 'Biométrie (WebAuthn)', note: "active si l'appareil la propose" },
+            { flag: FEATURE_FLAGS.nfc, label: 'Cartes NFC', note: "écriture sur Chrome/Android ; une puce programmée se lit partout" },
           ].map((row) => (
             <div key={row.label} className="flex items-center gap-3 rounded-2xl bg-ink-50 px-4 py-3">
               <Icon name={row.flag ? 'check' : 'clock'} size={16} className={row.flag ? 'text-emerald-600' : 'text-ink-400'} />

@@ -237,10 +237,9 @@ export const cards = {
   /**
    * Supports physiques d'une carte : QR imprimé, puce NFC.
    *
-   * Préparation seulement. Une puce NFC n'est qu'un déclencheur de plus vers le
-   * même mini-site : la faire fonctionner plus tard ne demandera que d'écrire
-   * l'adresse publique sur la puce et d'enregistrer son numéro de série ici,
-   * sans toucher aux cartes ni aux QR Codes existants.
+   * Une puce NFC n'est qu'un déclencheur de plus vers le même mini-site : elle
+   * porte l'adresse publique, et rien d'autre. Les lignes enregistrées ici
+   * correspondent à des supports réellement programmés depuis l'application.
    */
   async media(cardId) {
     const { data, error } = await supabase
@@ -250,6 +249,24 @@ export const cards = {
       id: row.id, cardId: row.card_id, kind: row.kind, label: row.label,
       serial: row.serial, status: row.status, createdAt: row.created_at,
     }))
+  },
+
+  /**
+   * Enregistre un support physique qui mène à cette carte.
+   *
+   * Appelé après qu'une puce NFC a réellement été programmée : la ligne dit ce
+   * qui existe, pas ce qui est prévu. Les politiques RLS limitent déjà l'accès
+   * au propriétaire de la carte.
+   */
+  async addMedium(cardId, { kind, label = null, serial = null, status = 'active' }) {
+    const { data, error } = await supabase
+      .from('card_media')
+      .insert({ card_id: cardId, kind, label, serial, status })
+      .select()
+      .single()
+    if (error) fail(error, "Le support n'a pas pu être enregistré.")
+    notifyChange()
+    return { id: data.id, cardId: data.card_id, kind: data.kind, label: data.label, serial: data.serial, status: data.status }
   },
 
   /** Enregistre une demande de carte imprimée. Aucun paiement, aucune offre nouvelle. */

@@ -34,4 +34,47 @@
   }
   .grain { background-image: radial-gradient(rgba(255,255,255,.12) 1px, transparent 1px); background-size: 22px 22px; }
   .text-balance { text-wrap: balance; }
+
+  /* Mouvements de la scène d'accueil : lents, discrets, jamais clignotants. */
+  .kartaa-flotte { animation: kartaa-flotte 5.5s ease-in-out infinite; }
+  .kartaa-balance { animation: kartaa-balance 7s ease-in-out infinite; }
+  .kartaa-lueur { animation: kartaa-lueur 5.5s ease-in-out infinite; }
+  .kartaa-reflet { animation: kartaa-reflet 6s ease-in-out infinite; }
+}
+
+@keyframes kartaa-flotte {
+  0%, 100% { transform: rotate(-9deg) translateY(0); }
+  50% { transform: rotate(-9deg) translateY(-10px); }
+}
+
+@keyframes kartaa-balance {
+  0%, 100% { transform: rotate(-2deg); }
+  50% { transform: rotate(2deg); }
+}
+
+@keyframes kartaa-lueur {
+  0%, 100% { opacity: .35; }
+  50% { opacity: .75; }
+}
+
+@keyframes kartaa-reflet {
+  0%, 62% { transform: translateX(0); }
+  92%, 100% { transform: translateX(520%); }
+}
+
+/*
+ * Certaines personnes règlent leur système pour réduire les animations —
+ * vertiges, migraines, simple préférence. On ne discute pas ce réglage : tout
+ * s'arrête, et la scène reste lisible, simplement immobile.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .kartaa-flotte,
+  .kartaa-balance,
+  .kartaa-lueur,
+  .kartaa-reflet,
+  .animate-fade-up,
+  .animate-scale-in {
+    animation: none !important;
+  }
+  .kartaa-flotte { transform: rotate(-9deg); }
 }

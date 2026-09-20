@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Badge, Button, ConfirmDialog, Field, Input, Modal, Panel, SectionTitle, Spinner, Tabs, Textarea } from '../../components/ui'
 import { Icon } from '../../components/ui/Icons'
 import { CardArtwork, CardScaler } from '../../components/card/CardArtwork'
+import CarteNfc from './CarteNfc'
 import { useCardAssets } from '../../hooks/useCardAssets'
 import { useAuth } from '../../state/AuthContext'
 import { useToast } from '../../state/ToastContext'
@@ -164,6 +165,8 @@ export default function CardDetailPage() {
           </Link>
         </Panel>
       </div>
+
+      <CarteNfc card={card} url={url} />
 
       <div className="grid gap-5 lg:grid-cols-2">
         {/* Domaine personnalisé et carte physique : les deux dépendent de services
