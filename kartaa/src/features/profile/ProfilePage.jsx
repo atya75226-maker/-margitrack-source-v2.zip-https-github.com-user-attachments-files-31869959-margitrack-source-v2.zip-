@@ -153,7 +153,19 @@ export default function ProfilePage() {
 
       <Panel className="border-rose-100">
         <div className="space-y-3">
-          <Button variant="outline" icon="logout" full onClick={async () => { await signOut(); navigate('/', { replace: true }) }}>
+          {/* Après une déconnexion, on revient à la page d'accueil : c'est de
+              là qu'on se reconnecte ou qu'on crée un compte. L'état dit que la
+              visite est voulue, pour que l'application installée l'affiche
+              elle aussi au lieu d'aller droit à la connexion. */}
+          <Button
+            variant="outline"
+            icon="logout"
+            full
+            onClick={async () => {
+              await signOut()
+              navigate('/', { replace: true, state: { accueil: true, deconnecte: true } })
+            }}
+          >
             Se déconnecter
           </Button>
           <p className="hint text-center">

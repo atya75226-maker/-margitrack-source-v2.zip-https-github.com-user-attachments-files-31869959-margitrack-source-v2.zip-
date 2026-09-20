@@ -18,7 +18,7 @@ export default function AuthShell({ title, subtitle, children, footer }) {
       <div className="relative hidden flex-col justify-between overflow-hidden bg-ink-950 p-12 text-white lg:flex">
         <div className="mesh absolute inset-0 opacity-80" />
         <div className="grain absolute inset-0 opacity-25" />
-        <Link to="/" className="relative">
+        <Link to="/" state={{ accueil: true }} className="relative">
           <Logo tone="light" />
         </Link>
         <div className="relative">
@@ -47,9 +47,21 @@ export default function AuthShell({ title, subtitle, children, footer }) {
 
       <div className="flex flex-col justify-center bg-white px-5 py-10 sm:px-10">
         <div className="mx-auto w-full max-w-md">
-          <Link to="/" className="mb-8 inline-flex lg:hidden">
-            <Logo />
-          </Link>
+          {/* Le chemin du retour, écrit en toutes lettres : depuis l'application
+              installée, le logo seul ne suffisait pas à retrouver l'accueil. */}
+          <div className="mb-8 flex items-center justify-between gap-4">
+            <Link to="/" state={{ accueil: true }} className="inline-flex lg:hidden">
+              <Logo />
+            </Link>
+            <Link
+              to="/"
+              state={{ accueil: true }}
+              className="ml-auto inline-flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-sm font-bold text-ink-500 transition-colors hover:bg-ink-50 hover:text-ink-900"
+            >
+              <Icon name="arrowLeft" size={16} />
+              Retour à l'accueil
+            </Link>
+          </div>
           <h1 className="font-display text-2xl font-extrabold text-ink-900 sm:text-3xl">{title}</h1>
           {subtitle && <p className="mt-2 text-sm leading-relaxed text-ink-500">{subtitle}</p>}
           <InAppBrowserNotice />
