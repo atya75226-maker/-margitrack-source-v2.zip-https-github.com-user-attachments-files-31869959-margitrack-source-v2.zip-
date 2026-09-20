@@ -128,12 +128,16 @@ export function LandingPage({ onStart, onLogin }) {
           }}
         >
           <div className="max-w-6xl mx-auto flex items-center justify-between px-5 sm:px-6 py-3">
+            {/* Sur un téléphone étroit, le nom écrit en toutes lettres pousse
+                le bouton d'inscription hors de l'écran : le logo suffit. */}
             <a href="#top" className="flex items-center gap-2 shrink-0">
               <img src="/logo.svg" alt="Margitrack" className="w-8 h-8 rounded-lg" />
-              <span className="font-semibold font-display" style={{ color: c.ink }}>Margitrack</span>
+              <span className="hidden sm:inline font-semibold font-display" style={{ color: c.ink }}>
+                Margitrack
+              </span>
             </a>
 
-            <nav className="hidden md:flex items-center gap-7 text-sm">
+            <nav className="hidden lg:flex items-center gap-7 text-sm">
               {navLinks.map((l) => (
                 <a key={l.href} href={l.href} style={{ color: c.muted }} className="hover:opacity-80">
                   {l.label}
@@ -145,17 +149,18 @@ export function LandingPage({ onStart, onLogin }) {
               <ThemeToggle c={c} name={c.name} onToggle={toggle} />
               <button
                 onClick={onLogin}
-                className="text-sm font-medium px-2 py-2"
+                className="text-sm font-medium px-2 py-2 whitespace-nowrap"
                 style={{ color: c.muted }}
               >
-                Se connecter
+                <span className="sm:hidden">Connexion</span>
+                <span className="hidden sm:inline">Se connecter</span>
               </button>
               <button
                 onClick={handleStart}
                 className="rounded-full text-sm font-semibold text-white px-4 py-2 whitespace-nowrap"
                 style={{ background: `linear-gradient(135deg, ${c.violet}, ${c.violetDeep})` }}
               >
-                Commencer<span className="hidden sm:inline"> gratuitement</span>
+                Commencer<span className="hidden lg:inline"> gratuitement</span>
               </button>
             </div>
           </div>
