@@ -81,16 +81,16 @@ dépendance à l'application Margitrack.
 
 - **URL après déploiement** : `https://<votre-domaine>/baobab/`
   (c'est cette adresse HTTPS que l'on encode dans un tag NFC ou un QR code).
-- **Modifier la carte** : les plats et les prix sont écrits en clair dans le
-  HTML, section par section (`<!-- ===== ENTRÉES ===== -->`, etc.). Les prix
-  sont en francs CFA ; pour changer de devise, remplacez les `<small>FCFA</small>`
-  et la mention du pied de page.
-- **Photos** : 19 plats affichent de vraies photos sous licence Creative
-  Commons, servies par Wikimedia Commons, avec les crédits en bas de carte.
-  `node scripts/baobab-photos.mjs` les rapatrie dans
-  `public/baobab/photos/` et bascule la page sur les fichiers locaux (plus
-  rapide, sans dépendance extérieure). Pour mettre vos propres visuels, voir
-  `public/baobab/photos/README.md`.
+- **Photos** : les 31 emplacements sont remplis, aucun vide. Les images
+  viennent de Pexels (licence commerciale libre) et de Wikimedia Commons, avec
+  une URL de secours par plat et un repli propre si les deux échouent.
+- **Vérifier les images** : `node scripts/verifier-photos.mjs` teste les 31 URL
+  et dit plat par plat ce qu'un téléphone verra.
+- **Rapatrier les images** : `node scripts/baobab-photos.mjs` télécharge tout
+  dans `public/baobab/photos/` et bascule la page sur les fichiers locaux.
+- **Modifier la carte** : plats et prix sont en clair dans le HTML, section par
+  section. Les prix sont en francs CFA ; pour changer de devise, remplacez les
+  `<small>FCFA</small>` et la mention du pied de page.
 - **Coordonnées** : adresse, horaires et numéro de téléphone (`tel:`) se
   trouvent dans l'en-tête et le pied de page du fichier.
 
