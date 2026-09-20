@@ -1,0 +1,870 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Le Baobab — Carte</title>
+<meta name="description" content="La carte du Baobab : cuisine d'Afrique de l'Ouest, feu de bois et produits du marché. Entrées, plats, accompagnements, boissons et desserts.">
+<meta name="theme-color" content="#131B33">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Le Baobab — Carte">
+<meta property="og:description" content="Cuisine d'Afrique de l'Ouest. Entrées, plats, accompagnements, boissons et desserts.">
+<meta property="og:locale" content="fr_FR">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Marcellus&family=Karla:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  /* ---- Palette : indigo teinturier, ivoire, or de mil, rouge bissap ---- */
+  --nuit:#131B33;
+  --nuit-haut:#0E1526;
+  --surface:#1B2440;
+  --surface-2:#222C4C;
+  --ligne:#2E3A5E;
+  --ivoire:#F3ECDC;
+  --ivoire-doux:#CFC6B4;
+  --sourdine:#8E8878;
+  --or:#E0A63C;
+  --or-clair:#F0C878;
+  --bissap:#C4543B;
+  --feuille:#7E9A60;
+
+  --display:"Marcellus", "Hoefler Text", Georgia, "Times New Roman", serif;
+  --ui:"Karla", "Helvetica Neue", Arial, sans-serif;
+
+  --gouttiere:20px;
+  --max:560px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  background:var(--nuit);
+  color:var(--ivoire);
+  font:400 16px/1.5 var(--ui);
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+img{max-width:100%}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--or);outline-offset:3px;border-radius:2px}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+
+.enveloppe{max-width:var(--max);margin:0 auto;padding-inline:var(--gouttiere)}
+
+/* ---------- Barre supérieure ---------- */
+.barre{
+  position:sticky;
+  top:env(safe-area-inset-top, 0px);
+  z-index:20;
+  background:rgba(14,21,38,.92);
+  backdrop-filter:saturate(140%) blur(8px);
+  border-bottom:1px solid var(--ligne);
+}
+.barre__titre{
+  display:flex;align-items:center;gap:9px;
+  padding:10px var(--gouttiere) 8px;
+  max-width:var(--max);margin:0 auto;
+}
+.barre__titre svg{width:20px;height:20px;flex:0 0 20px}
+.barre__titre span{
+  font:600 12px/1 var(--ui);letter-spacing:.22em;text-transform:uppercase;color:var(--ivoire-doux);
+}
+.nav{
+  display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;
+  padding:0 var(--gouttiere) 10px;
+  max-width:var(--max);margin:0 auto;
+}
+.nav::-webkit-scrollbar{display:none}
+.nav a{
+  flex:0 0 auto;
+  padding:7px 12px;border:1px solid var(--ligne);border-radius:999px;
+  font:600 11px/1 var(--ui);letter-spacing:.08em;text-transform:uppercase;
+  color:var(--ivoire-doux);text-decoration:none;white-space:nowrap;
+  transition:color .18s ease, border-color .18s ease, background-color .18s ease;
+}
+.nav a:hover{color:var(--ivoire)}
+.nav a[aria-current="true"]{color:var(--nuit);background:var(--or);border-color:var(--or)}
+
+/* ---------- Ouverture ---------- */
+.ouverture{padding-block:38px 26px;text-align:center}
+.embleme{width:78px;height:78px;margin:0 auto 14px;display:block}
+.enseigne{
+  margin:0;
+  font:400 clamp(38px,13.5vw,58px)/0.98 var(--display);
+  letter-spacing:.055em;
+  text-wrap:balance;
+}
+.enseigne em{display:block;font-style:normal;color:var(--or)}
+.devise{
+  margin:14px auto 0;max-width:34ch;
+  font:600 11px/1.6 var(--ui);letter-spacing:.2em;text-transform:uppercase;color:var(--or-clair);
+}
+.filet{
+  width:46px;height:1px;margin:18px auto;background:var(--or);opacity:.55;border:0;
+}
+.presentation{
+  margin:0 auto;max-width:42ch;
+  color:var(--ivoire-doux);font-size:15px;line-height:1.72;
+}
+.horaires{
+  margin:20px auto 0;display:inline-flex;flex-wrap:wrap;justify-content:center;gap:6px 10px;
+  font:500 12.5px/1.4 var(--ui);color:var(--sourdine);
+}
+.horaires b{color:var(--ivoire-doux);font-weight:600}
+
+/* ---------- Bandeau photos ---------- */
+.bandeau{
+  display:grid;grid-template-columns:1.9fr 1fr;grid-template-rows:auto auto;
+  gap:6px;margin-top:28px;
+}
+.bandeau .cliche{aspect-ratio:1}
+.bandeau .cliche:first-child{grid-row:span 2;aspect-ratio:auto}
+
+/* ---------- Emplacements photo ---------- */
+.cliche{
+  position:relative;overflow:hidden;border-radius:3px;
+  background:var(--surface);border:1px solid var(--ligne);
+}
+.cliche::after{
+  content:"";position:absolute;inset:0;
+  background:repeating-linear-gradient(135deg,transparent 0 8px,rgba(224,166,60,.06) 8px 9px);
+}
+.cliche::before{
+  content:attr(data-libelle);position:absolute;inset:0;
+  display:flex;align-items:center;justify-content:center;text-align:center;padding:6px;
+  font:600 8.5px/1.4 var(--ui);letter-spacing:.18em;text-transform:uppercase;color:var(--sourdine);
+}
+.cliche img{position:relative;z-index:2;width:100%;height:100%;object-fit:cover;display:block}
+
+/* ---------- Sections ---------- */
+.section{padding-block:34px 4px;scroll-margin-top:110px}
+.section__entete{display:flex;align-items:baseline;gap:12px;margin-bottom:4px}
+.section__titre{
+  margin:0;font:400 27px/1.15 var(--display);letter-spacing:.02em;color:var(--ivoire);
+}
+.section__trait{flex:1;height:1px;background:var(--ligne)}
+.section__compte{
+  font:600 10.5px/1 var(--ui);letter-spacing:.16em;text-transform:uppercase;color:var(--sourdine);
+}
+.section__note{
+  margin:8px 0 22px;font-size:13.5px;line-height:1.6;color:var(--sourdine);max-width:40ch;
+}
+
+/* ---------- Plats ---------- */
+.carte{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:20px}
+.plat{display:grid;grid-template-columns:78px 1fr;gap:14px;align-items:start}
+.plat .cliche{width:78px;height:78px}
+.plat__tete{display:flex;align-items:baseline;gap:8px}
+.plat__nom{
+  margin:0;font:500 16px/1.3 var(--ui);color:var(--ivoire);
+}
+.plat__pointilles{
+  flex:1;min-width:14px;height:1px;
+  border-bottom:1px dotted var(--ligne);
+  transform:translateY(-3px);
+}
+.plat__prix{
+  flex:0 0 auto;
+  font:600 15px/1.3 var(--ui);color:var(--or);
+  font-variant-numeric:tabular-nums;white-space:nowrap;
+}
+.plat__prix small{font-size:10.5px;font-weight:600;letter-spacing:.06em;color:var(--or-clair);opacity:.8}
+.plat__desc{margin:5px 0 0;font-size:13.5px;line-height:1.6;color:var(--ivoire-doux)}
+.etiquettes{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.etiquette{
+  display:inline-block;padding:3px 8px;border-radius:2px;border:1px solid currentColor;
+  font:600 9.5px/1.25 var(--ui);letter-spacing:.13em;text-transform:uppercase;
+}
+.etiquette--signature{color:var(--or)}
+.etiquette--vege{color:var(--feuille)}
+.etiquette--piment{color:var(--bissap)}
+
+/* ---------- Plat mis en avant ---------- */
+.vedette{
+  margin:26px 0 6px;border:1px solid var(--ligne);border-radius:4px;overflow:hidden;background:var(--surface);
+}
+.vedette .cliche{border:0;border-radius:0;aspect-ratio:16/10;display:block}
+.vedette__corps{padding:16px 16px 18px}
+.vedette__sus{
+  font:600 9.5px/1 var(--ui);letter-spacing:.2em;text-transform:uppercase;color:var(--or);
+}
+.vedette__nom{margin:9px 0 0;font:400 23px/1.2 var(--display);color:var(--ivoire)}
+.vedette__desc{margin:8px 0 0;font-size:13.5px;line-height:1.65;color:var(--ivoire-doux)}
+.vedette__prix{
+  margin-top:12px;font:600 16px/1 var(--ui);color:var(--or);font-variant-numeric:tabular-nums;
+}
+
+/* ---------- Pied ---------- */
+.pied{margin-top:46px;border-top:1px solid var(--ligne);padding-block:28px 40px;text-align:center}
+.pied__nom{font:400 22px/1 var(--display);letter-spacing:.09em;color:var(--ivoire)}
+.pied__ligne{margin:12px 0 0;font-size:13.5px;line-height:1.75;color:var(--ivoire-doux)}
+.pied__tel{
+  display:inline-block;margin-top:16px;padding:11px 22px;
+  border:1px solid var(--or);border-radius:999px;color:var(--or);text-decoration:none;
+  font:600 12px/1 var(--ui);letter-spacing:.14em;text-transform:uppercase;
+}
+.pied__tel:hover{background:var(--or);color:var(--nuit)}
+.mentions{
+  margin:22px auto 0;max-width:38ch;
+  font-size:11.5px;line-height:1.7;color:var(--sourdine);
+}
+.mentions span{display:block}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     LE BAOBAB — carte numérique (page unique, sans dépendance)
+     Pour ajouter une photo, remplacez le commentaire d'un bloc
+     .cliche par :   <img src="photos/mon-plat.jpg" alt="Nom du plat">
+     Les emplacements vides restent élégants tant qu'il n'y a pas
+     de photo : rien ne casse la mise en page.
+     ============================================================ -->
+
+<header class="barre">
+  <div class="barre__titre">
+    <svg viewBox="0 0 64 64" aria-hidden="true" fill="none">
+      <circle cx="32" cy="32" r="29" stroke="#E0A63C" stroke-width="1.6" opacity=".55"/>
+      <path d="M25.5 49c0-8 2.5-12 2.5-19h8c0 7 2.5 11 2.5 19" stroke="#E0A63C" stroke-width="2.4" stroke-linecap="round"/>
+      <path d="M32 30V17M32 28c-1-5-6-8-12-9M32 28c1-5 6-8 12-9M32 21c-.5-3-4-5-8-5.5M32 21c.5-3 4-5 8-5.5" stroke="#E0A63C" stroke-width="2.2" stroke-linecap="round"/>
+      <path d="M17 49h30" stroke="#E0A63C" stroke-width="1.6" stroke-linecap="round" opacity=".5"/>
+    </svg>
+    <span>Le Baobab</span>
+  </div>
+  <nav class="nav" aria-label="Catégories de la carte">
+    <a href="#entrees">Entrées</a>
+    <a href="#plats">Plats</a>
+    <a href="#accompagnements">Accompagnements</a>
+    <a href="#boissons">Boissons</a>
+    <a href="#desserts">Desserts</a>
+  </nav>
+</header>
+
+<main class="enveloppe">
+
+  <section class="ouverture">
+    <svg class="embleme" viewBox="0 0 64 64" aria-hidden="true" fill="none">
+      <circle cx="32" cy="32" r="29" stroke="#E0A63C" stroke-width="1" opacity=".45"/>
+      <path d="M25.5 49c0-8 2.5-12 2.5-19h8c0 7 2.5 11 2.5 19" stroke="#F3ECDC" stroke-width="2.2" stroke-linecap="round"/>
+      <path d="M32 30V17M32 28c-1-5-6-8-12-9M32 28c1-5 6-8 12-9M32 21c-.5-3-4-5-8-5.5M32 21c.5-3 4-5 8-5.5" stroke="#F3ECDC" stroke-width="2" stroke-linecap="round"/>
+      <path d="M17 49h30" stroke="#E0A63C" stroke-width="1.2" stroke-linecap="round" opacity=".55"/>
+    </svg>
+    <h1 class="enseigne">LE <em>BAOBAB</em></h1>
+    <p class="devise">Cuisine d'Afrique de l'Ouest</p>
+    <hr class="filet">
+    <p class="presentation">
+      Sous le grand arbre, on discute longtemps et on mange encore plus longtemps.
+      Ici, le poisson arrive du marché le matin, le riz mijote au feu de bois et
+      les recettes viennent de nos familles — de Dakar à Douala. Rien de pressé,
+      tout de frais.
+    </p>
+    <p class="horaires">
+      <b>Mardi au dimanche</b><span>·</span><span>12h – 15h</span><span>·</span><span>19h – 23h</span>
+    </p>
+
+    <div class="bandeau">
+      <div class="cliche" data-libelle="Photo · salle">
+        <!-- <img src="photos/salle.jpg" alt="La salle du Baobab"> -->
+      </div>
+      <div class="cliche" data-libelle="Photo · plat">
+        <!-- <img src="photos/plat.jpg" alt="Plat du jour"> -->
+      </div>
+      <div class="cliche" data-libelle="Photo · grill">
+        <!-- <img src="photos/grill.jpg" alt="Le grill au feu de bois"> -->
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== ENTRÉES ===================== -->
+  <section class="section" id="entrees">
+    <div class="section__entete">
+      <h2 class="section__titre">Entrées</h2>
+      <span class="section__trait"></span>
+      <span class="section__compte">5</span>
+    </div>
+    <p class="section__note">À partager au centre de la table, comme à la maison.</p>
+
+    <ul class="carte">
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <!-- <img src="photos/accras.jpg" alt="Accras de morue"> -->
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Accras de morue</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">2 000 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Six beignets dorés, morue effilochée, sauce tomate pimentée à part.</p>
+          <div class="etiquettes"><span class="etiquette etiquette--piment">Piquant</span></div>
+        </div>
+      </li>
+
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <!-- <img src="photos/fataya.jpg" alt="Fataya au thon"> -->
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Fataya au thon</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">1 500 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Chaussons frits minute, thon braisé, oignons confits au citron.</p>
+        </div>
+      </li>
+
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <!-- <img src="photos/salade-avocat.jpg" alt="Salade d'avocat et mangue verte"> -->
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Avocat &amp; mangue verte</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">2 500 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Avocat mûr, mangue verte râpée, gingembre frais, huile de sésame.</p>
+          <div class="etiquettes"><span class="etiquette etiquette--vege">Végétarien</span></div>
+        </div>
+      </li>
+
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <!-- <img src="photos/veloute-arachide.jpg" alt="Velouté d'arachide"> -->
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Velouté d'arachide</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">2 200 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Pâte d'arachide et patate douce, lait de coco, arachides torréfiées.</p>
+          <div class="etiquettes"><span class="etiquette etiquette--vege">Végétarien</span></div>
+        </div>
+      </li>
+
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <!-- <img src="photos/dibi.jpg" alt="Brochettes de dibi"> -->
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Brochettes de dibi</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">3 000 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Agneau grillé au charbon, moutarde d'oignons, pain croustillant.</p>
+        </div>
+      </li>
+    </ul>
+  </section>
+
+  <!-- ===================== PLATS PRINCIPAUX ===================== -->
+  <section class="section" id="plats">
+    <div class="section__entete">
+      <h2 class="section__titre">Plats principaux</h2>
+      <span class="section__trait"></span>
+      <span class="section__compte">7</span>
+    </div>
+    <p class="section__note">Servis avec leur accompagnement traditionnel. Comptez 20 minutes : tout est cuisiné à la commande.</p>
+
+    <article class="vedette">
+      <div class="cliche" data-libelle="Photo du plat signature · format paysage">
+        <!-- <img src="photos/thieboudiene.jpg" alt="Thiéboudiène rouge"> -->
+      </div>
+      <div class="vedette__corps">
+        <p class="vedette__sus">Le plat de la maison</p>
+        <h3 class="vedette__nom">Thiéboudiène rouge</h3>
+        <p class="vedette__desc">
+          Riz cassé cuit dans le bouillon de tomate, thiof farci au persil et à l'ail,
+          manioc, carotte, chou et aubergine amère. Le xooñ — le riz croustillant du
+          fond de la marmite — est servi à part.
+        </p>
+        <p class="vedette__prix">5 500 FCFA</p>
+      </div>
+    </article>
+
+    <ul class="carte" style="margin-top:26px">
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <!-- <img src="photos/yassa.jpg" alt="Yassa poulet"> -->
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Yassa poulet</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">4 500 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Poulet mariné au citron vert, oignons fondus, olives, riz blanc parfumé.</p>
+        </div>
+      </li>
+
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <!-- <img src="photos/mafe.jpg" alt="Mafé bœuf"> -->
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Mafé bœuf</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">5 000 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Sauce d'arachide mijotée trois heures, gîte de bœuf, patate douce et chou.</p>
+        </div>
+      </li>
+
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <!-- <img src="photos/ndole.jpg" alt="Ndolè aux crevettes"> -->
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Ndolè aux crevettes</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">6 500 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Feuilles de ndolè, pâte d'arachide, crevettes sauvages, miondo ou plantain.</p>
+          <div class="etiquettes"><span class="etiquette etiquette--signature">Signature</span></div>
+        </div>
+      </li>
+
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <!-- <img src="photos/poulet-dg.jpg" alt="Poulet DG"> -->
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Poulet DG</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">6 000 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Poulet fermier sauté, plantains mûrs, haricots verts, poivrons et céleri.</p>
+        </div>
+      </li>
+
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <!-- <img src="photos/poisson-braise.jpg" alt="Poisson braisé entier"> -->
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Poisson braisé entier</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">6 500 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Dorade du jour au feu de bois, sauce piment-gingembre, attiéké et oignons.</p>
+          <div class="etiquettes">
+            <span class="etiquette etiquette--signature">Signature</span>
+            <span class="etiquette etiquette--piment">Piquant</span>
+          </div>
+        </div>
+      </li>
+
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <!-- <img src="photos/kedjenou.jpg" alt="Kedjenou de poulet"> -->
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Kedjenou de poulet</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">5 000 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Étuvé en canari scellé, sans eau ajoutée : tomate, aubergine, piment vert.</p>
+        </div>
+      </li>
+
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <!-- <img src="photos/soupe-kandja.jpg" alt="Soupe kandja"> -->
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Soupe kandja</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">4 800 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Gombo frais pilé, poisson fumé, huile de palme rouge, riz blanc.</p>
+        </div>
+      </li>
+    </ul>
+  </section>
+
+  <!-- ===================== ACCOMPAGNEMENTS ===================== -->
+  <section class="section" id="accompagnements">
+    <div class="section__entete">
+      <h2 class="section__titre">Accompagnements</h2>
+      <span class="section__trait"></span>
+      <span class="section__compte">6</span>
+    </div>
+    <p class="section__note">Une portion suffit pour deux personnes.</p>
+
+    <ul class="carte">
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <!-- <img src="photos/attieke.jpg" alt="Attiéké"> -->
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Attiéké</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">1 000 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Semoule de manioc fermentée, légèrement acidulée.</p>
+          <div class="etiquettes"><span class="etiquette etiquette--vege">Végétarien</span></div>
+        </div>
+      </li>
+
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <!-- <img src="photos/alloco.jpg" alt="Alloco"> -->
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Alloco</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">1 500 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Bananes plantains bien mûres frites à l'huile de palme, sel de mer.</p>
+          <div class="etiquettes"><span class="etiquette etiquette--vege">Végétarien</span></div>
+        </div>
+      </li>
+
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <!-- <img src="photos/foutou.jpg" alt="Foutou banane"> -->
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Foutou banane</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">1 800 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Plantain et igname pilés au mortier, texture souple.</p>
+          <div class="etiquettes"><span class="etiquette etiquette--vege">Végétarien</span></div>
+        </div>
+      </li>
+
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <!-- <img src="photos/riz.jpg" alt="Riz blanc parfumé"> -->
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Riz blanc parfumé</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">1 000 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Riz long grain cuit à la vapeur, feuille de laurier.</p>
+          <div class="etiquettes"><span class="etiquette etiquette--vege">Végétarien</span></div>
+        </div>
+      </li>
+
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <!-- <img src="photos/frites.jpg" alt="Frites maison"> -->
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Frites maison</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">1 500 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Pommes de terre fraîches coupées au couteau, double cuisson.</p>
+          <div class="etiquettes"><span class="etiquette etiquette--vege">Végétarien</span></div>
+        </div>
+      </li>
+
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <!-- <img src="photos/salade-oignons.jpg" alt="Salade d'oignons"> -->
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Salade d'oignons au citron</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">1 200 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Oignons marinés, tomate, persil, un trait d'huile.</p>
+          <div class="etiquettes"><span class="etiquette etiquette--vege">Végétarien</span></div>
+        </div>
+      </li>
+    </ul>
+  </section>
+
+  <!-- ===================== BOISSONS ===================== -->
+  <section class="section" id="boissons">
+    <div class="section__entete">
+      <h2 class="section__titre">Boissons</h2>
+      <span class="section__trait"></span>
+      <span class="section__compte">9</span>
+    </div>
+    <p class="section__note">Les jus sont pressés et infusés chaque matin, sans sirop.</p>
+
+    <article class="vedette">
+      <div class="cliche" data-libelle="Photo des jus maison · format paysage">
+        <!-- <img src="photos/jus-bouye.jpg" alt="Jus de bouye"> -->
+      </div>
+      <div class="vedette__corps">
+        <p class="vedette__sus">Le jus de l'arbre</p>
+        <h3 class="vedette__nom">Jus de bouye</h3>
+        <p class="vedette__desc">
+          Le fruit du baobab, trempé une nuit puis fouetté au lait et à la vanille.
+          Crémeux, acidulé, très légèrement sucré — celui qui donne son nom à la maison.
+        </p>
+        <p class="vedette__prix">1 200 FCFA</p>
+      </div>
+    </article>
+
+    <ul class="carte" style="margin-top:26px">
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <!-- <img src="photos/bissap.jpg" alt="Bissap"> -->
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Bissap</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">1 000 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Infusion glacée d'hibiscus, menthe fraîche, fleur d'oranger.</p>
+        </div>
+      </li>
+
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <!-- <img src="photos/gingembre.jpg" alt="Jus de gingembre"> -->
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Gingembre</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">1 000 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Racine fraîche pressée, citron vert. Servi très frais.</p>
+          <div class="etiquettes"><span class="etiquette etiquette--piment">Relevé</span></div>
+        </div>
+      </li>
+
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <!-- <img src="photos/tamarin.jpg" alt="Jus de tamarin"> -->
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Tamarin</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">1 000 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Pulpe de tamarin, sucre de canne, une pincée de sel.</p>
+        </div>
+      </li>
+
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <!-- <img src="photos/ataya.jpg" alt="Thé ataya"> -->
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Thé ataya</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">700 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Thé vert à la menthe, mousse épaisse. Premier ou deuxième verre.</p>
+        </div>
+      </li>
+
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <!-- <img src="photos/cafe-touba.jpg" alt="Café Touba"> -->
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Café Touba</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">800 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Café torréfié au poivre de Selim, filtré à l'ancienne.</p>
+        </div>
+      </li>
+
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <!-- <img src="photos/sodas.jpg" alt="Sodas"> -->
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Sodas</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">800 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Bouteille 33 cl, servie glacée.</p>
+        </div>
+      </li>
+
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <!-- <img src="photos/eau.jpg" alt="Eau minérale"> -->
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Eau minérale</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">500 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">50 cl, plate ou gazeuse.</p>
+        </div>
+      </li>
+
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <!-- <img src="photos/biere.jpg" alt="Bière locale"> -->
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Bière locale</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">1 500 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">33 cl, blonde légère. Demandez la sélection du jour.</p>
+        </div>
+      </li>
+    </ul>
+  </section>
+
+  <!-- ===================== DESSERTS ===================== -->
+  <section class="section" id="desserts">
+    <div class="section__entete">
+      <h2 class="section__titre">Desserts</h2>
+      <span class="section__trait"></span>
+      <span class="section__compte">5</span>
+    </div>
+    <p class="section__note">Préparés le matin même, en quantité limitée.</p>
+
+    <ul class="carte">
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <!-- <img src="photos/thiakry.jpg" alt="Thiakry"> -->
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Thiakry</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">1 500 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Couscous de mil, lait caillé, vanille et muscade.</p>
+          <div class="etiquettes"><span class="etiquette etiquette--vege">Végétarien</span></div>
+        </div>
+      </li>
+
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <!-- <img src="photos/ngalakh.jpg" alt="Ngalakh"> -->
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Ngalakh</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">2 000 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Pâte d'arachide, pain de singe et mil. Servi le week-end uniquement.</p>
+          <div class="etiquettes"><span class="etiquette etiquette--signature">Signature</span></div>
+        </div>
+      </li>
+
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <!-- <img src="photos/beignets-banane.jpg" alt="Beignets de banane"> -->
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Beignets de banane</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">1 500 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Servis tièdes, miel de brousse et zestes de citron.</p>
+          <div class="etiquettes"><span class="etiquette etiquette--vege">Végétarien</span></div>
+        </div>
+      </li>
+
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <!-- <img src="photos/glace-coco.jpg" alt="Glace coco-baobab"> -->
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Glace coco-baobab</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">2 000 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Deux boules maison, copeaux de coco grillés.</p>
+          <div class="etiquettes"><span class="etiquette etiquette--vege">Végétarien</span></div>
+        </div>
+      </li>
+
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <!-- <img src="photos/salade-fruits.jpg" alt="Salade de fruits"> -->
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Salade de fruits du marché</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">1 800 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Mangue, papaye, ananas, pastèque — selon l'arrivage du jour.</p>
+          <div class="etiquettes"><span class="etiquette etiquette--vege">Végétarien</span></div>
+        </div>
+      </li>
+    </ul>
+  </section>
+
+  <footer class="pied">
+    <p class="pied__nom">LE BAOBAB</p>
+    <p class="pied__ligne">
+      12, rue des Manguiers · Quartier Almadies<br>
+      Service de 12h à 15h et de 19h à 23h, du mardi au dimanche
+    </p>
+    <a class="pied__tel" href="tel:+221000000000">Réserver une table</a>
+    <p class="mentions">
+      <span>Prix nets en francs CFA, service compris.</span>
+      <span>La carte évolue selon le marché et la saison.</span>
+      <span>Une question sur un allergène ? Demandez-nous, nous connaissons chaque recette.</span>
+    </p>
+  </footer>
+</main>
+
+<script>
+/* Surligne la catégorie en cours de lecture dans la barre du haut.
+   Sans JavaScript, les liens fonctionnent toujours comme des ancres. */
+(function () {
+  var liens = Array.prototype.slice.call(document.querySelectorAll('.nav a'));
+  var sections = liens
+    .map(function (a) { return document.querySelector(a.getAttribute('href')); })
+    .filter(Boolean);
+  if (!sections.length || !('IntersectionObserver' in window)) return;
+
+  var visibles = new Set();
+  function rafraichir() {
+    var vues = sections.filter(function (s) { return visibles.has(s.id); });
+    var actif = vues[vues.length - 1];
+    liens.forEach(function (a) {
+      var ok = actif && a.getAttribute('href') === '#' + actif.id;
+      if (ok) { a.setAttribute('aria-current', 'true'); }
+      else { a.removeAttribute('aria-current'); }
+    });
+  }
+  var observateur = new IntersectionObserver(function (entrees) {
+    entrees.forEach(function (e) {
+      if (e.isIntersecting) { visibles.add(e.target.id); }
+      else { visibles.delete(e.target.id); }
+    });
+    rafraichir();
+  }, { rootMargin: '-120px 0px -65% 0px' });
+  sections.forEach(function (s) { observateur.observe(s); });
+})();
+</script>
+</body>
+</html>

@@ -72,3 +72,25 @@ sinon les liens de connexion et de réinitialisation de mot de passe échoueront
 `.github/workflows/ci.yml` installe les dépendances et exécute `npm run build`
 à chaque push et chaque pull request, pour détecter une erreur de build avant
 le déploiement.
+
+## Page de menu « Le Baobab » (démonstration)
+
+`public/baobab/index.html` est une carte numérique autonome pour un restaurant
+fictif : un seul fichier HTML, sans build, sans compte, sans paiement et sans
+dépendance à l'application Margitrack.
+
+- **URL après déploiement** : `https://<votre-domaine>/baobab/`
+  (c'est cette adresse HTTPS que l'on encode dans un tag NFC ou un QR code).
+- **Modifier la carte** : les plats et les prix sont écrits en clair dans le
+  HTML, section par section (`<!-- ===== ENTRÉES ===== -->`, etc.). Les prix
+  sont en francs CFA ; pour changer de devise, remplacez les `<small>FCFA</small>`
+  et la mention du pied de page.
+- **Ajouter des photos** : déposez les images dans `public/baobab/photos/` et
+  décommentez la balise `<img>` de l'emplacement concerné — voir
+  `public/baobab/photos/README.md`.
+- **Coordonnées** : adresse, horaires et numéro de téléphone (`tel:`) se
+  trouvent dans l'en-tête et le pied de page du fichier.
+
+Aucune donnée n'est collectée et la page ne fait aucun appel réseau, hormis le
+chargement des deux polices Google Fonts (avec repli système si elles sont
+indisponibles).
