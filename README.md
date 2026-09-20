@@ -85,12 +85,15 @@ dépendance à l'application Margitrack.
   HTML, section par section (`<!-- ===== ENTRÉES ===== -->`, etc.). Les prix
   sont en francs CFA ; pour changer de devise, remplacez les `<small>FCFA</small>`
   et la mention du pied de page.
-- **Ajouter des photos** : déposez les images dans `public/baobab/photos/` et
-  décommentez la balise `<img>` de l'emplacement concerné — voir
+- **Photos** : 19 plats affichent de vraies photos sous licence Creative
+  Commons, servies par Wikimedia Commons, avec les crédits en bas de carte.
+  `node scripts/baobab-photos.mjs` les rapatrie dans
+  `public/baobab/photos/` et bascule la page sur les fichiers locaux (plus
+  rapide, sans dépendance extérieure). Pour mettre vos propres visuels, voir
   `public/baobab/photos/README.md`.
 - **Coordonnées** : adresse, horaires et numéro de téléphone (`tel:`) se
   trouvent dans l'en-tête et le pied de page du fichier.
 
-Aucune donnée n'est collectée et la page ne fait aucun appel réseau, hormis le
-chargement des deux polices Google Fonts (avec repli système si elles sont
-indisponibles).
+Aucune donnée n'est collectée et aucun compte n'est nécessaire. Les seuls
+appels réseau sont les deux polices Google Fonts (repli système si elles sont
+indisponibles) et les photos, tant qu'elles ne sont pas rapatriées en local.

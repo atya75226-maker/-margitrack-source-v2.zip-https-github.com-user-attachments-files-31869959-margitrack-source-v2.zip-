@@ -1,0 +1,202 @@
+[
+  {
+    "local": "photos/salle.jpg",
+    "fichier": "African Dishes.jpg",
+    "largeur": 700,
+    "alt": "Assortiment de plats d'Afrique de l'Ouest",
+    "page": "https://commons.wikimedia.org/wiki/File:African_Dishes.jpg",
+    "url": "https://commons.wikimedia.org/wiki/Special:FilePath/African_Dishes.jpg?width=700"
+  },
+  {
+    "local": "photos/plat.jpg",
+    "fichier": "Poulet braisé attieké.JPG",
+    "largeur": 350,
+    "alt": "Poulet braisé servi avec de l'attiéké",
+    "page": "https://commons.wikimedia.org/wiki/File:Poulet_brais%C3%A9_attiek%C3%A9.JPG",
+    "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Poulet_brais%C3%A9_attiek%C3%A9.JPG?width=350"
+  },
+  {
+    "local": "photos/grill.jpg",
+    "fichier": "Le Poisson silure braisé au barbecue.jpg",
+    "largeur": 350,
+    "alt": "Poisson braisé au barbecue",
+    "page": "https://commons.wikimedia.org/wiki/File:Le_Poisson_silure_brais%C3%A9_au_barbecue.jpg",
+    "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Le_Poisson_silure_brais%C3%A9_au_barbecue.jpg?width=350"
+  },
+  {
+    "local": "photos/thieboudiene.jpg",
+    "fichier": "Thiebou Djeun.jpg",
+    "largeur": 900,
+    "alt": "Thiéboudiène, riz au poisson sénégalais",
+    "page": "https://commons.wikimedia.org/wiki/File:Thiebou_Djeun.jpg",
+    "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Thiebou_Djeun.jpg?width=900"
+  },
+  {
+    "local": "photos/yassa.jpg",
+    "fichier": "Poulet Yassa.JPG",
+    "largeur": 400,
+    "alt": "Poulet yassa aux oignons et au citron",
+    "page": "https://commons.wikimedia.org/wiki/File:Poulet_Yassa.JPG",
+    "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Poulet_Yassa.JPG?width=400"
+  },
+  {
+    "local": "photos/mafe.jpg",
+    "fichier": "Mafé Sénégalais.jpg",
+    "largeur": 400,
+    "alt": "Mafé sénégalais à la sauce d'arachide",
+    "page": "https://commons.wikimedia.org/wiki/File:Maf%C3%A9_S%C3%A9n%C3%A9galais.jpg",
+    "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Maf%C3%A9_S%C3%A9n%C3%A9galais.jpg?width=400"
+  },
+  {
+    "local": "photos/ndole.jpg",
+    "fichier": "Ndolé camerounais.JPG",
+    "largeur": 400,
+    "alt": "Ndolé camerounais",
+    "page": "https://commons.wikimedia.org/wiki/File:Ndol%C3%A9_camerounais.JPG",
+    "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ndol%C3%A9_camerounais.JPG?width=400"
+  },
+  {
+    "local": "photos/poulet-dg.jpg",
+    "fichier": "Poulet DG.JPG",
+    "largeur": 400,
+    "alt": "Poulet DG aux plantains",
+    "page": "https://commons.wikimedia.org/wiki/File:Poulet_DG.JPG",
+    "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Poulet_DG.JPG?width=400"
+  },
+  {
+    "local": "photos/poisson-braise.jpg",
+    "fichier": "Poisson braisé à la façon du Cameroun, Kribi.JPG",
+    "largeur": 400,
+    "alt": "Poisson braisé entier",
+    "page": "https://commons.wikimedia.org/wiki/File:Poisson_brais%C3%A9_%C3%A0_la_fa%C3%A7on_du_Cameroun%2C_Kribi.JPG",
+    "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Poisson_brais%C3%A9_%C3%A0_la_fa%C3%A7on_du_Cameroun%2C_Kribi.JPG?width=400"
+  },
+  {
+    "local": "photos/kedjenou.jpg",
+    "fichier": "Kedjenou poulet sauce claire.JPG",
+    "largeur": 400,
+    "alt": "Kedjenou de poulet en sauce claire",
+    "page": "https://commons.wikimedia.org/wiki/File:Kedjenou_poulet_sauce_claire.JPG",
+    "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Kedjenou_poulet_sauce_claire.JPG?width=400"
+  },
+  {
+    "local": "photos/soupe-kandja.jpg",
+    "fichier": "Plat sénégalais soupe kandja.jpg",
+    "largeur": 400,
+    "alt": "Soupe kandja au gombo",
+    "page": "https://commons.wikimedia.org/wiki/File:Plat_s%C3%A9n%C3%A9galais_soupe_kandja.jpg",
+    "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Plat_s%C3%A9n%C3%A9galais_soupe_kandja.jpg?width=400"
+  },
+  {
+    "local": "photos/attieke.jpg",
+    "fichier": "Attieke.JPG",
+    "largeur": 400,
+    "alt": "Attiéké, semoule de manioc",
+    "page": "https://commons.wikimedia.org/wiki/File:Attieke.JPG",
+    "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Attieke.JPG?width=400"
+  },
+  {
+    "local": "photos/alloco.jpg",
+    "fichier": "Abidjan Alloco.JPG",
+    "largeur": 400,
+    "alt": "Alloco, bananes plantains frites",
+    "page": "https://commons.wikimedia.org/wiki/File:Abidjan_Alloco.JPG",
+    "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Abidjan_Alloco.JPG?width=400"
+  },
+  {
+    "local": "photos/foutou.jpg",
+    "fichier": "Foutou bananes.jpg",
+    "largeur": 400,
+    "alt": "Foutou banane",
+    "page": "https://commons.wikimedia.org/wiki/File:Foutou_bananes.jpg",
+    "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Foutou_bananes.jpg?width=400"
+  },
+  {
+    "local": "photos/jus-bouye.jpg",
+    "fichier": "Jus de bouye, gingembre et bissap 04.jpg",
+    "largeur": 900,
+    "alt": "Jus de bouye, de gingembre et de bissap",
+    "page": "https://commons.wikimedia.org/wiki/File:Jus_de_bouye%2C_gingembre_et_bissap_04.jpg",
+    "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Jus_de_bouye%2C_gingembre_et_bissap_04.jpg?width=900"
+  },
+  {
+    "local": "photos/bissap.jpg",
+    "fichier": "Zobo drink (hibiscus juice) 01.png",
+    "largeur": 400,
+    "alt": "Bissap, infusion glacée d'hibiscus",
+    "page": "https://commons.wikimedia.org/wiki/File:Zobo_drink_%28hibiscus_juice%29_01.png",
+    "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Zobo_drink_%28hibiscus_juice%29_01.png?width=400"
+  },
+  {
+    "local": "photos/ataya.jpg",
+    "fichier": "\"Atay\" tea ceremony.jpg",
+    "largeur": 400,
+    "alt": "Préparation du thé ataya",
+    "page": "https://commons.wikimedia.org/wiki/File:%22Atay%22_tea_ceremony.jpg",
+    "url": "https://commons.wikimedia.org/wiki/Special:FilePath/%22Atay%22_tea_ceremony.jpg?width=400"
+  },
+  {
+    "local": "photos/thiakry.jpg",
+    "fichier": "Couscous de mil \"Thiakri\" de Ngalax fête de pâques au Sénégal 04.jpg",
+    "largeur": 400,
+    "alt": "Thiakry, couscous de mil au lait caillé",
+    "page": "https://commons.wikimedia.org/wiki/File:Couscous_de_mil_%22Thiakri%22_de_Ngalax_f%C3%AAte_de_p%C3%A2ques_au_S%C3%A9n%C3%A9gal_04.jpg",
+    "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Couscous_de_mil_%22Thiakri%22_de_Ngalax_f%C3%AAte_de_p%C3%A2ques_au_S%C3%A9n%C3%A9gal_04.jpg?width=400"
+  },
+  {
+    "local": "photos/beignets-banane.jpg",
+    "fichier": "Beignets farine et Beignets dougoub.jpg",
+    "largeur": 400,
+    "alt": "Beignets de farine et beignets de mil",
+    "page": "https://commons.wikimedia.org/wiki/File:Beignets_farine_et_Beignets_dougoub.jpg",
+    "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Beignets_farine_et_Beignets_dougoub.jpg?width=400"
+  },
+  {
+    "local": "photos/fataya.jpg",
+    "fichier": "Fatayas fourrés au poisson.jpg",
+    "largeur": 400,
+    "alt": "Fatayas fourrés au poisson",
+    "page": "https://commons.wikimedia.org/wiki/File:Fatayas_fourr%C3%A9s_au_poisson.jpg",
+    "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Fatayas_fourr%C3%A9s_au_poisson.jpg?width=400"
+  },
+  {
+    "local": "photos/accras.jpg",
+    "fichier": "Beignets de crevettes.jpg",
+    "largeur": 400,
+    "alt": "Accras de crevettes",
+    "page": "https://commons.wikimedia.org/wiki/File:Beignets_de_crevettes.jpg",
+    "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Beignets_de_crevettes.jpg?width=400"
+  },
+  {
+    "local": "photos/frites.jpg",
+    "fichier": "Frites attiéké poulet braisé.jpg",
+    "largeur": 400,
+    "alt": "Frites, attiéké et poulet braisé",
+    "page": "https://commons.wikimedia.org/wiki/File:Frites_atti%C3%A9k%C3%A9_poulet_brais%C3%A9.jpg",
+    "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Frites_atti%C3%A9k%C3%A9_poulet_brais%C3%A9.jpg?width=400"
+  },
+  {
+    "local": "photos/cafe-touba.jpg",
+    "fichier": "Caffe Touba.jpg",
+    "largeur": 400,
+    "alt": "Café Touba",
+    "page": "https://commons.wikimedia.org/wiki/File:Caffe_Touba.jpg",
+    "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Caffe_Touba.jpg?width=400"
+  },
+  {
+    "local": "photos/ngalakh.jpg",
+    "fichier": "Ngalax plats Sénégalais.jpg",
+    "largeur": 400,
+    "alt": "Ngalakh, dessert sénégalais",
+    "page": "https://commons.wikimedia.org/wiki/File:Ngalax_plats_S%C3%A9n%C3%A9galais.jpg",
+    "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ngalax_plats_S%C3%A9n%C3%A9galais.jpg?width=400"
+  },
+  {
+    "local": "photos/salade-fruits.jpg",
+    "fichier": "Salades de fruit ananas banane pasteque.JPG",
+    "largeur": 400,
+    "alt": "Salade de fruits frais",
+    "page": "https://commons.wikimedia.org/wiki/File:Salades_de_fruit_ananas_banane_pasteque.JPG",
+    "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Salades_de_fruit_ananas_banane_pasteque.JPG?width=400"
+  }
+]

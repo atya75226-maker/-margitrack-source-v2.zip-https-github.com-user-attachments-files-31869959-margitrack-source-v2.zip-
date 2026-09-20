@@ -210,6 +210,21 @@ a{color:inherit}
   font-size:11.5px;line-height:1.7;color:var(--sourdine);
 }
 .mentions span{display:block}
+
+/* ---------- Crédits photos ---------- */
+.credits{margin:26px auto 0;max-width:42ch;text-align:left}
+.credits summary{
+  cursor:pointer;list-style:none;text-align:center;
+  font:600 10.5px/1 var(--ui);letter-spacing:.16em;text-transform:uppercase;color:var(--sourdine);
+}
+.credits summary::-webkit-details-marker{display:none}
+.credits summary:hover{color:var(--ivoire-doux)}
+.credits__intro{margin:14px 0 10px;font-size:11.5px;line-height:1.7;color:var(--sourdine)}
+.credits__liste{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.credits__liste li{font-size:11.5px;line-height:1.5;color:var(--sourdine)}
+.credits__liste a{color:var(--ivoire-doux);text-decoration:none;border-bottom:1px solid var(--ligne)}
+.credits__liste a:hover{color:var(--or);border-bottom-color:var(--or)}
+
 </style>
 </head>
 <body>
@@ -265,13 +280,16 @@ a{color:inherit}
 
     <div class="bandeau">
       <div class="cliche" data-libelle="Photo · salle">
-        <!-- <img src="photos/salle.jpg" alt="La salle du Baobab"> -->
+        <img src="https://commons.wikimedia.org/wiki/Special:FilePath/African_Dishes.jpg?width=700"
+               alt="Assortiment de plats d'Afrique de l'Ouest" loading="lazy" decoding="async" data-local="photos/salle.jpg">
       </div>
       <div class="cliche" data-libelle="Photo · plat">
-        <!-- <img src="photos/plat.jpg" alt="Plat du jour"> -->
+        <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Poulet_brais%C3%A9_attiek%C3%A9.JPG?width=350"
+               alt="Poulet braisé servi avec de l'attiéké" loading="lazy" decoding="async" data-local="photos/plat.jpg">
       </div>
       <div class="cliche" data-libelle="Photo · grill">
-        <!-- <img src="photos/grill.jpg" alt="Le grill au feu de bois"> -->
+        <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Le_Poisson_silure_brais%C3%A9_au_barbecue.jpg?width=350"
+               alt="Poisson braisé au barbecue" loading="lazy" decoding="async" data-local="photos/grill.jpg">
       </div>
     </div>
   </section>
@@ -288,22 +306,24 @@ a{color:inherit}
     <ul class="carte">
       <li class="plat">
         <div class="cliche" data-libelle="Photo">
-          <!-- <img src="photos/accras.jpg" alt="Accras de morue"> -->
+          <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Beignets_de_crevettes.jpg?width=400"
+               alt="Accras de crevettes" loading="lazy" decoding="async" data-local="photos/accras.jpg">
         </div>
         <div>
           <div class="plat__tete">
-            <h3 class="plat__nom">Accras de morue</h3>
+            <h3 class="plat__nom">Accras de crevettes</h3>
             <span class="plat__pointilles"></span>
             <span class="plat__prix">2 000 <small>FCFA</small></span>
           </div>
-          <p class="plat__desc">Six beignets dorés, morue effilochée, sauce tomate pimentée à part.</p>
+          <p class="plat__desc">Six beignets dorés, crevettes hachées, sauce tomate pimentée à part.</p>
           <div class="etiquettes"><span class="etiquette etiquette--piment">Piquant</span></div>
         </div>
       </li>
 
       <li class="plat">
         <div class="cliche" data-libelle="Photo">
-          <!-- <img src="photos/fataya.jpg" alt="Fataya au thon"> -->
+          <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Fatayas_fourr%C3%A9s_au_poisson.jpg?width=400"
+               alt="Fatayas fourrés au poisson" loading="lazy" decoding="async" data-local="photos/fataya.jpg">
         </div>
         <div>
           <div class="plat__tete">
@@ -372,7 +392,8 @@ a{color:inherit}
 
     <article class="vedette">
       <div class="cliche" data-libelle="Photo du plat signature · format paysage">
-        <!-- <img src="photos/thieboudiene.jpg" alt="Thiéboudiène rouge"> -->
+        <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Thiebou_Djeun.jpg?width=900"
+               alt="Thiéboudiène, riz au poisson sénégalais" loading="lazy" decoding="async" data-local="photos/thieboudiene.jpg">
       </div>
       <div class="vedette__corps">
         <p class="vedette__sus">Le plat de la maison</p>
@@ -389,7 +410,8 @@ a{color:inherit}
     <ul class="carte" style="margin-top:26px">
       <li class="plat">
         <div class="cliche" data-libelle="Photo">
-          <!-- <img src="photos/yassa.jpg" alt="Yassa poulet"> -->
+          <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Poulet_Yassa.JPG?width=400"
+               alt="Poulet yassa aux oignons et au citron" loading="lazy" decoding="async" data-local="photos/yassa.jpg">
         </div>
         <div>
           <div class="plat__tete">
@@ -403,7 +425,8 @@ a{color:inherit}
 
       <li class="plat">
         <div class="cliche" data-libelle="Photo">
-          <!-- <img src="photos/mafe.jpg" alt="Mafé bœuf"> -->
+          <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Maf%C3%A9_S%C3%A9n%C3%A9galais.jpg?width=400"
+               alt="Mafé sénégalais à la sauce d'arachide" loading="lazy" decoding="async" data-local="photos/mafe.jpg">
         </div>
         <div>
           <div class="plat__tete">
@@ -417,7 +440,8 @@ a{color:inherit}
 
       <li class="plat">
         <div class="cliche" data-libelle="Photo">
-          <!-- <img src="photos/ndole.jpg" alt="Ndolè aux crevettes"> -->
+          <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Ndol%C3%A9_camerounais.JPG?width=400"
+               alt="Ndolé camerounais" loading="lazy" decoding="async" data-local="photos/ndole.jpg">
         </div>
         <div>
           <div class="plat__tete">
@@ -432,7 +456,8 @@ a{color:inherit}
 
       <li class="plat">
         <div class="cliche" data-libelle="Photo">
-          <!-- <img src="photos/poulet-dg.jpg" alt="Poulet DG"> -->
+          <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Poulet_DG.JPG?width=400"
+               alt="Poulet DG aux plantains" loading="lazy" decoding="async" data-local="photos/poulet-dg.jpg">
         </div>
         <div>
           <div class="plat__tete">
@@ -446,7 +471,8 @@ a{color:inherit}
 
       <li class="plat">
         <div class="cliche" data-libelle="Photo">
-          <!-- <img src="photos/poisson-braise.jpg" alt="Poisson braisé entier"> -->
+          <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Poisson_brais%C3%A9_%C3%A0_la_fa%C3%A7on_du_Cameroun%2C_Kribi.JPG?width=400"
+               alt="Poisson braisé entier" loading="lazy" decoding="async" data-local="photos/poisson-braise.jpg">
         </div>
         <div>
           <div class="plat__tete">
@@ -464,7 +490,8 @@ a{color:inherit}
 
       <li class="plat">
         <div class="cliche" data-libelle="Photo">
-          <!-- <img src="photos/kedjenou.jpg" alt="Kedjenou de poulet"> -->
+          <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Kedjenou_poulet_sauce_claire.JPG?width=400"
+               alt="Kedjenou de poulet en sauce claire" loading="lazy" decoding="async" data-local="photos/kedjenou.jpg">
         </div>
         <div>
           <div class="plat__tete">
@@ -478,7 +505,8 @@ a{color:inherit}
 
       <li class="plat">
         <div class="cliche" data-libelle="Photo">
-          <!-- <img src="photos/soupe-kandja.jpg" alt="Soupe kandja"> -->
+          <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Plat_s%C3%A9n%C3%A9galais_soupe_kandja.jpg?width=400"
+               alt="Soupe kandja au gombo" loading="lazy" decoding="async" data-local="photos/soupe-kandja.jpg">
         </div>
         <div>
           <div class="plat__tete">
@@ -504,7 +532,8 @@ a{color:inherit}
     <ul class="carte">
       <li class="plat">
         <div class="cliche" data-libelle="Photo">
-          <!-- <img src="photos/attieke.jpg" alt="Attiéké"> -->
+          <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Attieke.JPG?width=400"
+               alt="Attiéké, semoule de manioc" loading="lazy" decoding="async" data-local="photos/attieke.jpg">
         </div>
         <div>
           <div class="plat__tete">
@@ -519,7 +548,8 @@ a{color:inherit}
 
       <li class="plat">
         <div class="cliche" data-libelle="Photo">
-          <!-- <img src="photos/alloco.jpg" alt="Alloco"> -->
+          <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Abidjan_Alloco.JPG?width=400"
+               alt="Alloco, bananes plantains frites" loading="lazy" decoding="async" data-local="photos/alloco.jpg">
         </div>
         <div>
           <div class="plat__tete">
@@ -534,7 +564,8 @@ a{color:inherit}
 
       <li class="plat">
         <div class="cliche" data-libelle="Photo">
-          <!-- <img src="photos/foutou.jpg" alt="Foutou banane"> -->
+          <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Foutou_bananes.jpg?width=400"
+               alt="Foutou banane" loading="lazy" decoding="async" data-local="photos/foutou.jpg">
         </div>
         <div>
           <div class="plat__tete">
@@ -564,7 +595,8 @@ a{color:inherit}
 
       <li class="plat">
         <div class="cliche" data-libelle="Photo">
-          <!-- <img src="photos/frites.jpg" alt="Frites maison"> -->
+          <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Frites_atti%C3%A9k%C3%A9_poulet_brais%C3%A9.jpg?width=400"
+               alt="Frites, attiéké et poulet braisé" loading="lazy" decoding="async" data-local="photos/frites.jpg">
         </div>
         <div>
           <div class="plat__tete">
@@ -605,7 +637,8 @@ a{color:inherit}
 
     <article class="vedette">
       <div class="cliche" data-libelle="Photo des jus maison · format paysage">
-        <!-- <img src="photos/jus-bouye.jpg" alt="Jus de bouye"> -->
+        <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Jus_de_bouye%2C_gingembre_et_bissap_04.jpg?width=900"
+               alt="Jus de bouye, de gingembre et de bissap" loading="lazy" decoding="async" data-local="photos/jus-bouye.jpg">
       </div>
       <div class="vedette__corps">
         <p class="vedette__sus">Le jus de l'arbre</p>
@@ -621,7 +654,8 @@ a{color:inherit}
     <ul class="carte" style="margin-top:26px">
       <li class="plat">
         <div class="cliche" data-libelle="Photo">
-          <!-- <img src="photos/bissap.jpg" alt="Bissap"> -->
+          <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Zobo_drink_%28hibiscus_juice%29_01.png?width=400"
+               alt="Bissap, infusion glacée d'hibiscus" loading="lazy" decoding="async" data-local="photos/bissap.jpg">
         </div>
         <div>
           <div class="plat__tete">
@@ -664,7 +698,8 @@ a{color:inherit}
 
       <li class="plat">
         <div class="cliche" data-libelle="Photo">
-          <!-- <img src="photos/ataya.jpg" alt="Thé ataya"> -->
+          <img src="https://commons.wikimedia.org/wiki/Special:FilePath/%22Atay%22_tea_ceremony.jpg?width=400"
+               alt="Préparation du thé ataya" loading="lazy" decoding="async" data-local="photos/ataya.jpg">
         </div>
         <div>
           <div class="plat__tete">
@@ -678,7 +713,8 @@ a{color:inherit}
 
       <li class="plat">
         <div class="cliche" data-libelle="Photo">
-          <!-- <img src="photos/cafe-touba.jpg" alt="Café Touba"> -->
+          <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Caffe_Touba.jpg?width=400"
+               alt="Café Touba" loading="lazy" decoding="async" data-local="photos/cafe-touba.jpg">
         </div>
         <div>
           <div class="plat__tete">
@@ -746,7 +782,8 @@ a{color:inherit}
     <ul class="carte">
       <li class="plat">
         <div class="cliche" data-libelle="Photo">
-          <!-- <img src="photos/thiakry.jpg" alt="Thiakry"> -->
+          <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Couscous_de_mil_%22Thiakri%22_de_Ngalax_f%C3%AAte_de_p%C3%A2ques_au_S%C3%A9n%C3%A9gal_04.jpg?width=400"
+               alt="Thiakry, couscous de mil au lait caillé" loading="lazy" decoding="async" data-local="photos/thiakry.jpg">
         </div>
         <div>
           <div class="plat__tete">
@@ -761,7 +798,8 @@ a{color:inherit}
 
       <li class="plat">
         <div class="cliche" data-libelle="Photo">
-          <!-- <img src="photos/ngalakh.jpg" alt="Ngalakh"> -->
+          <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Ngalax_plats_S%C3%A9n%C3%A9galais.jpg?width=400"
+               alt="Ngalakh, dessert sénégalais" loading="lazy" decoding="async" data-local="photos/ngalakh.jpg">
         </div>
         <div>
           <div class="plat__tete">
@@ -776,15 +814,16 @@ a{color:inherit}
 
       <li class="plat">
         <div class="cliche" data-libelle="Photo">
-          <!-- <img src="photos/beignets-banane.jpg" alt="Beignets de banane"> -->
+          <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Beignets_farine_et_Beignets_dougoub.jpg?width=400"
+               alt="Beignets de farine et beignets de mil" loading="lazy" decoding="async" data-local="photos/beignets-banane.jpg">
         </div>
         <div>
           <div class="plat__tete">
-            <h3 class="plat__nom">Beignets de banane</h3>
+            <h3 class="plat__nom">Beignets de mil et de farine</h3>
             <span class="plat__pointilles"></span>
             <span class="plat__prix">1 500 <small>FCFA</small></span>
           </div>
-          <p class="plat__desc">Servis tièdes, miel de brousse et zestes de citron.</p>
+          <p class="plat__desc">Beignets dougoub et beignets de farine, servis tièdes, miel de brousse.</p>
           <div class="etiquettes"><span class="etiquette etiquette--vege">Végétarien</span></div>
         </div>
       </li>
@@ -806,7 +845,8 @@ a{color:inherit}
 
       <li class="plat">
         <div class="cliche" data-libelle="Photo">
-          <!-- <img src="photos/salade-fruits.jpg" alt="Salade de fruits"> -->
+          <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Salades_de_fruit_ananas_banane_pasteque.JPG?width=400"
+               alt="Salade de fruits frais" loading="lazy" decoding="async" data-local="photos/salade-fruits.jpg">
         </div>
         <div>
           <div class="plat__tete">
@@ -828,6 +868,14 @@ a{color:inherit}
       Service de 12h à 15h et de 19h à 23h, du mardi au dimanche
     </p>
     <a class="pied__tel" href="tel:+221000000000">Réserver une table</a>
+    <details class="credits">
+      <summary>Crédits photos</summary>
+      <p class="credits__intro">
+        Photographies issues de Wikimedia Commons, sous licence Creative Commons.
+        Chaque lien mène à la page du fichier, qui indique l'auteur et la licence exacte.
+      </p>
+      <ul class="credits__liste" id="credits-liste"></ul>
+    </details>
     <p class="mentions">
       <span>Prix nets en francs CFA, service compris.</span>
       <span>La carte évolue selon le marché et la saison.</span>
@@ -864,6 +912,36 @@ a{color:inherit}
     rafraichir();
   }, { rootMargin: '-120px 0px -65% 0px' });
   sections.forEach(function (s) { observateur.observe(s); });
+})();
+
+/* Si une photo distante ne charge pas, on la retire : l'emplacement dessiné
+   reprend sa place et la carte reste lisible. */
+(function () {
+  Array.prototype.forEach.call(document.querySelectorAll('.cliche img'), function (img) {
+    img.addEventListener('error', function () { img.remove(); });
+    if (img.complete && img.naturalWidth === 0) { img.remove(); }
+  });
+})();
+
+/* Crédits : un lien par photo réellement présente dans la page. */
+(function () {
+  var liste = document.getElementById('credits-liste');
+  if (!liste) return;
+  var vues = {};
+  Array.prototype.forEach.call(document.querySelectorAll('.cliche img[src*="Special:FilePath"]'), function (img) {
+    var fichier = decodeURIComponent(img.getAttribute('src').split('Special:FilePath/')[1].split('?')[0]);
+    if (vues[fichier]) return;
+    vues[fichier] = true;
+    var li = document.createElement('li');
+    var a = document.createElement('a');
+    a.href = 'https://commons.wikimedia.org/wiki/File:' + encodeURIComponent(fichier);
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.textContent = fichier.replace(/\.[a-zA-Z]+$/, '').replace(/_/g, ' ');
+    li.appendChild(document.createTextNode(img.getAttribute('alt') + ' — '));
+    li.appendChild(a);
+    liste.appendChild(li);
+  });
 })();
 </script>
 </body>
