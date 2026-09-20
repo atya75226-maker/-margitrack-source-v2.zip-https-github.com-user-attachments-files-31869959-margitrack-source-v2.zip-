@@ -1,0 +1,860 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Le Baobab — Carte</title>
+<meta name="description" content="La carte du Baobab : cuisine d'Afrique de l'Ouest, feu de bois et produits du marché. Entrées, plats, accompagnements, boissons et desserts.">
+<meta name="theme-color" content="#131B33">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Le Baobab — Carte">
+<meta property="og:description" content="Cuisine d'Afrique de l'Ouest. Entrées, plats, accompagnements, boissons et desserts.">
+<meta property="og:locale" content="fr_FR">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Marcellus&family=Karla:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  /* ---- Palette : indigo teinturier, ivoire, or de mil, rouge bissap ---- */
+  --nuit:#131B33;
+  --nuit-haut:#0E1526;
+  --surface:#1B2440;
+  --surface-2:#222C4C;
+  --ligne:#2E3A5E;
+  --ivoire:#F3ECDC;
+  --ivoire-doux:#CFC6B4;
+  --sourdine:#8E8878;
+  --or:#E0A63C;
+  --or-clair:#F0C878;
+  --bissap:#C4543B;
+  --feuille:#7E9A60;
+
+  --display:"Marcellus", "Hoefler Text", Georgia, "Times New Roman", serif;
+  --ui:"Karla", "Helvetica Neue", Arial, sans-serif;
+
+  --gouttiere:20px;
+  --max:560px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  background:var(--nuit);
+  color:var(--ivoire);
+  font:400 16px/1.5 var(--ui);
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+img{max-width:100%}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--or);outline-offset:3px;border-radius:2px}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+
+.enveloppe{max-width:var(--max);margin:0 auto;padding-inline:var(--gouttiere)}
+
+/* ---------- Barre supérieure ---------- */
+.barre{
+  position:sticky;
+  top:env(safe-area-inset-top, 0px);
+  z-index:20;
+  background:rgba(14,21,38,.92);
+  backdrop-filter:saturate(140%) blur(8px);
+  border-bottom:1px solid var(--ligne);
+}
+.barre__titre{
+  display:flex;align-items:center;gap:9px;
+  padding:10px var(--gouttiere) 8px;
+  max-width:var(--max);margin:0 auto;
+}
+.barre__titre svg{width:20px;height:20px;flex:0 0 20px}
+.barre__titre span{
+  font:600 12px/1 var(--ui);letter-spacing:.22em;text-transform:uppercase;color:var(--ivoire-doux);
+}
+.nav{
+  display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;
+  padding:0 var(--gouttiere) 10px;
+  max-width:var(--max);margin:0 auto;
+}
+.nav::-webkit-scrollbar{display:none}
+.nav a{
+  flex:0 0 auto;
+  padding:7px 12px;border:1px solid var(--ligne);border-radius:999px;
+  font:600 11px/1 var(--ui);letter-spacing:.08em;text-transform:uppercase;
+  color:var(--ivoire-doux);text-decoration:none;white-space:nowrap;
+  transition:color .18s ease, border-color .18s ease, background-color .18s ease;
+}
+.nav a:hover{color:var(--ivoire)}
+.nav a[aria-current="true"]{color:var(--nuit);background:var(--or);border-color:var(--or)}
+
+/* ---------- Ouverture ---------- */
+.ouverture{padding-block:38px 26px;text-align:center}
+.embleme{width:78px;height:78px;margin:0 auto 14px;display:block}
+.enseigne{
+  margin:0;
+  font:400 clamp(38px,13.5vw,58px)/0.98 var(--display);
+  letter-spacing:.055em;
+  text-wrap:balance;
+}
+.enseigne em{display:block;font-style:normal;color:var(--or)}
+.devise{
+  margin:14px auto 0;max-width:34ch;
+  font:600 11px/1.6 var(--ui);letter-spacing:.2em;text-transform:uppercase;color:var(--or-clair);
+}
+.filet{
+  width:46px;height:1px;margin:18px auto;background:var(--or);opacity:.55;border:0;
+}
+.presentation{
+  margin:0 auto;max-width:42ch;
+  color:var(--ivoire-doux);font-size:15px;line-height:1.72;
+}
+.horaires{
+  margin:20px auto 0;display:inline-flex;flex-wrap:wrap;justify-content:center;gap:6px 10px;
+  font:500 12.5px/1.4 var(--ui);color:var(--sourdine);
+}
+.horaires b{color:var(--ivoire-doux);font-weight:600}
+
+/* ---------- Bandeau photos ---------- */
+.bandeau{
+  display:grid;grid-template-columns:1.9fr 1fr;grid-template-rows:auto auto;
+  gap:6px;margin-top:28px;
+}
+.bandeau .cliche{aspect-ratio:1}
+.bandeau .cliche:first-child{grid-row:span 2;aspect-ratio:auto}
+
+/* ---------- Emplacements photo ---------- */
+.cliche{
+  position:relative;overflow:hidden;border-radius:3px;
+  background:var(--surface);border:1px solid var(--ligne);
+}
+.cliche::after{
+  content:"";position:absolute;inset:0;
+  background:repeating-linear-gradient(135deg,transparent 0 8px,rgba(224,166,60,.06) 8px 9px);
+}
+.cliche::before{
+  content:attr(data-libelle);position:absolute;inset:0;
+  display:flex;align-items:center;justify-content:center;text-align:center;padding:6px;
+  font:600 8.5px/1.4 var(--ui);letter-spacing:.18em;text-transform:uppercase;color:var(--sourdine);
+}
+.cliche img{position:relative;z-index:2;width:100%;height:100%;object-fit:cover;display:block}
+
+/* ---------- Sections ---------- */
+.section{padding-block:34px 4px;scroll-margin-top:110px}
+.section__entete{display:flex;align-items:baseline;gap:12px;margin-bottom:4px}
+.section__titre{
+  margin:0;font:400 27px/1.15 var(--display);letter-spacing:.02em;color:var(--ivoire);
+}
+.section__trait{flex:1;height:1px;background:var(--ligne)}
+.section__compte{
+  font:600 10.5px/1 var(--ui);letter-spacing:.16em;text-transform:uppercase;color:var(--sourdine);
+}
+.section__note{
+  margin:8px 0 22px;font-size:13.5px;line-height:1.6;color:var(--sourdine);max-width:40ch;
+}
+
+/* ---------- Plats ---------- */
+.carte{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:20px}
+.plat{display:grid;grid-template-columns:78px 1fr;gap:14px;align-items:start}
+.plat .cliche{width:78px;height:78px}
+.plat__tete{display:flex;align-items:baseline;gap:8px}
+.plat__nom{
+  margin:0;font:500 16px/1.3 var(--ui);color:var(--ivoire);
+}
+.plat__pointilles{
+  flex:1;min-width:14px;height:1px;
+  border-bottom:1px dotted var(--ligne);
+  transform:translateY(-3px);
+}
+.plat__prix{
+  flex:0 0 auto;
+  font:600 15px/1.3 var(--ui);color:var(--or);
+  font-variant-numeric:tabular-nums;white-space:nowrap;
+}
+.plat__prix small{font-size:10.5px;font-weight:600;letter-spacing:.06em;color:var(--or-clair);opacity:.8}
+.plat__desc{margin:5px 0 0;font-size:13.5px;line-height:1.6;color:var(--ivoire-doux)}
+.etiquettes{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.etiquette{
+  display:inline-block;padding:3px 8px;border-radius:2px;border:1px solid currentColor;
+  font:600 9.5px/1.25 var(--ui);letter-spacing:.13em;text-transform:uppercase;
+}
+.etiquette--signature{color:var(--or)}
+.etiquette--vege{color:var(--feuille)}
+.etiquette--piment{color:var(--bissap)}
+
+/* ---------- Plat mis en avant ---------- */
+.vedette{
+  margin:26px 0 6px;border:1px solid var(--ligne);border-radius:4px;overflow:hidden;background:var(--surface);
+}
+.vedette .cliche{border:0;border-radius:0;aspect-ratio:16/10;display:block}
+.vedette__corps{padding:16px 16px 18px}
+.vedette__sus{
+  font:600 9.5px/1 var(--ui);letter-spacing:.2em;text-transform:uppercase;color:var(--or);
+}
+.vedette__nom{margin:9px 0 0;font:400 23px/1.2 var(--display);color:var(--ivoire)}
+.vedette__desc{margin:8px 0 0;font-size:13.5px;line-height:1.65;color:var(--ivoire-doux)}
+.vedette__prix{
+  margin-top:12px;font:600 16px/1 var(--ui);color:var(--or);font-variant-numeric:tabular-nums;
+}
+
+/* ---------- Pied ---------- */
+.pied{margin-top:46px;border-top:1px solid var(--ligne);padding-block:28px 40px;text-align:center}
+.pied__nom{font:400 22px/1 var(--display);letter-spacing:.09em;color:var(--ivoire)}
+.pied__ligne{margin:12px 0 0;font-size:13.5px;line-height:1.75;color:var(--ivoire-doux)}
+.pied__tel{
+  display:inline-block;margin-top:16px;padding:11px 22px;
+  border:1px solid var(--or);border-radius:999px;color:var(--or);text-decoration:none;
+  font:600 12px/1 var(--ui);letter-spacing:.14em;text-transform:uppercase;
+}
+.pied__tel:hover{background:var(--or);color:var(--nuit)}
+.mentions{
+  margin:22px auto 0;max-width:38ch;
+  font-size:11.5px;line-height:1.7;color:var(--sourdine);
+}
+.mentions span{display:block}
+
+/* Les grandes photos (plat vedette, bandeau) gardent un cadrage paysage. */
+.cliche--large{aspect-ratio:16/10;border:0;border-radius:0;display:block;width:100%}
+
+
+/* ---------- Crédits photos ---------- */
+.credits{margin:26px auto 0;max-width:42ch;text-align:left}
+.credits summary{
+  cursor:pointer;list-style:none;text-align:center;
+  font:600 10.5px/1 var(--ui);letter-spacing:.16em;text-transform:uppercase;color:var(--sourdine);
+}
+.credits summary::-webkit-details-marker{display:none}
+.credits summary:hover{color:var(--ivoire-doux)}
+.credits__intro{margin:14px 0 10px;font-size:11.5px;line-height:1.7;color:var(--sourdine)}
+.credits__liste{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.credits__liste li{font-size:11.5px;line-height:1.5;color:var(--sourdine)}
+.credits__liste a{color:var(--ivoire-doux);text-decoration:none;border-bottom:1px solid var(--ligne)}
+.credits__liste a:hover{color:var(--or);border-bottom-color:var(--or)}
+
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     LE BAOBAB — carte numérique (page unique, sans dépendance)
+     Photos : Pexels (licence libre, usage commercial, sans attribution)
+     et Wikimedia Commons (Creative Commons, crédits en pied de carte).
+     Chaque image porte une URL de secours dans `data-secours` : si la
+     première ne répond pas, la seconde prend le relais automatiquement.
+     Pour mettre vos propres photos, remplacez simplement `src`.
+     ============================================================ -->
+
+<header class="barre">
+  <div class="barre__titre">
+    <svg viewBox="0 0 64 64" aria-hidden="true" fill="none">
+      <circle cx="32" cy="32" r="29" stroke="#E0A63C" stroke-width="1.6" opacity=".55"/>
+      <path d="M25.5 49c0-8 2.5-12 2.5-19h8c0 7 2.5 11 2.5 19" stroke="#E0A63C" stroke-width="2.4" stroke-linecap="round"/>
+      <path d="M32 30V17M32 28c-1-5-6-8-12-9M32 28c1-5 6-8 12-9M32 21c-.5-3-4-5-8-5.5M32 21c.5-3 4-5 8-5.5" stroke="#E0A63C" stroke-width="2.2" stroke-linecap="round"/>
+      <path d="M17 49h30" stroke="#E0A63C" stroke-width="1.6" stroke-linecap="round" opacity=".5"/>
+    </svg>
+    <span>Le Baobab</span>
+  </div>
+  <nav class="nav" aria-label="Catégories de la carte">
+    <a href="#entrees">Entrées</a>
+    <a href="#plats">Plats</a>
+    <a href="#accompagnements">Accompagnements</a>
+    <a href="#boissons">Boissons</a>
+    <a href="#desserts">Desserts</a>
+  </nav>
+</header>
+
+<main class="enveloppe">
+
+  <section class="ouverture">
+    <svg class="embleme" viewBox="0 0 64 64" aria-hidden="true" fill="none">
+      <circle cx="32" cy="32" r="29" stroke="#E0A63C" stroke-width="1" opacity=".45"/>
+      <path d="M25.5 49c0-8 2.5-12 2.5-19h8c0 7 2.5 11 2.5 19" stroke="#F3ECDC" stroke-width="2.2" stroke-linecap="round"/>
+      <path d="M32 30V17M32 28c-1-5-6-8-12-9M32 28c1-5 6-8 12-9M32 21c-.5-3-4-5-8-5.5M32 21c.5-3 4-5 8-5.5" stroke="#F3ECDC" stroke-width="2" stroke-linecap="round"/>
+      <path d="M17 49h30" stroke="#E0A63C" stroke-width="1.2" stroke-linecap="round" opacity=".55"/>
+    </svg>
+    <h1 class="enseigne">LE <em>BAOBAB</em></h1>
+    <p class="devise">Grillades &amp; cuisine du jour</p>
+    <hr class="filet">
+    <p class="presentation">
+      Sous le grand arbre, on discute longtemps et on mange encore plus longtemps.
+      Ici, le poisson arrive du marché le matin, la viande passe au feu de bois et
+      les frites sont coupées au couteau. Rien de pressé, tout de frais.
+    </p>
+    <p class="horaires">
+      <b>Mardi au dimanche</b><span>·</span><span>12h – 15h</span><span>·</span><span>19h – 23h</span>
+    </p>
+
+    <div class="bandeau">
+      <div class="cliche" data-libelle="Photo · salle">
+        <img src="https://images.pexels.com/photos/776538/pexels-photo-776538.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=700&h=700" data-secours="https://images.pexels.com/photos/9371714/pexels-photo-9371714.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=700&h=700"
+             alt="Salle du restaurant" loading="lazy" decoding="async">
+      </div>
+      <div class="cliche" data-libelle="Photo · plat">
+        <img src="https://images.pexels.com/photos/1639558/pexels-photo-1639558.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=360&h=360" data-secours="https://images.pexels.com/photos/899237/pexels-photo-899237.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=360&h=360"
+             alt="Viande grillée servie à l'assiette" loading="lazy" decoding="async">
+      </div>
+      <div class="cliche" data-libelle="Photo · salle">
+        <img src="https://images.pexels.com/photos/1581384/pexels-photo-1581384.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=360&h=360" data-secours="https://images.pexels.com/photos/3465604/pexels-photo-3465604.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=360&h=360"
+             alt="Table dressée" loading="lazy" decoding="async">
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="entrees">
+    <div class="section__entete">
+      <h2 class="section__titre">Entrées</h2>
+      <span class="section__trait"></span>
+      <span class="section__compte">5</span>
+    </div>
+    <p class="section__note">À partager au centre de la table, comme à la maison.</p>
+
+    <ul class="carte">
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <img src="https://images.pexels.com/photos/4198015/pexels-photo-4198015.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320" data-secours="https://images.pexels.com/photos/406152/pexels-photo-406152.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320"
+               alt="Salade du chef" loading="lazy" decoding="async">
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Salade du chef</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">2 500 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Laitue, tomate, concombre, maïs et vinaigrette maison.</p>
+          <div class="etiquettes"><span class="etiquette etiquette--vege">Végétarien</span></div>
+        </div>
+      </li>
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <img src="https://images.pexels.com/photos/17320975/pexels-photo-17320975.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320" data-secours="https://images.pexels.com/photos/29177449/pexels-photo-29177449.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320"
+               alt="Salade d'avocat et crevettes" loading="lazy" decoding="async">
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Salade avocat & crevettes</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">3 500 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Avocat mûr, crevettes roses, citron vert et huile d'olive.</p>
+        </div>
+      </li>
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <img src="https://images.pexels.com/photos/2233730/pexels-photo-2233730.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320" data-secours="https://images.pexels.com/photos/53148/pexels-photo-53148.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320"
+               alt="Brochettes de bœuf grillées" loading="lazy" decoding="async">
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Brochettes de bœuf</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">3 000 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Deux brochettes marinées, grillées au charbon, sauce piment à part.</p>
+          <div class="etiquettes"><span class="etiquette etiquette--piment">Piquant</span></div>
+        </div>
+      </li>
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <img src="https://images.pexels.com/photos/8862753/pexels-photo-8862753.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320" data-secours="https://images.pexels.com/photos/5704254/pexels-photo-5704254.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320"
+               alt="Ailes de poulet grillées" loading="lazy" decoding="async">
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Ailes de poulet grillées</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">3 000 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Six ailes marinées au gingembre, sauce crémeuse.</p>
+        </div>
+      </li>
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <img src="https://images.pexels.com/photos/1143754/pexels-photo-1143754.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320" data-secours="https://images.pexels.com/photos/997389/pexels-photo-997389.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320"
+               alt="Tomates et avocat en tranches" loading="lazy" decoding="async">
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Tomates & avocat</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">2 000 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Tranches d'avocat et de tomate, oignon rouge, sel de mer.</p>
+          <div class="etiquettes"><span class="etiquette etiquette--vege">Végétarien</span></div>
+        </div>
+      </li>
+    </ul>
+  </section>
+
+  <section class="section" id="plats">
+    <div class="section__entete">
+      <h2 class="section__titre">Plats principaux</h2>
+      <span class="section__trait"></span>
+      <span class="section__compte">7</span>
+    </div>
+    <p class="section__note">Servis avec l'accompagnement de votre choix. Comptez 20 minutes : tout est cuisiné à la commande.</p>
+
+    <article class="vedette">
+      <div class="cliche cliche--large" data-libelle="Photo du plat">
+          <img src="https://images.pexels.com/photos/5704254/pexels-photo-5704254.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=900&h=560" data-secours="https://images.pexels.com/photos/37030068/pexels-photo-37030068.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=900&h=560"
+               alt="Poulet braisé au feu de bois" loading="lazy" decoding="async">
+        </div>
+      <div class="vedette__corps">
+        <p class="vedette__sus">Le plat de la maison</p>
+        <h3 class="vedette__nom">Poulet braisé</h3>
+        <p class="vedette__desc">Un poulet entier mariné au gingembre et à l'ail, braisé lentement au feu de bois jusqu'à ce que la peau craque. Servi avec alloco ou attiéké, et la sauce piment de la maison à part.</p>
+        <p class="vedette__prix">5 000 FCFA</p>
+      </div>
+    </article>
+    <ul class="carte" style="margin-top:26px">
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <img src="https://images.pexels.com/photos/1510714/pexels-photo-1510714.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320" data-secours="https://commons.wikimedia.org/wiki/Special:FilePath/Poisson_brais%C3%A9_%C3%A0_la_fa%C3%A7on_du_Cameroun%2C_Kribi.JPG?width=400"
+               alt="Poisson braisé entier" loading="lazy" decoding="async">
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Poisson braisé entier</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">6 500 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Poisson du jour braisé au charbon, sauce tomate-gingembre, légumes.</p>
+          <div class="etiquettes"><span class="etiquette etiquette--signature">Signature</span><span class="etiquette etiquette--piment">Piquant</span></div>
+        </div>
+      </li>
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <img src="https://images.pexels.com/photos/6287525/pexels-photo-6287525.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320" data-secours="https://images.pexels.com/photos/18959531/pexels-photo-18959531.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320"
+               alt="Spaghetti bolognaise" loading="lazy" decoding="async">
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Spaghetti bolognaise</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">4 000 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Sauce bolognaise mijotée longuement, parmesan et basilic frais.</p>
+        </div>
+      </li>
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <img src="https://images.pexels.com/photos/17650170/pexels-photo-17650170.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320" data-secours="https://commons.wikimedia.org/wiki/Special:FilePath/Thiebou_Djeun.jpg?width=400"
+               alt="Riz au poulet" loading="lazy" decoding="async">
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Riz au poulet</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">4 500 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Riz parfumé mijoté dans son bouillon de tomate, cuisse de poulet fondante.</p>
+        </div>
+      </li>
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <img src="https://images.pexels.com/photos/899237/pexels-photo-899237.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320" data-secours="https://images.pexels.com/photos/13156974/pexels-photo-13156974.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320"
+               alt="Grillades de bœuf au charbon" loading="lazy" decoding="async">
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Grillades de bœuf</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">6 000 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Morceaux de bœuf grillés au charbon, oignons au citron.</p>
+          <div class="etiquettes"><span class="etiquette etiquette--signature">Signature</span></div>
+        </div>
+      </li>
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <img src="https://images.pexels.com/photos/12118979/pexels-photo-12118979.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320" data-secours="https://images.pexels.com/photos/8862753/pexels-photo-8862753.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320"
+               alt="Poulet rôti avec des frites" loading="lazy" decoding="async">
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Poulet rôti & frites</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">5 500 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Demi-poulet rôti, frites maison, salade verte.</p>
+        </div>
+      </li>
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <img src="https://images.pexels.com/photos/11653557/pexels-photo-11653557.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320" data-secours="https://images.pexels.com/photos/8352799/pexels-photo-8352799.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320"
+               alt="Poisson grillé et légumes" loading="lazy" decoding="async">
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Poisson grillé aux légumes</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">6 000 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Filet grillé, légumes de saison rôtis, beurre citronné.</p>
+        </div>
+      </li>
+    </ul>
+  </section>
+
+  <section class="section" id="accompagnements">
+    <div class="section__entete">
+      <h2 class="section__titre">Accompagnements</h2>
+      <span class="section__trait"></span>
+      <span class="section__compte">5</span>
+    </div>
+    <p class="section__note">Une portion suffit pour deux personnes.</p>
+
+    <ul class="carte">
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <img src="https://images.pexels.com/photos/4109234/pexels-photo-4109234.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320" data-secours="https://images.pexels.com/photos/12946719/pexels-photo-12946719.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320"
+               alt="Frites maison" loading="lazy" decoding="async">
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Frites maison</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">1 500 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Pommes de terre fraîches coupées au couteau, double cuisson.</p>
+          <div class="etiquettes"><span class="etiquette etiquette--vege">Végétarien</span></div>
+        </div>
+      </li>
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Abidjan_Alloco.JPG?width=400" data-secours="https://images.pexels.com/photos/4109234/pexels-photo-4109234.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320"
+               alt="Alloco, bananes plantains frites" loading="lazy" decoding="async">
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Alloco</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">1 500 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Bananes plantains bien mûres frites à l'huile de palme, sel de mer.</p>
+          <div class="etiquettes"><span class="etiquette etiquette--vege">Végétarien</span></div>
+        </div>
+      </li>
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Attieke.JPG?width=400" data-secours="https://commons.wikimedia.org/wiki/Special:FilePath/Poulet_brais%C3%A9_attiek%C3%A9.JPG?width=400"
+               alt="Attiéké" loading="lazy" decoding="async">
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Attiéké</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">1 000 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Semoule de manioc fermentée, légèrement acidulée.</p>
+          <div class="etiquettes"><span class="etiquette etiquette--vege">Végétarien</span></div>
+        </div>
+      </li>
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <img src="https://images.pexels.com/photos/8956718/pexels-photo-8956718.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320" data-secours="https://images.pexels.com/photos/1306548/pexels-photo-1306548.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320"
+               alt="Riz blanc parfumé" loading="lazy" decoding="async">
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Riz blanc parfumé</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">1 000 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Riz long grain cuit à la vapeur, feuille de laurier.</p>
+          <div class="etiquettes"><span class="etiquette etiquette--vege">Végétarien</span></div>
+        </div>
+      </li>
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <img src="https://images.pexels.com/photos/6428245/pexels-photo-6428245.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320" data-secours="https://images.pexels.com/photos/4869356/pexels-photo-4869356.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320"
+               alt="Salade verte" loading="lazy" decoding="async">
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Salade verte</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">1 200 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Jeunes pousses, vinaigrette légère au citron.</p>
+          <div class="etiquettes"><span class="etiquette etiquette--vege">Végétarien</span></div>
+        </div>
+      </li>
+    </ul>
+  </section>
+
+  <section class="section" id="boissons">
+    <div class="section__entete">
+      <h2 class="section__titre">Boissons</h2>
+      <span class="section__trait"></span>
+      <span class="section__compte">6</span>
+    </div>
+    <p class="section__note">Les jus sont pressés et infusés chaque matin, sans sirop.</p>
+
+    <article class="vedette">
+      <div class="cliche cliche--large" data-libelle="Photo du plat">
+          <img src="https://images.pexels.com/photos/5946803/pexels-photo-5946803.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=900&h=560" data-secours="https://images.pexels.com/photos/8679338/pexels-photo-8679338.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=900&h=560"
+               alt="Jus naturel pressé" loading="lazy" decoding="async">
+        </div>
+      <div class="vedette__corps">
+        <p class="vedette__sus">Pressé du matin</p>
+        <h3 class="vedette__nom">Jus naturel</h3>
+        <p class="vedette__desc">Oranges, ananas ou mangue selon l'arrivage, pressés le matin même et servis très frais. Sans sucre ajouté, sans concentré — demandez le jus du jour.</p>
+        <p class="vedette__prix">1 500 FCFA</p>
+      </div>
+    </article>
+    <ul class="carte" style="margin-top:26px">
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <img src="https://images.pexels.com/photos/16826278/pexels-photo-16826278.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320" data-secours="https://images.pexels.com/photos/2983100/pexels-photo-2983100.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320"
+               alt="Coca-Cola servi avec des glaçons" loading="lazy" decoding="async">
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Coca-Cola</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">800 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Bouteille 33 cl, servie glacée avec un quartier de citron.</p>
+        </div>
+      </li>
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <img src="https://images.pexels.com/photos/8678927/pexels-photo-8678927.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320" data-secours="https://images.pexels.com/photos/8679152/pexels-photo-8679152.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320"
+               alt="Bissap, infusion glacée d'hibiscus" loading="lazy" decoding="async">
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Bissap glacé</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">1 000 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Infusion d'hibiscus, menthe fraîche, fleur d'oranger.</p>
+          <div class="etiquettes"><span class="etiquette etiquette--vege">Végétarien</span></div>
+        </div>
+      </li>
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <img src="https://images.pexels.com/photos/8879626/pexels-photo-8879626.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320" data-secours="https://images.pexels.com/photos/4397824/pexels-photo-4397824.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320"
+               alt="Soda servi avec des glaçons" loading="lazy" decoding="async">
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Sodas</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">800 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Fanta, Sprite, tonic — bouteille 33 cl.</p>
+        </div>
+      </li>
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <img src="https://images.pexels.com/photos/35020123/pexels-photo-35020123.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320" data-secours="https://images.pexels.com/photos/8679367/pexels-photo-8679367.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320"
+               alt="Bouteille d'eau minérale" loading="lazy" decoding="async">
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Eau minérale</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">500 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">50 cl, plate ou gazeuse.</p>
+        </div>
+      </li>
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <img src="https://images.pexels.com/photos/12089505/pexels-photo-12089505.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320" data-secours="https://images.pexels.com/photos/4044674/pexels-photo-4044674.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320"
+               alt="Bière locale servie fraîche" loading="lazy" decoding="async">
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Bière locale</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">1 500 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">33 cl, blonde légère. Demandez la sélection du jour.</p>
+        </div>
+      </li>
+    </ul>
+  </section>
+
+  <section class="section" id="desserts">
+    <div class="section__entete">
+      <h2 class="section__titre">Desserts</h2>
+      <span class="section__trait"></span>
+      <span class="section__compte">5</span>
+    </div>
+    <p class="section__note">Préparés le matin même, en quantité limitée.</p>
+
+    <ul class="carte">
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <img src="https://images.pexels.com/photos/12412863/pexels-photo-12412863.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320" data-secours="https://images.pexels.com/photos/6072378/pexels-photo-6072378.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320"
+               alt="Crêpes servies à l'assiette" loading="lazy" decoding="async">
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Crêpes</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">2 000 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Deux crêpes fines, sucre, chocolat ou confiture de mangue.</p>
+          <div class="etiquettes"><span class="etiquette etiquette--vege">Végétarien</span></div>
+        </div>
+      </li>
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <img src="https://images.pexels.com/photos/1640774/pexels-photo-1640774.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320" data-secours="https://images.pexels.com/photos/773724/pexels-photo-773724.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320"
+               alt="Salade de fruits frais" loading="lazy" decoding="async">
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Salade de fruits</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">1 800 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Mangue, ananas, papaye, pastèque — selon l'arrivage du jour.</p>
+          <div class="etiquettes"><span class="etiquette etiquette--vege">Végétarien</span></div>
+        </div>
+      </li>
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <img src="https://images.pexels.com/photos/16015237/pexels-photo-16015237.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320" data-secours="https://images.pexels.com/photos/1683546/pexels-photo-1683546.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320"
+               alt="Boules de glace" loading="lazy" decoding="async">
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Glace</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">2 000 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Deux boules : vanille, chocolat ou coco.</p>
+          <div class="etiquettes"><span class="etiquette etiquette--vege">Végétarien</span></div>
+        </div>
+      </li>
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <img src="https://images.pexels.com/photos/10897666/pexels-photo-10897666.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320" data-secours="https://images.pexels.com/photos/7144334/pexels-photo-7144334.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320"
+               alt="Pancakes nappés de miel" loading="lazy" decoding="async">
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Pancakes au miel</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">2 000 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Trois pancakes moelleux, miel de brousse et beurre fondu.</p>
+          <div class="etiquettes"><span class="etiquette etiquette--vege">Végétarien</span></div>
+        </div>
+      </li>
+      <li class="plat">
+        <div class="cliche" data-libelle="Photo">
+          <img src="https://images.pexels.com/photos/773724/pexels-photo-773724.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320" data-secours="https://images.pexels.com/photos/1640774/pexels-photo-1640774.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=320&h=320"
+               alt="Assiette de fruits frais découpés" loading="lazy" decoding="async">
+        </div>
+        <div>
+          <div class="plat__tete">
+            <h3 class="plat__nom">Assiette de fruits frais</h3>
+            <span class="plat__pointilles"></span>
+            <span class="plat__prix">1 500 <small>FCFA</small></span>
+          </div>
+          <p class="plat__desc">Fruits de saison découpés minute, menthe et citron vert.</p>
+          <div class="etiquettes"><span class="etiquette etiquette--vege">Végétarien</span></div>
+        </div>
+      </li>
+    </ul>
+  </section>
+
+  <footer class="pied">
+    <p class="pied__nom">LE BAOBAB</p>
+    <p class="pied__ligne">
+      12, rue des Manguiers · Quartier Almadies<br>
+      Service de 12h à 15h et de 19h à 23h, du mardi au dimanche
+    </p>
+    <a class="pied__tel" href="tel:+221000000000">Réserver une table</a>
+    <details class="credits">
+      <summary>Crédits photos</summary>
+      <p class="credits__intro">
+        Photographies libres de droits : Pexels (licence Pexels, usage commercial
+        autorisé, sans attribution obligatoire) et Wikimedia Commons, sous licence
+        Creative Commons — pour ces dernières, chaque lien mène à la page du
+        fichier, qui indique l'auteur et la licence exacte.
+      </p>
+      <ul class="credits__liste" id="credits-liste"></ul>
+    </details>
+    <p class="mentions">
+      <span>Prix nets en francs CFA, service compris.</span>
+      <span>La carte évolue selon le marché et la saison.</span>
+      <span>Une question sur un allergène ? Demandez-nous, nous connaissons chaque recette.</span>
+    </p>
+  </footer>
+</main>
+
+<script>
+/* Surligne la catégorie en cours de lecture dans la barre du haut.
+   Sans JavaScript, les liens fonctionnent toujours comme des ancres. */
+(function () {
+  var liens = Array.prototype.slice.call(document.querySelectorAll('.nav a'));
+  var sections = liens
+    .map(function (a) { return document.querySelector(a.getAttribute('href')); })
+    .filter(Boolean);
+  if (!sections.length || !('IntersectionObserver' in window)) return;
+
+  var visibles = {};
+  function rafraichir() {
+    var actif = null;
+    sections.forEach(function (s) { if (visibles[s.id]) { actif = s; } });
+    liens.forEach(function (a) {
+      if (actif && a.getAttribute('href') === '#' + actif.id) { a.setAttribute('aria-current', 'true'); }
+      else { a.removeAttribute('aria-current'); }
+    });
+  }
+  var observateur = new IntersectionObserver(function (entrees) {
+    entrees.forEach(function (e) { visibles[e.target.id] = e.isIntersecting; });
+    rafraichir();
+  }, { rootMargin: '-120px 0px -65% 0px' });
+  sections.forEach(function (s) { observateur.observe(s); });
+})();
+
+/* Chaque photo a une URL de secours. Si la première échoue, on bascule ;
+   si la seconde échoue aussi, on retire l'image et l'emplacement dessiné
+   reprend sa place. La carte n'affiche jamais d'image cassée. */
+(function () {
+  Array.prototype.forEach.call(document.querySelectorAll('.cliche img'), function (img) {
+    img.addEventListener('error', function () {
+      var secours = img.getAttribute('data-secours');
+      if (secours && img.src !== secours) {
+        img.removeAttribute('data-secours');
+        img.src = secours;
+      } else {
+        img.remove();
+      }
+    });
+  });
+})();
+
+/* Crédits : un lien par photo Wikimedia réellement présente dans la page. */
+(function () {
+  var liste = document.getElementById('credits-liste');
+  if (!liste) return;
+  var vues = {};
+  Array.prototype.forEach.call(document.querySelectorAll('.cliche img'), function (img) {
+    var url = img.getAttribute('src');
+    if (url.indexOf('Special:FilePath') === -1) return;
+    var fichier = decodeURIComponent(url.split('Special:FilePath/')[1].split('?')[0]);
+    if (vues[fichier]) return;
+    vues[fichier] = true;
+    var li = document.createElement('li');
+    var a = document.createElement('a');
+    a.href = 'https://commons.wikimedia.org/wiki/File:' + encodeURIComponent(fichier);
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.textContent = fichier.replace(/\.[a-zA-Z]+$/, '').replace(/_/g, ' ');
+    li.appendChild(document.createTextNode(img.getAttribute('alt') + ' — '));
+    li.appendChild(a);
+    liste.appendChild(li);
+  });
+  if (!liste.children.length) {
+    liste.innerHTML = '<li>Toutes les photographies proviennent de Pexels.</li>';
+  }
+})();
+</script>
+</body>
+</html>
