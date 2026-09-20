@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import { CardArtwork, CardScaler } from '../../components/card/CardArtwork'
 import ProfileView from '../public/ProfileView'
 import { useCardAssets } from '../../hooks/useCardAssets'
@@ -29,6 +30,56 @@ import { DEMO_CARDS } from './demoCards'
  * et des images-clés CSS. Tout s'arrête sous `prefers-reduced-motion`, et la
  * scène se fige alors sur son moment le plus parlant — le profil ouvert.
  */
+
+/**
+ * L'écran du téléphone : une vraie page mobile, à l'échelle de l'écran.
+ *
+ * Le profil est rendu à sa largeur mobile réelle — 420 px — puis réduit d'un
+ * facteur mesuré sur l'écran lui-même. C'est la seule façon d'obtenir la page
+ * telle qu'elle s'ouvre vraiment : rien n'est étiré, rien n'est rogné sur les
+ * côtés, et la mise en page reste celle du mini-site.
+ *
+ * L'échelle était auparavant écrite en dur (0,26) alors que l'écran, lui, vaut
+ * un pourcentage du conteneur : sur un téléphone, le profil était rendu deux
+ * fois et demie trop large et l'on n'en voyait qu'une bande — l'en-tête coloré,
+ * pris pour un écran vide. On mesure donc, au lieu de supposer.
+ *
+ * Une page de profil est plus haute qu'un écran, comme n'importe quelle page
+ * ouverte sur un téléphone : on en montre le haut, aligné au bord supérieur, et
+ * la suite est simplement hors champ.
+ */
+function EcranProfil({ card, assets }) {
+  const LARGEUR_MOBILE = 420
+  const ref = useRef(null)
+  const [largeur, setLargeur] = useState(0)
+
+  useEffect(() => {
+    const noeud = ref.current
+    if (!noeud) return undefined
+    const mesurer = () => setLargeur(noeud.getBoundingClientRect().width)
+    mesurer()
+    if (typeof ResizeObserver === 'undefined') return undefined
+    const observateur = new ResizeObserver(mesurer)
+    observateur.observe(noeud)
+    return () => observateur.disconnect()
+  }, [])
+
+  return (
+    <div ref={ref} className="scene-ecran-profil absolute inset-0 overflow-hidden">
+      {largeur > 0 && (
+        <div
+          style={{
+            width: LARGEUR_MOBILE,
+            transform: `scale(${largeur / LARGEUR_MOBILE})`,
+            transformOrigin: 'top left',
+          }}
+        >
+          <ProfileView card={card} assets={{ ...assets, qr: null }} actif={false} publicHref="" onVcard={() => {}} />
+        </div>
+      )}
+    </div>
+  )
+}
 
 /* Les couleurs du décor, une seule fois. */
 const PEAU_A = '#9a683f'
@@ -145,11 +196,7 @@ export default function SceneAnimee({ className = '' }) {
             <span className="absolute inset-x-[30%] top-[20%] h-[1.4%] rounded-full bg-white/15" />
           </div>
           {/* le profil, quand la carte est arrivée */}
-          <div className="scene-ecran-profil absolute inset-0 overflow-hidden">
-            <div style={{ width: 420, transform: 'scale(var(--echelle-profil, .26))', transformOrigin: 'top left' }}>
-              <ProfileView card={profil} assets={{ ...assets, qr: null }} actif={false} publicHref="" onVcard={() => {}} />
-            </div>
-          </div>
+          <EcranProfil card={profil} assets={assets} />
         </div>
         {/* Les doigts, par-dessus l'écran : sans eux, le téléphone flotte. */}
         <span
