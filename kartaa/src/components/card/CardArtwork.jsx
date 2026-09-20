@@ -1,21 +1,27 @@
 import { useEffect, useRef, useState } from 'react'
-import { Icon } from '../ui/Icons'
-import { prettyUrl } from '../../lib/format'
-import { publicUrl } from '../../lib/slug'
 import { APP } from '../../config/app.config'
 
 /**
- * Rendu « réaliste » d'une carte, à taille fixe (1050 × 600 px).
+ * Rendu d'une carte Kartaa, à taille fixe (1050 × 600 px).
  * Le même composant sert à la prévisualisation (mise à l'échelle par transform)
- * et à l'export PNG / JPG / PDF, pour que le fichier obtenu soit identique à l'écran.
+ * et à l'export PNG / JPG / PDF : le fichier obtenu est exactement ce qu'on voyait.
  *
- * Répartition des deux faces :
- *   • RECTO — identité Kartaa uniquement (logo, nom de la marque). Aucun QR Code,
- *     aucune donnée du propriétaire : c'est la face « marque ».
- *   • VERSO — identité du propriétaire : son nom, éventuellement son métier, et le
- *     grand QR Code qui ouvre son profil public Kartaa.
- * Les trois modèles (standard / premium / VIP) ne changent que l'habillage :
- * mêmes informations, même structure, mêmes garanties.
+ * LA CARTE NE CONTIENT PAS L'IDENTITÉ, ELLE Y DONNE ACCÈS
+ *
+ *   • RECTO — le nom de la marque, et rien d'autre.
+ *   • VERSO — le QR Code, et rien d'autre.
+ *
+ * Aucune donnée du propriétaire n'entre ici : ni nom, ni photo, ni logo, ni
+ * téléphone, ni métier. Ces informations continuent d'exister — dans le profil,
+ * dans la base, sur le mini-site public — mais elles ne sont plus imprimées.
+ * C'est le mini-site qui les porte ; la carte ne porte que le chemin vers lui.
+ *
+ * Cette séparation est volontaire et tenue par le code : ce composant ne lit du
+ * `card` que son modèle. Une modification du profil ne peut donc plus déplacer
+ * quoi que ce soit sur la carte, ni y faire réapparaître une information.
+ *
+ * Les trois modèles ne changent que l'habillage : fond, typographie, traitement
+ * du nom. Tous suivent la même règle — recto « Kartaa », verso QR Code.
  */
 
 export const CARD_WIDTH = 1050
@@ -24,199 +30,123 @@ export const CARD_HEIGHT = 600
 /**
  * Marge de sécurité pour l'impression.
  * 1050 px pour 85 mm ≈ 12,35 px/mm : 64 px valent un peu plus de 5 mm, la marge
- * habituellement demandée par les imprimeurs. Rien d'important ne sort de cette zone,
- * donc une découpe légèrement décalée ne coupe jamais le nom ni le QR Code.
+ * habituellement demandée par les imprimeurs. Ni le nom ni le QR Code n'en
+ * sortent, donc une découpe légèrement décalée ne les entame jamais.
  */
 export const CARD_SAFE = 64
 
-/** Coordonnées réellement renseignées, sans doublon entre téléphone et WhatsApp. */
-function contactLines(card) {
-  const p = card.profile || {}
-  return [
-    p.phone && { icon: 'phone', value: p.phone },
-    p.whatsapp && p.whatsapp !== p.phone && { icon: 'whatsapp', value: p.whatsapp },
-    p.email && { icon: 'mail', value: p.email },
-    (p.city || p.country) && { icon: 'pin', value: [p.city, p.country].filter(Boolean).join(', ') },
-  ].filter(Boolean)
-}
-
-const FONT_STACK = {
+const POLICES = {
+  display: "'Sora', 'Plus Jakarta Sans', system-ui, sans-serif",
   sans: "'Plus Jakarta Sans', system-ui, sans-serif",
-  display: "'Sora', 'Plus Jakarta Sans', sans-serif",
   serif: "'Fraunces', Georgia, serif",
 }
 
-function hexToRgb(hex = '#6d28d9') {
-  const value = hex.replace('#', '')
-  const full = value.length === 3 ? value.split('').map((c) => c + c).join('') : value
-  const int = parseInt(full, 16)
-  return { r: (int >> 16) & 255, g: (int >> 8) & 255, b: int & 255 }
-}
-
-function shade(hex, amount) {
-  const { r, g, b } = hexToRgb(hex)
-  const mix = (channel) => Math.round(amount < 0 ? channel * (1 + amount) : channel + (255 - channel) * amount)
-  return `rgb(${mix(r)}, ${mix(g)}, ${mix(b)})`
-}
-
-function readableOn(hex) {
-  const { r, g, b } = hexToRgb(hex)
-  return (r * 299 + g * 587 + b * 114) / 1000 > 150 ? '#141728' : '#ffffff'
-}
-
 /**
- * Habillage d'un modèle : les deux faces y puisent leurs couleurs, donc le recto et
- * le verso d'une même carte restent assortis sans être dupliqués.
- */
-function skinOf(template, theme) {
-  if (template === 'vip') {
-    return {
-      background: '#0a0c18',
-      text: '#ffffff',
-      muted: '#8f97bb',
-      soft: '#cbcfe0',
-      accent: theme.accent,
-      glow: `radial-gradient(75% 130% at 82% -10%, ${theme.accent}30 0%, transparent 62%)`,
-      frame: `${theme.accent}55`,
-      markPlate: 'rgba(255,255,255,.06)',
-      markPlateBorder: `${theme.accent}66`,
-    }
-  }
-  if (template === 'premium') {
-    const text = readableOn(theme.primary)
-    const light = text === '#ffffff'
-    return {
-      background: `linear-gradient(135deg, ${theme.primary} 0%, ${shade(theme.primary, -0.45)} 100%)`,
-      text,
-      muted: light ? 'rgba(255,255,255,.62)' : 'rgba(20,23,40,.6)',
-      soft: light ? 'rgba(255,255,255,.86)' : 'rgba(20,23,40,.8)',
-      accent: theme.accent,
-      glow: `radial-gradient(55% 90% at 100% 0%, ${theme.accent}40 0%, transparent 62%)`,
-      frame: light ? 'rgba(255,255,255,.28)' : 'rgba(20,23,40,.18)',
-      markPlate: '#ffffff',
-      markPlateBorder: 'transparent',
-    }
-  }
-  return {
-    background: '#ffffff',
-    text: '#141728',
-    muted: '#757ea6',
-    soft: '#41486c',
-    accent: theme.accent,
-    glow: `radial-gradient(60% 100% at 100% 0%, ${theme.primary}0f 0%, transparent 60%)`,
-    frame: `${theme.primary}26`,
-    markPlate: 'transparent',
-    markPlateBorder: 'transparent',
-  }
-}
-
-/**
- * Photo du propriétaire.
+ * Les trois habillages, figés ici.
  *
- * Une image indisponible — lien expiré, fichier supprimé, réseau coupé — ne
- * doit pas laisser un cadre vide ou une icône de fichier cassé sur une carte
- * qu'on va imprimer : elle s'efface, et la carte reste propre.
+ * Ils ne dépendent d'aucun réglage du propriétaire : c'est ce qui garantit
+ * qu'une carte Standard ressemble toujours à une carte Standard. Les couleurs
+ * choisies dans l'assistant habillent le mini-site public, pas la carte.
  */
-function Photo({ url, borderColor, taille = 104, marge = true }) {
-  const [echec, setEchec] = useState(false)
-  if (!url || echec) return null
+const MODELES = {
+  // Bleu nuit franc : sobre, professionnel, lisible de loin.
+  standard: {
+    fond: 'linear-gradient(145deg, #27334f 0%, #1d2740 55%, #161e33 100%)',
+    voile: 'radial-gradient(120% 150% at 0% 0%, rgba(255,255,255,.07) 0%, transparent 58%)',
+    marque: {
+      police: POLICES.display,
+      taille: 96,
+      graisse: 600,
+      espacement: '.01em',
+      couleur: '#ffffff',
+    },
+  },
+  // Noir satiné : le même dépouillement, une lumière rasante en plus.
+  premium: {
+    fond: 'linear-gradient(150deg, #17181c 0%, #0d0e11 48%, #0a0b0e 100%)',
+    voile: 'linear-gradient(118deg, transparent 32%, rgba(255,255,255,.055) 46%, rgba(255,255,255,.015) 54%, transparent 66%)',
+    marque: {
+      police: POLICES.display,
+      taille: 94,
+      graisse: 400,
+      espacement: '.05em',
+      couleur: '#ffffff',
+    },
+  },
+  // Noir profond cerné d'or : tout tient dans le liseré et le nom.
+  vip: {
+    fond: 'linear-gradient(150deg, #101013 0%, #08080b 52%, #050507 100%)',
+    voile: 'radial-gradient(85% 130% at 50% -18%, rgba(226,194,116,.12) 0%, transparent 60%)',
+    // Le liseré épouse le bord de la carte : arrondi par le cadre qui l'affiche,
+    // droit sur le fichier imprimé, où les angles sont coupés au massicot.
+    cadre: { epaisseur: 9, couleur: '#c9a24a' },
+    marque: {
+      police: POLICES.display,
+      taille: 92,
+      graisse: 500,
+      espacement: '.06em',
+      couleur: '#e2c274',
+      // L'or est un dégradé découpé dans le texte. Si le navigateur ne sait pas
+      // le faire, `couleur` reste visible : jamais de nom invisible.
+      or: 'linear-gradient(101deg, #f6e4b0 0%, #d3a54c 42%, #f7e6b6 63%, #c69a42 100%)',
+    },
+  },
+}
+
+function habillage(template) {
+  return MODELES[template] || MODELES.standard
+}
+
+/** Liseré du modèle, le long du bord. Les modèles qui n'en ont pas n'en dessinent aucun. */
+function Cadre({ modele }) {
+  if (!modele.cadre) return null
   return (
-    <img
-      src={url}
-      alt=""
-      onError={() => setEchec(true)}
-      style={{ width: taille, height: taille, border: `3px solid ${borderColor}` }}
-      className={`rounded-full object-cover ${marge ? 'mb-7' : ''}`}
+    <div
+      className="absolute inset-0"
+      style={{ border: `${modele.cadre.epaisseur}px solid ${modele.cadre.couleur}` }}
     />
+  )
+}
+
+/** Le nom de la marque, tel qu'il est défini une seule fois dans la configuration. */
+function Marque({ modele }) {
+  const { marque } = modele
+  const or = marque.or
+    ? { backgroundImage: marque.or, WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' }
+    : null
+  return (
+    <span
+      style={{
+        fontFamily: marque.police,
+        fontSize: marque.taille,
+        fontWeight: marque.graisse,
+        letterSpacing: marque.espacement,
+        color: marque.couleur,
+        lineHeight: 1,
+        // Un espacement de lettres décale le texte vers la droite : on compense
+        // pour que le nom reste optiquement centré.
+        paddingLeft: marque.espacement.startsWith('.') ? marque.espacement : 0,
+        ...or,
+      }}
+    >
+      {APP.name}
+    </span>
   )
 }
 
 /* ------------------------------------------------------------------ recto */
 
-/** Logo du propriétaire. Absent, il ne laisse aucun trou : la mise en page se resserre. */
-function Logo({ url, hauteur = 68 }) {
-  const [echec, setEchec] = useState(false)
-  if (!url || echec) return null
-  return (
-    <img
-      src={url}
-      alt=""
-      onError={() => setEchec(true)}
-      style={{ height: hauteur, maxWidth: 260, objectFit: 'contain' }}
-    />
-  )
-}
-
-/**
- * Recto : l'identité du propriétaire, et rien d'autre.
- *
- * Aucun logo n'est imposé — ni celui de Kartaa, ni un autre. Le propriétaire met
- * le sien s'il en a un, sa photo s'il le souhaite, les deux ou aucun des deux :
- * la mise en page tient dans les quatre cas.
- *
- * Le QR Code reste au verso : deux codes sur une même carte feraient hésiter
- * celui qui la scanne.
- */
-function Front({ card, theme, photoUrl, logoUrl }) {
-  const font = FONT_STACK[theme.font] || FONT_STACK.sans
-  const template = card.template || 'standard'
-  const skin = skinOf(template, theme)
-  const p = card.profile || {}
-  const fullName = [p.firstName, p.lastName].filter(Boolean).join(' ') || 'Votre nom'
-  const profession = (p.profession || '').trim()
-  const company = (card.companies?.[0]?.name || '').trim()
-  const contacts = contactLines(card)
-  const nameSize = fullName.length > 24 ? 44 : fullName.length > 17 ? 52 : 60
-
+/** Recto : le nom de la marque, centré, seul. */
+function Recto({ modele }) {
   return (
     <div
-      style={{ width: CARD_WIDTH, height: CARD_HEIGHT, fontFamily: font, background: skin.background, color: skin.text }}
+      style={{ width: CARD_WIDTH, height: CARD_HEIGHT, background: modele.fond }}
       className="relative overflow-hidden"
     >
-      <div style={{ background: skin.glow }} className="absolute inset-0" />
-      {template === 'vip' && <div style={{ border: `1px solid ${skin.frame}` }} className="absolute inset-6 rounded-[28px]" />}
-      {template === 'standard' && (
-        <>
-          <div style={{ background: theme.primary }} className="absolute inset-y-0 left-0 w-6" />
-          <div style={{ background: theme.accent }} className="absolute bottom-0 left-6 right-0 h-2" />
-        </>
-      )}
-
-      <div className="relative flex h-full flex-col justify-between" style={{ padding: CARD_SAFE }}>
-        <div className="flex items-start justify-between gap-10">
-          <div className="min-w-0 flex-1">
-            <h1 style={{ fontSize: nameSize, fontWeight: 800, lineHeight: 1.06, letterSpacing: '-.015em' }}>
-              {fullName}
-            </h1>
-            <div style={{ background: skin.accent }} className="mt-5 h-1 w-20 rounded-full" />
-            {profession && (
-              <p style={{ fontSize: 25, color: skin.soft, fontWeight: 600 }} className="mt-5 leading-snug">
-                {profession.slice(0, 48)}
-              </p>
-            )}
-            {company && (
-              <p style={{ fontSize: 20, color: skin.muted }} className="mt-1.5 leading-snug">
-                {company.slice(0, 44)}
-              </p>
-            )}
-          </div>
-
-          <div className="flex shrink-0 flex-col items-end gap-5">
-            <Logo url={logoUrl} />
-            <Photo url={photoUrl} borderColor={skin.accent} taille={132} marge={false} />
-          </div>
-        </div>
-
-        {!!contacts.length && (
-          <div className="grid grid-cols-2 gap-x-10 gap-y-3">
-            {contacts.slice(0, 4).map((line) => (
-              <div key={line.value} className="flex items-center gap-3" style={{ fontSize: 19, color: skin.soft }}>
-                <Icon name={line.icon} size={19} style={{ color: skin.accent }} />
-                <span className="truncate">{line.value}</span>
-              </div>
-            ))}
-          </div>
-        )}
+      <div style={{ background: modele.voile }} className="absolute inset-0" />
+      <Cadre modele={modele} />
+      <div className="relative grid h-full place-items-center" style={{ padding: CARD_SAFE }}>
+        <Marque modele={modele} />
       </div>
     </div>
   )
@@ -225,85 +155,60 @@ function Front({ card, theme, photoUrl, logoUrl }) {
 /* ------------------------------------------------------------------ verso */
 
 /**
- * Verso : l'identité du propriétaire et son QR Code.
- * Le nom vient du profil déjà saisi (aucune ressaisie), et le QR Code ne contient
- * qu'une URL publique — jamais une donnée personnelle, jamais un fichier.
+ * Verso : le QR Code, centré, seul.
+ *
+ * Aucun texte, aucune adresse, aucune invitation à scanner : un QR Code se
+ * reconnaît sans légende. Ce qu'il contient reste une simple adresse publique —
+ * jamais une donnée personnelle, jamais un fichier.
  */
-function Back({ card, theme, qr, photoUrl, logoUrl, branded = true }) {
-  const font = FONT_STACK[theme.font] || FONT_STACK.sans
-  const template = card.template || 'standard'
-  const skin = skinOf(template, theme)
-  const p = card.profile || {}
-  const fullName = [p.firstName, p.lastName].filter(Boolean).join(' ') || 'Votre nom'
-  // Une seule ligne professionnelle, courte : le reste vit sur le profil public.
-  const profession = (p.profession || '').trim()
-  const company = (card.companies?.[0]?.name || '').trim()
-  const url = prettyUrl(publicUrl(card.slug || ''))
-  // Le nom passe en deux tailles pour que « Jean-Baptiste Kouassi » tienne sans être coupé.
-  const nameSize = fullName.length > 22 ? 46 : fullName.length > 16 ? 54 : 62
-
+function Verso({ modele, qr }) {
+  // 328 px de code sur 1050, soit environ 26 mm sur une carte de 85 mm : bien
+  // au-dessus des 20 mm en dessous desquels un téléphone commence à peiner.
+  const cote = 372
+  const marge = 22
   return (
     <div
-      style={{ width: CARD_WIDTH, height: CARD_HEIGHT, fontFamily: font, background: skin.background, color: skin.text }}
+      style={{ width: CARD_WIDTH, height: CARD_HEIGHT, background: modele.fond }}
       className="relative overflow-hidden"
     >
-      <div style={{ background: skin.glow }} className="absolute inset-0" />
-      {template === 'vip' && <div style={{ border: `1px solid ${skin.frame}` }} className="absolute inset-6 rounded-[28px]" />}
-      {template === 'standard' && <div style={{ background: theme.primary }} className="absolute inset-x-0 top-0 h-3" />}
-
-      <div className="relative flex h-full items-center gap-12" style={{ padding: CARD_SAFE }}>
-        {/* ------------------------------------------------ identité */}
-        <div className="flex min-w-0 flex-1 flex-col justify-center">
-          {/* Logo et photo sont facultatifs et indépendants : la colonne se
-              resserre d'elle-même quand l'un des deux manque, ou les deux. */}
-          {(logoUrl || photoUrl) && (
-            <div className="mb-7 flex items-center gap-5">
-              <Photo url={photoUrl} borderColor={skin.accent} marge={false} />
-              <Logo url={logoUrl} hauteur={56} />
-            </div>
+      <div style={{ background: modele.voile }} className="absolute inset-0" />
+      <Cadre modele={modele} />
+      <div className="relative grid h-full place-items-center" style={{ padding: CARD_SAFE }}>
+        {/* La plaque blanche et sa marge forment la zone calme du code : sans
+            elle, aucun de ces fonds sombres ne se laisserait scanner. La
+            lisibilité passe avant l'esthétique, sur les trois modèles. */}
+        <div
+          style={{
+            width: cote,
+            height: cote,
+            padding: marge,
+            background: '#ffffff',
+            boxShadow: '0 30px 64px -38px rgba(0,0,0,.85)',
+            borderRadius: 18,
+          }}
+        >
+          {qr ? (
+            <img
+              src={qr}
+              alt="QR Code"
+              style={{ width: cote - marge * 2, height: cote - marge * 2, display: 'block' }}
+            />
+          ) : (
+            <div style={{ width: cote - marge * 2, height: cote - marge * 2 }} />
           )}
-          <h1 style={{ fontSize: nameSize, fontWeight: 800, lineHeight: 1.06, letterSpacing: '-.015em' }}>{fullName}</h1>
-          <div style={{ background: skin.accent }} className="mt-6 h-1 w-20 rounded-full" />
-          {profession && (
-            <p style={{ fontSize: 26, color: skin.soft, fontWeight: 600 }} className="mt-6 leading-snug">
-              {profession.slice(0, 48)}
-            </p>
-          )}
-          {company && (
-            <p style={{ fontSize: 21, color: skin.muted }} className="mt-2 leading-snug">
-              {company.slice(0, 44)}
-            </p>
-          )}
-          {branded && (
-            <p style={{ fontSize: 15, color: skin.muted }} className="mt-10 font-medium">
-              Créé avec Kartaa
-            </p>
-          )}
-        </div>
-
-        {/* ------------------------------------------------ QR Code */}
-        <div className="flex w-[372px] shrink-0 flex-col items-center gap-5 text-center">
-          {/* Fond blanc et marge autour du code : deux conditions pour qu'un téléphone
-              le lise du premier coup, y compris sur les modèles sombres. */}
-          <div
-            className="rounded-3xl bg-white"
-            style={{ padding: 18, boxShadow: template === 'standard' ? '0 20px 40px -22px rgba(10,12,24,.35)' : 'none' }}
-          >
-            {qr ? <img src={qr} alt="QR Code" style={{ width: 300, height: 300, display: 'block' }} /> : <div style={{ width: 300, height: 300 }} />}
-          </div>
-          <p style={{ fontSize: 20, fontWeight: 700 }} className="whitespace-nowrap">Scannez pour voir mon profil</p>
-          <p style={{ fontSize: 16, color: skin.muted }} className="truncate max-w-full">{url}</p>
         </div>
       </div>
     </div>
   )
 }
 
-export function CardArtwork({ card, side = 'front', qr, photoUrl, logoUrl, branded = true }) {
-  const theme = { primary: '#6d28d9', accent: '#f5b229', font: 'sans', layout: 'left', ...(card.theme || {}) }
-  return side === 'back'
-    ? <Back card={card} theme={theme} qr={qr} photoUrl={photoUrl} logoUrl={logoUrl} branded={branded} />
-    : <Front card={card} theme={theme} photoUrl={photoUrl} logoUrl={logoUrl} />
+/**
+ * `qr` est la seule chose qui vienne du dehors : l'image du code, calculée à
+ * partir de l'adresse publique de la carte. Tout le reste est décidé ici.
+ */
+export function CardArtwork({ card, side = 'front', qr }) {
+  const modele = habillage(card?.template || 'standard')
+  return side === 'back' ? <Verso modele={modele} qr={qr} /> : <Recto modele={modele} />
 }
 
 /** Conteneur responsive : met la carte à l'échelle sans déformer le rendu. */

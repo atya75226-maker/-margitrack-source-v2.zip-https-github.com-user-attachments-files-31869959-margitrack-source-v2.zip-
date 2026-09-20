@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { repo } from '../lib/storage'
+import { chargerCartes } from '../lib/offline/donnees'
 import { planOf } from '../config/app.config'
 import { useAuth } from './AuthContext'
 
@@ -9,14 +10,23 @@ export function DataProvider({ children }) {
   const { user } = useAuth()
   const [cards, setCards] = useState([])
   const [loading, setLoading] = useState(true)
+  // Vrai quand les cartes affichées viennent de la copie locale : le serveur
+  // n'a pas répondu. L'écran peut alors le dire au lieu de faire comme si.
+  const [local, setLocal] = useState(false)
 
   const refresh = useCallback(async () => {
     if (!user) {
       setCards([])
+      setLocal(false)
       setLoading(false)
       return
     }
-    setCards(await repo.cards.listByUser(user.id))
+    // chargerCartes ne lève jamais : sans réseau, elle rend la copie locale.
+    // Auparavant l'appel direct au serveur levait sans être rattrapé, et
+    // l'application restait bloquée sur son écran de chargement.
+    const { cartes, local: horsLigne } = await chargerCartes(user.id)
+    setCards(cartes)
+    setLocal(horsLigne)
     setLoading(false)
   }, [user])
 
@@ -37,7 +47,7 @@ export function DataProvider({ children }) {
     }
   }, [cards, user])
 
-  const value = useMemo(() => ({ cards, stats, loading, refresh }), [cards, stats, loading, refresh])
+  const value = useMemo(() => ({ cards, stats, loading, local, refresh }), [cards, stats, loading, local, refresh])
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>
 }

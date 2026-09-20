@@ -1,0 +1,94 @@
+/**
+ * La page d'accueil ne promet que ce qui existe (Playwright).
+ *
+ *   npm run build && npm run preview -- --port 4173
+ *   node scripts/vitrine-check.mjs
+ *
+ * Une vitrine se démode plus vite que le produit : on retire une
+ * fonctionnalité, la page continue de la vendre. Ce contrôle relit donc la page
+ * telle qu'un visiteur la reçoit et vérifie deux choses :
+ *
+ *   • qu'aucun chantier non branché n'y est présenté comme disponible ;
+ *   • que la démonstration est bien le composant réel du profil, et qu'elle est
+ *     annoncée comme un exemple.
+ */
+import { chromium } from 'playwright'
+
+const BASE = process.env.BASE_URL || 'http://localhost:4173'
+
+const echecs = []
+function verifier(nom, condition, detail = '') {
+  if (condition) console.log(`  ok   ${nom}`)
+  else {
+    console.log(`  ÉCHEC ${nom}${detail ? ` ${detail}` : ''}`)
+    echecs.push(nom)
+  }
+}
+
+/**
+ * Ce qui n'est pas branché (voir FEATURE_FLAGS et le README).
+ *
+ * Le mot peut apparaître pour dire qu'il n'est PAS disponible — c'est le rôle
+ * du pied de page. Ce qui est interdit, c'est de le présenter comme une
+ * fonctionnalité : on vérifie donc son absence des listes et des titres.
+ */
+const NON_BRANCHE = ['NFC', 'sans contact', 'domaine personnalisé', 'impression de cartes', 'cartes physiques livrées']
+
+const browser = await chromium.launch()
+const context = await browser.newContext({ viewport: { width: 1280, height: 1000 }, locale: 'fr-FR' })
+// Aucun compte, aucune donnée : la page d'accueil doit tenir toute seule.
+await context.route('**://*.supabase.co/**', (route) => route.abort('failed'))
+
+const page = await context.newPage()
+const erreurs = []
+page.on('pageerror', (erreur) => erreurs.push(String(erreur)))
+
+await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' })
+await page.waitForSelector('text=Comment ça marche', { timeout: 20000 })
+await page.waitForTimeout(2000)
+
+const texte = await page.innerText('body')
+
+console.log('\nAucune promesse qui n’existe pas')
+for (const mot of NON_BRANCHE) {
+  const present = new RegExp(mot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i').test(texte)
+  // Seule exception tolérée : la phrase du pied de page qui dit précisément
+  // que ces chantiers ne sont pas branchés.
+  const dansLAvertissement = /ne sont pas encore branchés/.test(texte)
+  verifier(`« ${mot} » n’est pas présenté comme disponible`, !present || dansLAvertissement,
+    `→ trouvé dans la page`)
+}
+verifier('le pied de page dit ce qui n’est pas branché', /ne sont pas encore branchés/.test(texte))
+verifier('aucune mention « aucun paiement n’est prélevé »', !/aucun paiement n['’]est/i.test(texte))
+
+console.log('\nLe produit réel est montré')
+verifier('la démonstration est annoncée comme un exemple', /données de démonstration/i.test(texte))
+// Marqueurs du composant de profil : ce sont ses propres libellés.
+verifier('le profil affiché est le composant réel', /MES RÉSEAUX/i.test(texte) && /Enregistrer le contact/i.test(texte))
+verifier('les trois profils d’exemple sont proposés',
+  (await page.locator('button:has-text("Consultante en marketing digital")').count()) > 0)
+
+const reseaux = await page.locator('[aria-label], a[href^="#"]').count()
+verifier('la page se charge sans erreur JavaScript', erreurs.length === 0, `→ ${erreurs[0] || ''}`)
+verifier('la page est complète', reseaux > 0 && texte.length > 1500, `→ ${texte.length} caractères`)
+
+console.log('\nLes chemins mènent où ils disent')
+const lien = async (texteBouton) => page.locator(`a:has-text("${texteBouton}")`).first().getAttribute('href')
+verifier('« Commencer gratuitement » mène à l’inscription', (await lien('Commencer gratuitement')) === '/inscription')
+verifier('« Passer à Pro » mène au vrai parcours', ['/inscription', '/app/abonnement'].includes(await lien('Passer à Pro')),
+  `→ ${await lien('Passer à Pro')}`)
+verifier('« Voir la démo » reste sur la page, vers la démonstration réelle',
+  (await lien('Voir la démo')) === '#profil', `→ ${await lien('Voir la démo')}`)
+verifier('le prix affiché est 5 000 FCFA', /5\s?000\s*FCFA/.test(texte))
+verifier('aucune autre offre payante n’est nommée',
+  !/Premium\s*[—:-]\s*\d|VIP\s*[—:-]\s*\d|abonnement (Premium|VIP)/i.test(texte))
+
+console.log('\nSur un téléphone')
+await page.setViewportSize({ width: 390, height: 844 })
+await page.waitForTimeout(800)
+const debordement = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 2)
+verifier('rien ne déborde horizontalement', !debordement)
+
+await browser.close()
+console.log(echecs.length ? `\n${echecs.length} échec(s).` : '\nTout est conforme.')
+process.exit(echecs.length ? 1 : 0)

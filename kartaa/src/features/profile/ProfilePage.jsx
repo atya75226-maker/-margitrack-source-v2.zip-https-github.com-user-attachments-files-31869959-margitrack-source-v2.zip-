@@ -134,7 +134,7 @@ export default function ProfilePage() {
         <SectionTitle icon="info" title="À propos de ce prototype" />
         <div className="space-y-2.5 text-sm text-ink-600">
           {[
-            { flag: FEATURE_FLAGS.payments, label: 'Paiement en ligne', note: "architecture prête, aucun prestataire branché" },
+            { flag: FEATURE_FLAGS.payments, label: 'Paiement en ligne', note: "Chariow ; l'abonnement est activé par la confirmation signée du prestataire" },
             { flag: FEATURE_FLAGS.physicalPrinting, label: 'Impression de cartes physiques', note: 'formulaire de commande disponible' },
             { flag: FEATURE_FLAGS.domainRegistrar, label: 'Vérification de domaine', note: 'instructions DNS affichées, vérification à venir' },
             { flag: FEATURE_FLAGS.nativeBiometrics, label: 'Biométrie (WebAuthn)', note: "active si l'appareil la propose" },

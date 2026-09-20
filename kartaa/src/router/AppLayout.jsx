@@ -8,6 +8,7 @@ import { isPro } from '../config/app.config'
 import { useTranslation } from '../i18n'
 import { useProLock } from '../components/ProLock'
 import { initialsOf } from '../lib/format'
+import EtatReseau from '../components/EtatReseau'
 
 const NAV = [
   { to: '/app', label: 'Accueil', icon: 'home', end: true },
@@ -96,6 +97,7 @@ export default function AppLayout() {
             <Logo size={30} />
           </Link>
           <div className="flex items-center gap-2">
+            <EtatReseau compact />
             {pro && <Badge tone="gold" icon="crown">{t('plan.pro')}</Badge>}
             <Link to="/app/profil">
               <Avatar src={user?.avatarUrl} initials={initialsOf(user?.firstName, user?.lastName)} size={36} />

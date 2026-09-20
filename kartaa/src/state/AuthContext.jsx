@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase, readableError, readStoredSession } from '../lib/supabaseClient'
 import { repo } from '../lib/storage'
+import { oublierToutEnLocal } from '../lib/offline/donnees'
 
 const AuthContext = createContext(null)
 
@@ -236,6 +237,9 @@ export function AuthProvider({ children }) {
   }, [loadProfile])
 
   const signOut = useCallback(async () => {
+    // Le reflet local part avec la session : rien ne doit rester lisible sur
+    // l'appareil après une déconnexion volontaire.
+    await oublierToutEnLocal().catch(() => null)
     clearTimeout(reconnectTimer.current)
     setReconnecting(false)
     await supabase.auth.signOut()

@@ -1,14 +1,16 @@
 /**
- * Photo du compte reprise par la carte (Playwright).
+ * Photo du compte reprise par le mini-site (Playwright).
  *
  *   npm run build && npm run preview -- --port 4173
  *   node scripts/photo-check.mjs
  *
- * Le compte possède une photo, la carte n'en a aucune qui lui soit propre :
- * elle doit donc afficher celle du compte. Le test suit ensuite tout le cycle —
- * ajout, changement, suppression — sans jamais recharger la page, parce que
- * c'est précisément ce qui manquait : la photo était bien enregistrée dans le
- * compte, mais la carte ne la lisait pas.
+ * La photo du compte habille le mini-site public : c'est là qu'on la voit, et
+ * nulle part ailleurs. Le test suit tout le cycle — photo venue du fournisseur,
+ * ajout, changement, retrait — et vérifie à chaque étape que la page publique
+ * montre la bonne, celle du compte et non une autre.
+ *
+ * Il vérifie aussi l'inverse, à chaque étape : la carte, elle, n'en affiche
+ * jamais aucune. Elle ne porte que la marque et le QR Code.
  */
 import { chromium } from 'playwright'
 import { PNG } from 'pngjs'
@@ -102,6 +104,11 @@ metaAvatar = PHOTO_FOURNISSEUR
 const browser = await chromium.launch()
 const context = await browser.newContext({
   viewport: { width: 1280, height: 1000 },
+  // Le service worker met en cache les images publiques : ses requêtes à lui
+  // échappent aux interceptions de Playwright, et ce contrôle porte sur la
+  // photo, pas sur le cache. On le neutralise ici — le cache des images est
+  // vérifié par pwa-check et offline-check.
+  serviceWorkers: 'block',
   storageState: { cookies: [], origins: [{ origin: BASE, localStorage: [{ name: KEY, value: JSON.stringify(session()) }] }] },
 })
 
@@ -171,19 +178,43 @@ await context.route('**/rest/v1/rpc/card_by_slug*', (route) => json(route, {
 
 const page = await context.newPage()
 
-/** Couleur réellement peinte par la photo au centre de la pastille du verso. */
-async function couleurDeLaPhotoDuVerso() {
-  await page.goto(`${BASE}/app/cartes/${CARTE}`, { waitUntil: 'domcontentloaded' })
-  await page.waitForSelector('text=Verso', { timeout: 15000 })
-  await page.click('button:has-text("Verso")')
-  await page.waitForTimeout(1200)
-  const photo = page.locator('.shadow-lift img[alt=""]').first()
+/** Couleur réellement peinte par le portrait, en haut du mini-site public. */
+async function couleurDuMiniSite() {
+  await page.goto(`${BASE}/${carte.slug}`, { waitUntil: 'domcontentloaded' })
+  await page.waitForSelector('text=Awa Diallo', { timeout: 15000 })
+  await page.waitForTimeout(1000)
+  const photo = page.locator('header img').first()
   if (!(await photo.count())) return null
   const capture = PNG.sync.read(await photo.screenshot())
   const milieu = (capture.height >> 1) * capture.width * 4 + (capture.width >> 1) * 4
   const pixel = [capture.data[milieu], capture.data[milieu + 1], capture.data[milieu + 2]]
   if (BLEU.test(pixel)) return 'fournisseur'
   return fichiers.find((f) => f.test(pixel))?.nom || `inconnue(${pixel.join(',')})`
+}
+
+/**
+ * Compte les pixels d'une photo de test sur les deux faces de la carte.
+ *
+ * Zéro est la seule réponse acceptable, quelle que soit l'étape : la carte ne
+ * lit plus le profil. Une valeur non nulle voudrait dire qu'une information
+ * personnelle est revenue s'imprimer dessus.
+ */
+async function photoSurLaCarte() {
+  await page.goto(`${BASE}/app/cartes/${CARTE}`, { waitUntil: 'domcontentloaded' })
+  await page.waitForSelector('text=Verso', { timeout: 15000 })
+  await page.waitForTimeout(1200)
+  const face = page.locator('.shadow-lift').first()
+  let total = 0
+  for (const bouton of ['Recto', 'Verso']) {
+    await page.click(`button:has-text("${bouton}")`)
+    await page.waitForTimeout(900)
+    const capture = PNG.sync.read(await face.screenshot())
+    for (let i = 0; i < capture.data.length; i += 4) {
+      const pixel = [capture.data[i], capture.data[i + 1], capture.data[i + 2]]
+      if (BLEU.test(pixel) || fichiers.some((f) => f.test(pixel))) total += 1
+    }
+  }
+  return total
 }
 
 async function deposerPhoto(fichier) {
@@ -195,19 +226,24 @@ async function deposerPhoto(fichier) {
 
 console.log('\nCas 0 — photo donnée par Google, jamais recopiée dans le profil')
 // C'est la situation d'un compte dont l'identité Google a été rattachée après
-// la création du profil : la photo n'existe que dans le jeton.
-verifier('la carte affiche la photo du fournisseur', (await couleurDeLaPhotoDuVerso()) === 'fournisseur')
+// la création du profil : la photo n'existe que dans le jeton. Elle doit être
+// reprise dans le profil, sans quoi le mini-site public resterait aux initiales.
+// L'ouverture de l'application déclenche la reprise : on regarde donc la carte
+// d'abord, puis l'état du profil.
+verifier('la carte n’affiche aucune photo', (await photoSurLaCarte()) === 0)
 verifier('le profil est réparé pour le mini-site public', avatarUrl === PHOTO_FOURNISSEUR,
   `→ ${avatarUrl || '(vide)'}`)
+verifier('le mini-site affiche la photo du fournisseur', (await couleurDuMiniSite()) === 'fournisseur')
 
-console.log('\nCas 1 — le compte a une photo, la carte n’en a pas')
+console.log('\nCas 1 — le compte reçoit sa propre photo')
 await deposerPhoto(fichiers[0])
 verifier('la photo est enregistrée sur le compte', avatarUrl.includes('card-assets'), `→ ${avatarUrl || '(vide)'}`)
-verifier('la carte reprend la photo du compte', (await couleurDeLaPhotoDuVerso()) === 'rose')
+verifier('le mini-site reprend la photo du compte', (await couleurDuMiniSite()) === 'rose')
+verifier('la carte reste sans photo', (await photoSurLaCarte()) === 0)
 
 console.log('\nCas 2 — la photo change')
 await deposerPhoto(fichiers[1])
-verifier('la carte montre la nouvelle photo, sans rechargement', (await couleurDeLaPhotoDuVerso()) === 'vert')
+verifier('le mini-site montre la nouvelle photo', (await couleurDuMiniSite()) === 'vert')
 
 console.log('\nCas 3 — la photo est retirée')
 await page.goto(`${BASE}/app/profil`, { waitUntil: 'domcontentloaded' })
@@ -215,9 +251,9 @@ await page.waitForSelector('text=Ma photo', { timeout: 15000 })
 await page.click('button:has-text("Retirer")')
 await page.waitForSelector('text=Photo retirée', { timeout: 15000 })
 verifier('le compte n’a plus de photo', avatarUrl === '', `→ ${avatarUrl || '(vide)'}`)
-verifier('la carte n’affiche plus aucune photo', (await couleurDeLaPhotoDuVerso()) === null)
+verifier('le mini-site n’affiche plus aucune photo', (await couleurDuMiniSite()) === null)
 
-console.log('\nLe mini-site public affiche la photo du propriétaire')
+console.log('\nUn visiteur, qui n’est pas le propriétaire, voit la même photo')
 await deposerPhoto(fichiers[0])
 const visiteur = await browser.newContext({ viewport: { width: 420, height: 900 } })
 await visiteur.route('**://*.supabase.co/**', (route) => route.abort('failed'))

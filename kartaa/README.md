@@ -19,10 +19,11 @@ stockage de fichiers et règles d'accès côté serveur.
 | --- | --- |
 | Création de compte et connexion | Supabase Auth — e-mail + mot de passe, ou Google |
 | Assistant de création de carte en 5 étapes | fonctionnel |
-| Prévisualisation en direct, 3 modèles, couleurs et typographie | fonctionnel |
+| Prévisualisation en direct, 3 modèles de carte | fonctionnel |
+| Couleurs et typographie du mini-site | fonctionnel |
 | Génération du QR Code | fonctionnel (le QR pointe vers le mini-site, jamais vers un numéro) |
 | Page publique / mini-site | fonctionnel, avec « Ajouter aux contacts » (.vcf) |
-| Téléchargement de la carte en PNG / JPG / PDF | fonctionnel (PDF recto + verso) |
+| Téléchargement de la carte en PNG / JPG / PDF | fonctionnel (PDF recto + verso), QR Code vectoriel |
 | Coffre Sécurité : création, fichiers, dossiers | fonctionnel, **chiffré AES-256-GCM avant téléversement** |
 | Protection par mot de passe | fonctionnel, **tentatives comptées côté serveur** |
 | Déverrouillage biométrique | WebAuthn quand l'appareil le propose |
@@ -36,7 +37,7 @@ stockage de fichiers et règles d'accès côté serveur.
 | Quotas de stockage | appliqués par déclencheur ; le plan Supabase lui-même plafonne l'espace total du projet (1 Go sur l'offre gratuite) |
 | Nom de domaine personnalisé | **interface + instructions DNS uniquement** — aucun registrar branché |
 | Commande de cartes physiques | **formulaire de demande uniquement** |
-| Paiement en ligne | **non branché** — l'offre se change en mode démonstration |
+| Paiement en ligne | Chariow : page de paiement + confirmation signée (`chariow-webhook`) |
 
 ---
 
@@ -390,6 +391,206 @@ sinon, à la connexion.
 `npm run test:pwa` vérifie tout cela dans un navigateur, à commencer par
 l'absence de toute ressource externe dans les caches.
 
+## Le profil public, et la vitrine
+
+Le mini-site public (`/<votre-adresse>`) et la page d'accueil partagent un seul
+composant d'affichage : `src/features/public/ProfileView.jsx`.
+
+Ce n'est pas une coquetterie d'architecture. La page d'accueil montre un profil
+dans un téléphone ; si c'était une maquette dessinée à côté, elle se mettrait à
+mentir au premier changement du vrai profil. Ici, la démonstration EST le
+produit — seules les informations affichées sont des exemples, et la page le
+dit.
+
+`PublicProfilePage` garde ce qui touche aux données : chargement, mode hors
+connexion, comptage des visites, partage, fiche contact. `ProfileView` ne fait
+qu'afficher ce qu'on lui donne.
+
+### Rien n'est affiché qui n'existe pas
+
+| Donnée absente | Ce qui s'affiche |
+| --- | --- |
+| Pas de numéro | pas de bouton « Appeler » |
+| Pas d'e-mail | pas de bouton « E-mail » |
+| Aucun réseau | pas de section « Mes réseaux » |
+| Aucun service, aucune photo | sections absentes, pas de liste vide |
+| Pas de photo de profil | les initiales, sur le même fond |
+
+Un profil qui ne renseigne que son nom et son WhatsApp reste une page nette.
+C'est vérifié : `npm run test:profil` joue un profil complet *et* un profil
+presque vide.
+
+### Les réseaux, en ligne
+
+Les réseaux sont une rangée d'icônes, défilante sur téléphone. Une plateforme
+qui ne porte qu'un compte mène directement au lien ; une plateforme qui en porte
+plusieurs — c'est permis — déplie la liste, parce qu'une icône ne peut pas mener
+à deux endroits. Les sites et autres adresses ont leur propre section, avec leur
+libellé en toutes lettres.
+
+### La vitrine ne promet que ce qui existe
+
+`npm run test:vitrine` relit la page d'accueil comme un visiteur la reçoit et
+refuse : le NFC, le domaine personnalisé, l'impression de cartes — tout ce que
+`FEATURE_FLAGS` annonce comme non branché. Le pied de page, lui, dit franchement
+ce qui ne l'est pas encore.
+
+Le bouton « Passer à Pro » mène au vrai parcours (`/app/abonnement`, ou
+l'inscription si personne n'est connecté), jamais à une activation directe.
+
+```bash
+npm run build && npm run preview -- --port 4173
+npm run test:profil     # profil complet, puis profil presque vide
+npm run test:vitrine    # aucune promesse qui n'existe pas
+```
+
+## La carte : deux faces, rien de plus
+
+La carte ne contient pas l'identité — elle y donne accès.
+
+| | Recto | Verso |
+| --- | --- | --- |
+| Standard | « Kartaa » en blanc sur bleu nuit | QR Code |
+| Premium | « Kartaa » en lettrage fin sur noir satiné | QR Code |
+| VIP | « Kartaa » doré sur noir profond, liseré or | QR Code |
+
+C'est tout. Pas de nom, pas de photo, pas de logo, pas de téléphone, pas de
+métier, pas de réseaux — et au verso, aucun texte, pas même une adresse ou un
+« scannez-moi ». Un QR Code se reconnaît sans légende.
+
+Ces informations n'ont pas disparu : elles vivent dans le profil, dans la base
+et sur le mini-site public, qui est précisément ce que le QR Code ouvre. La
+photo, le logo et les coordonnées continuent de s'y afficher.
+
+### Pourquoi la carte a son propre composant
+
+`src/components/card/CardArtwork.jsx` ne lit du `card` que son modèle. Rien
+d'autre n'y entre : pas de profil, pas de compte, pas de thème. C'est cette
+frontière qui garantit qu'une modification du profil ne peut ni déplacer quoi
+que ce soit sur la carte, ni y faire réapparaître une information.
+
+Les trois habillages sont figés dans ce fichier. Les couleurs et la typographie
+choisies dans l'assistant habillent le mini-site public — l'écran le dit —, pas
+la carte : une carte Standard ressemble toujours à une carte Standard.
+
+### Le QR Code
+
+Il pointe vers l'adresse publique de référence (`kartaa-eight.vercel.app/<votre-adresse>`),
+jamais vers celle du navigateur : un code imprimé depuis une préproduction
+resterait coincé dessus.
+
+Il est **vectoriel** sur la carte : le dessin est recalculé à la résolution du
+fichier produit, donc net à l'impression quelle que soit la taille. Le
+téléchargement du code seul reste une image `.png`, forme attendue par la
+plupart des usages.
+
+Il occupe 328 px de côté sur une carte de 1050 px, soit environ 26 mm sur une
+carte de 85 mm — bien au-dessus des 20 mm en dessous desquels un téléphone
+commence à peiner. Il est posé sur une plaque blanche : les trois modèles sont
+sombres, et sans ce blanc aucun ne se laisserait scanner. La lisibilité passe
+avant l'esthétique, toujours.
+
+### Vérification
+
+```bash
+npm run build && npm run preview -- --port 4173
+npm run test:carte
+```
+
+Pour chacun des trois modèles, avec un compte volontairement rempli (nom, photo,
+métier, entreprise, téléphone, e-mail, réseaux) : le recto n'affiche que
+« Kartaa » au mot près, le verso aucun texte, aucune de ces informations
+n'apparaît sur l'une des deux faces, aucun pixel de la photo non plus, et le QR
+Code lu dans le fichier téléchargé ouvre bien le profil public attendu.
+
+## Sans réseau
+
+Kartaa s'ouvre et reste utilisable sans connexion. Pas complètement : une partie
+du produit a réellement besoin du serveur, et l'application le dit au lieu de
+faire semblant.
+
+### Ce qui fonctionne sans réseau
+
+| | Sans réseau |
+| --- | --- |
+| Ouvrir l'application | oui, elle démarre |
+| Voir ses cartes et leur QR Code | oui — le QR est dessiné sur l'appareil |
+| Modifier une carte existante | oui : enregistrée ici, envoyée au retour du réseau |
+| Rouvrir un mini-site **déjà consulté** sur cet appareil | oui, avec un bandeau |
+| Ouvrir l'écran du scanner | oui |
+| Créer une **première** carte | non : le serveur attribue l'adresse publique |
+| Ouvrir un mini-site **jamais consulté** ici | non : il n'a jamais été téléchargé |
+| Statistiques, paiement, téléversement d'images | non |
+
+Les deux derniers cas ne sont pas silencieux : l'écran explique qu'une connexion
+est nécessaire, et la saisie en cours n'est jamais perdue.
+
+### Où les données sont rangées
+
+Dans **IndexedDB** (`src/lib/offline/db.js`), pas dans `localStorage` : trois
+magasins, `cartes`, `profils` (les mini-sites déjà ouverts) et `attente` (les
+modifications pas encore parties).
+
+N'y entrent jamais : aucun mot de passe, aucun code de récupération, aucun
+fichier privé. Ce qui y est rangé est exactement ce que la personne connectée a
+déjà sous les yeux, et les mini-sites sont publics par nature.
+
+Le service worker garde en plus les images de l'espace public `card-assets`
+(soixante au maximum, les plus anciennes partent en premier). Rien d'autre du
+serveur n'entre dans un cache : ni appels d'API, ni jetons, ni URL signées.
+
+### Le serveur reste la source de vérité
+
+Chaque lecture réussie écrit au passage ce qu'elle a obtenu ; chaque lecture
+impossible relit cette copie et le signale (`local: true`), ce qui allume le
+bandeau « Mode hors connexion — dernières données disponibles ». Rien n'est
+inventé : si rien n'a jamais été enregistré, l'écran affiche qu'une connexion
+est nécessaire.
+
+Une requête partie vers un serveur injoignable ne revient parfois **jamais** —
+ni réponse, ni erreur. Toute lecture est donc bornée (huit secondes, vingt pour
+une écriture), et quand le navigateur annonce lui-même l'absence de réseau, rien
+n'est envoyé du tout. Sans cette borne, l'écran attendait indéfiniment une
+réponse qui ne viendrait pas au lieu d'afficher la copie locale.
+
+### La file d'attente, et les conflits
+
+Une modification faite sans réseau est rangée dans `attente` avec l'heure à
+laquelle elle a été faite, puis appliquée à la copie locale — ce que l'écran
+montre est donc vrai : c'est bien enregistré sur l'appareil.
+
+Au retour du réseau (évènement `online`, ou simple retour au premier plan), la
+file est vidée dans l'ordre. Chaque opération part, puis est **retirée** : elle
+ne peut pas être envoyée deux fois. Le premier échec réseau arrête la boucle —
+on réessaiera plutôt que de marteler un serveur injoignable. Remplacer la liste
+complète des liens est idempotent : la rejouer donne le même résultat.
+
+La règle de conflit est volontairement simple :
+
+- si la carte a été modifiée **ailleurs après** la modification locale, la
+  version du serveur est gardée et l'opération est marquée « conflit ». Rien
+  n'est écrasé en silence ;
+- si le serveur **refuse** (droits, validation, adresse déjà prise), l'opération
+  est marquée « refusée » avec son motif : la garder ne servirait à rien,
+  elle serait refusée à l'identique.
+
+L'indicateur d'en-tête ne dit que ce qui est vrai : « Hors connexion »,
+« À synchroniser (n) », « Synchronisation… », et « Synchronisé » seulement quand
+la file est réellement vide.
+
+À la déconnexion, la base locale est effacée : rien ne reste lisible sur
+l'appareil.
+
+### Vérification
+
+`npm run test:offline` rejoue les huit scénarios dans un vrai navigateur avec
+une vraie coupure (`context.setOffline`) : démarrage, cartes, QR Code,
+modification, retour du réseau (envoyée **une seule fois**), mini-site déjà
+consulté, mini-site jamais consulté, scanner. La photo du mini-site est servie
+par un vrai serveur, parce que les requêtes d'un service worker échappent aux
+interceptions de Playwright : le test vérifie qu'elle est réellement rangée dans
+son cache, et pas seulement affichée.
+
 ## Gratuit et Pro
 
 Un seul produit payant : **Pro, 5 000 FCFA par mois**. Premium et VIP sont des
@@ -465,10 +666,14 @@ Pour activer un compte à la main : `select set_user_plan('<id>', 'pro');`.
 
 ### Aucun paiement n'est simulé
 
-La page d'abonnement écrivait directement `plan = 'pro'` : un paiement réussi
-qui n'avait jamais eu lieu. Le bouton enregistre désormais une intention dans
-`subscription_requests` et le dit clairement. L'activation passe par
-`set_user_plan()`, côté serveur — c'est là que se branchera l'encaissement.
+La page d'abonnement écrivait autrefois directement `plan = 'pro'` : un paiement
+réussi qui n'avait jamais eu lieu.
+
+Aujourd'hui, le bouton ouvre la page de paiement du prestataire (Chariow). Le
+retour du navigateur n'accorde rien — il est sous le contrôle du visiteur, donc
+sans valeur comme preuve. Seule la confirmation signée envoyée par le
+prestataire à `supabase/functions/chariow-webhook` active l'abonnement, après
+vérification de sa signature HMAC, en appelant `activate_pro()` côté serveur.
 
 `npm run test:plan` compare les deux offres dans un navigateur : un seul bouton,
 un seul prix, aucune activation sans paiement, et un verrou qui nomme la
@@ -548,6 +753,10 @@ recto. Regarder l'écran ne suffisait pas : le recto s'affichait correctement,
 c'est le fichier qui était faux — l'export rendait `front` quelle que soit la
 face demandée.
 
+Il vérifie aussi ce que les fichiers ne contiennent pas : la photo du compte,
+pourtant bien présente dans le profil, ne doit apparaître sur aucune des deux
+faces (voir « La carte : deux faces, rien de plus »).
+
 ### Vérification de la session et de la navigation (navigateur réel)
 
 ```bash
@@ -585,6 +794,14 @@ et fiche contact.
 
 ### Test de bout en bout
 
+> **Ce script est périmé et ne passe plus.** Il a été écrit avant le passage à
+> Supabase : il lit encore la base locale du prototype (`kartaa.db.v1`), attend
+> des identifiants `crd_`/`vlt_`, et déroule le Coffre Sécurité, retiré de
+> l'application depuis. Il est conservé pour mémoire, à réécrire. Les contrôles
+> qui font foi aujourd'hui sont les suivants (`test:profil`, `test:vitrine`,
+> `test:carte`, `test:offline`, `test:pwa`, `test:session`, `test:plan`,
+> `test:export`, `test:photo`, `test:scanner`, `test:maj`).
+
 `scripts/e2e-smoke.mjs` rejoue tout le parcours dans un vrai navigateur — compte,
 carte, QR Code, mini-site, téléchargement PNG/PDF, coffre, fichier chiffré,
 verrouillage, mauvais mot de passe, récupération.
@@ -606,11 +823,11 @@ confirmation, ce que le test signale clairement).
 
 `FEATURE_FLAGS` dans `src/config/app.config.js` décrit l'état de chaque extension.
 
-- **Paiement** : l'abonnement s'active aujourd'hui en mode démonstration depuis
-  `/app/abonnement`. Brancher un prestataire compatible FCFA (Wave, Orange Money,
-  MTN MoMo, Stripe…) revient à écrire la colonne `profiles.plan` depuis un webhook
-  serveur — les limites sont déjà appliquées en base, elles suivront
-  automatiquement. Le montant à transmettre est **5 000 FCFA par mois**.
+- **Paiement** : branché. `/app/abonnement` ouvre la page de paiement de
+  Chariow, et c'est la confirmation signée du prestataire, reçue par
+  `chariow-webhook`, qui active l'abonnement — jamais un retour de navigateur.
+  Le montant est de **5 000 FCFA par mois**. Ce qui reste à faire : configurer
+  le Pulse et le secret `CHARIOW_PULSE_SECRET` sur un nouveau projet.
 - **Impression physique** : le formulaire enregistre la demande ; il reste à la
   transmettre à un imprimeur.
 - **Domaine personnalisé** : l'interface enregistre le domaine et affiche les

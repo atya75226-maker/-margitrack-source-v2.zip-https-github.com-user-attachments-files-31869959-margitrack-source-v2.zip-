@@ -36,9 +36,11 @@ export default function StatsPage() {
 
   useEffect(() => {
     let cancelled = false
+    // Sans réseau, l'historique ne peut pas être connu : l'écran reste vide et
+    // l'indicateur « Hors connexion » de l'en-tête dit pourquoi.
     repo.cards.scanHistory(DAYS).then((rows) => {
       if (!cancelled) setHistory(rows)
-    })
+    }).catch(() => null)
     return () => {
       cancelled = true
     }
@@ -53,7 +55,7 @@ export default function StatsPage() {
       // Le serveur applique la même règle que l'écran : il répond
       // « verrouillé » plutôt que des chiffres si l'offre ne les couvre pas.
       if (!cancelled) setInteractions(counts?.locked ? null : counts)
-    })
+    }).catch(() => null)
     return () => {
       cancelled = true
     }

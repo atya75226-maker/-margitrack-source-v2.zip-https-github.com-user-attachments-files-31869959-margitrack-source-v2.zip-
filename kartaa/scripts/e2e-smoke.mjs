@@ -1,6 +1,12 @@
 /**
  * Test de bout en bout du prototype (Playwright).
  *
+ * PÉRIMÉ — NE PASSE PLUS. Écrit avant le passage à Supabase : il lit encore la
+ * base locale du prototype (kartaa.db.v1), attend des identifiants crd_/vlt_ et
+ * déroule le Coffre Sécurité, retiré de l'application depuis. Conservé pour
+ * mémoire, à réécrire. Les contrôles qui font foi sont les autres scripts de ce
+ * dossier (offline, pwa, session, plan, export, photo, scanner, maj).
+ *
  *   npm run build && npm run preview -- --port 4178
  *   npm install --no-save playwright && npx playwright install chromium
  *   node scripts/e2e-smoke.mjs            # ou BASE_URL=... node scripts/e2e-smoke.mjs

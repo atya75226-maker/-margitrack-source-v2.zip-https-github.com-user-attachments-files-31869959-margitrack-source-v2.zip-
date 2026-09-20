@@ -1,4 +1,16 @@
-/** Exemples affichés sur la page d'accueil (aucune donnée réelle). */
+/**
+ * Exemples de la page d'accueil. Aucune donnée réelle, aucun compte réel.
+ *
+ * Ils ont exactement la forme d'une carte renvoyée par la base — y compris
+ * `socialLinks` — parce que la vitrine affiche le vrai composant de profil, pas
+ * une maquette. Un exemple mal formé se verrait donc immédiatement.
+ *
+ * Ces objets ne sont lus que par la page d'accueil. Ils n'entrent jamais dans
+ * la base, ne sont jamais enregistrés, et le profil d'une personne connectée
+ * affiche toujours ses propres données.
+ */
+
+const lien = (platform, url, title = '') => ({ id: `${platform}-${url}`, platform, url, title, isActive: true })
 
 export const DEMO_CARDS = [
   {
@@ -17,38 +29,46 @@ export const DEMO_CARDS = [
       country: "Côte d'Ivoire",
     },
     companies: [{ id: 'c1', name: 'Studio Akwaba' }],
-    socials: [
-      { key: 'instagram', value: 'instagram.com/studioakwaba', enabled: true },
-      { key: 'linkedin', value: 'linkedin.com/in/awatraore', enabled: true },
-      { key: 'website', value: 'studio-akwaba.ci', enabled: true },
+    socialLinks: [
+      lien('instagram', 'instagram.com/studioakwaba'),
+      lien('linkedin', 'linkedin.com/in/awatraore'),
+      lien('tiktok', 'tiktok.com/@studioakwaba'),
+      lien('website', 'studio-akwaba.ci', 'Mon site'),
     ],
     about: "Consultante indépendante, j'accompagne les petites entreprises dans leur passage au digital.",
     activities: ['Marketing digital', 'Community management', 'Formation'],
+    services: [
+      { id: 's1', name: 'Audit de présence en ligne', price: '75 000 FCFA' },
+      { id: 's2', name: 'Accompagnement mensuel', description: 'Publication, réponses aux messages, suivi des résultats.', price: '150 000 FCFA / mois' },
+    ],
+    gallery: [],
   },
   {
     id: 'demo-premium',
-    slug: 'jean-dupont',
+    slug: 'ibrahim-sow',
     template: 'premium',
     theme: { primary: '#5b21b6', accent: '#f5b229', font: 'display' },
     profile: {
-      firstName: 'Jean',
-      lastName: 'Dupont',
-      profession: 'Architecte d’intérieur',
-      phone: '+33 6 12 34 56 78',
-      whatsapp: '+33 6 12 34 56 78',
-      email: 'contact@jeandupont.fr',
-      city: 'Lyon',
-      country: 'France',
+      firstName: 'Ibrahim',
+      lastName: 'Sow',
+      profession: "Architecte d'intérieur",
+      phone: '+221 77 123 45 67',
+      whatsapp: '+221 77 123 45 67',
+      email: 'contact@atelier-sow.sn',
+      city: 'Dakar',
+      country: 'Sénégal',
     },
-    companies: [{ id: 'c1', name: 'Atelier Dupont' }],
-    socials: [
-      { key: 'instagram', value: 'instagram.com/atelierdupont', enabled: true },
-      { key: 'linkedin', value: 'linkedin.com/in/jeandupont', enabled: true },
-      { key: 'youtube', value: 'youtube.com/@atelierdupont', enabled: true },
-      { key: 'website', value: 'jeandupont.fr', enabled: true },
+    companies: [{ id: 'c1', name: 'Atelier Sow' }],
+    socialLinks: [
+      lien('instagram', 'instagram.com/ateliersow'),
+      lien('linkedin', 'linkedin.com/in/ibrahimsow'),
+      lien('youtube', 'youtube.com/@ateliersow'),
+      lien('website', 'atelier-sow.sn', 'Mes réalisations'),
     ],
-    about: "Architecte d'intérieur, je conçois des espaces qui racontent une histoire.",
+    about: "Je conçois des bureaux et des commerces qui ressemblent à ceux qui les occupent.",
     activities: ['Architecture intérieure', 'Décoration', 'Suivi de chantier'],
+    services: [{ id: 's1', name: "Plan d'aménagement", price: '250 000 FCFA' }],
+    gallery: [],
   },
   {
     id: 'demo-vip',
@@ -58,7 +78,7 @@ export const DEMO_CARDS = [
     profile: {
       firstName: 'Chantal',
       lastName: 'Mbeki',
-      profession: 'Avocate d’affaires',
+      profession: "Avocate d'affaires",
       phone: '+237 6 99 88 77 66',
       whatsapp: '+237 6 99 88 77 66',
       email: 'c.mbeki@cabinet-mbeki.cm',
@@ -66,11 +86,13 @@ export const DEMO_CARDS = [
       country: 'Cameroun',
     },
     companies: [{ id: 'c1', name: 'Cabinet Mbeki & Associés' }],
-    socials: [
-      { key: 'linkedin', value: 'linkedin.com/in/chantalmbeki', enabled: true },
-      { key: 'website', value: 'cabinet-mbeki.cm', enabled: true },
+    socialLinks: [
+      lien('linkedin', 'linkedin.com/in/chantalmbeki'),
+      lien('website', 'cabinet-mbeki.cm', 'Le cabinet'),
     ],
-    about: "Cabinet spécialisé en droit des affaires et accompagnement des entreprises.",
+    about: 'Cabinet spécialisé en droit des affaires et accompagnement des entreprises.',
     activities: ['Droit des affaires', 'Contrats', 'Contentieux'],
+    services: [],
+    gallery: [],
   },
 ]

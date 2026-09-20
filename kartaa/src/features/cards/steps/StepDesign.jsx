@@ -16,7 +16,10 @@ export default function StepDesign({ draft, update, assets, slugError }) {
     <div className="space-y-5">
       <Panel>
         <p className="font-display text-base font-bold text-ink-900">Modèle de carte</p>
-        <p className="hint mt-0.5 mb-4">Le contenu reste le même : seul le niveau de finition change.</p>
+        <p className="hint mt-0.5 mb-4">
+          La carte porte le nom Kartaa au recto et votre QR Code au verso — rien d'autre. Vos informations vivent sur
+          votre mini-site, que le QR Code ouvre. Les modèles ne changent que la finition.
+        </p>
         <div className="grid gap-4 sm:grid-cols-3">
           {TEMPLATES.map((template) => {
             const locked = template.pro && !allowedPremium
@@ -32,7 +35,7 @@ export default function StepDesign({ draft, update, assets, slugError }) {
               >
                 <div className="relative bg-ink-100">
                   <CardScaler>
-                    <CardArtwork card={{ ...draft, template: template.id, theme: { ...draft.theme, ...template.defaults } }} side="back" qr={assets.qr} photoUrl={assets.photoUrl} logoUrl={assets.logoUrl} />
+                    <CardArtwork card={{ ...draft, template: template.id }} side="front" />
                   </CardScaler>
                   {locked && (
                     <span className="absolute inset-0 grid place-items-center bg-ink-950/50 text-white">
@@ -56,8 +59,10 @@ export default function StepDesign({ draft, update, assets, slugError }) {
       </Panel>
 
       <Panel>
-        <p className="font-display text-base font-bold text-ink-900">Couleurs</p>
-        <p className="hint mt-0.5 mb-4">Une couleur principale, un accent. On reste sobre : c'est une carte professionnelle.</p>
+        <p className="font-display text-base font-bold text-ink-900">Couleurs de mon mini-site</p>
+        <p className="hint mt-0.5 mb-4">
+          Elles habillent la page que votre QR Code ouvre. La carte, elle, garde la finition de son modèle.
+        </p>
         <div className="flex flex-wrap gap-2.5">
           {PALETTES.map((palette) => {
             const active = draft.theme?.primary === palette.primary
@@ -106,7 +111,7 @@ export default function StepDesign({ draft, update, assets, slugError }) {
       </Panel>
 
       <Panel>
-        <p className="font-display text-base font-bold text-ink-900">Typographie</p>
+        <p className="font-display text-base font-bold text-ink-900">Typographie de mon mini-site</p>
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
           {FONTS.map((font) => (
             <button
