@@ -35,11 +35,89 @@
   .grain { background-image: radial-gradient(rgba(255,255,255,.12) 1px, transparent 1px); background-size: 22px 22px; }
   .text-balance { text-wrap: balance; }
 
-  /* Mouvements de la scène d'accueil : lents, discrets, jamais clignotants. */
+  /*
+   * La scène du haut de page, en boucle de 14 secondes.
+   *
+   * Une seule horloge pour tout le monde : chaque élément porte la même durée
+   * et ne diffère que par ses images-clés. C'est ce qui fait que la main, la
+   * carte, la lueur et l'écran restent d'accord entre eux, sans une ligne de
+   * JavaScript ni un seul minuteur.
+   *
+   *   0 → 18 %   on attend, la carte est dans la main
+   *  18 → 36 %   la carte avance vers le téléphone
+   *  36 → 43 %   contact : la lueur et l'onde passent
+   *  40 → 52 %   l'écran bascule vers le profil
+   *  52 → 76 %   on regarde
+   *  76 → 90 %   tout revient à sa place
+   */
+  .scene-carte { animation: scene-carte 14s cubic-bezier(.4,0,.2,1) infinite; }
+  .scene-bras { animation: scene-bras 14s cubic-bezier(.4,0,.2,1) infinite; }
+  .scene-lueur { animation: scene-lueur 14s ease-in-out infinite; opacity: 0; }
+  .scene-onde { animation: scene-onde 14s ease-out infinite; opacity: 0; }
+  .scene-ecran-attente { animation: scene-ecran-attente 14s ease-in-out infinite; }
+  .scene-ecran-profil { animation: scene-ecran-profil 14s ease-in-out infinite; opacity: 0; }
+  .scene-tete { animation: scene-tete 14s ease-in-out infinite; }
+  .scene-respire { animation: scene-respire 6s ease-in-out infinite; }
+
+  /* Mouvements de la scène du bureau : lents, discrets, jamais clignotants. */
   .kartaa-flotte { animation: kartaa-flotte 5.5s ease-in-out infinite; }
   .kartaa-balance { animation: kartaa-balance 7s ease-in-out infinite; }
   .kartaa-lueur { animation: kartaa-lueur 5.5s ease-in-out infinite; }
   .kartaa-reflet { animation: kartaa-reflet 6s ease-in-out infinite; }
+}
+
+/*
+ * La carte se déplace de 157 % de sa propre largeur, le bras de 198 unités de
+ * dessin : au conteneur près, c'est la même distance. Changer l'un sans
+ * l'autre ferait lâcher la main.
+ */
+@keyframes scene-carte {
+  0%, 18% { transform: translate(0, 0) rotate(-7deg); }
+  36%, 76% { transform: translate(61%, 15%) rotate(3deg); }
+  90%, 100% { transform: translate(0, 0) rotate(-7deg); }
+}
+
+@keyframes scene-bras {
+  0%, 18% { transform: translate(0, 0); }
+  36%, 76% { transform: translate(77px, 11px); }
+  90%, 100% { transform: translate(0, 0); }
+}
+
+@keyframes scene-lueur {
+  0%, 34% { opacity: 0; transform: scale(.8); }
+  40% { opacity: 1; transform: scale(1.05); }
+  50%, 100% { opacity: 0; transform: scale(1.15); }
+}
+
+@keyframes scene-onde {
+  0%, 34% { opacity: 0; transform: scale(.85); }
+  38% { opacity: .9; transform: scale(1); }
+  48%, 100% { opacity: 0; transform: scale(1.35); }
+}
+
+@keyframes scene-ecran-attente {
+  0%, 40% { opacity: 1; }
+  47%, 80% { opacity: 0; }
+  90%, 100% { opacity: 1; }
+}
+
+@keyframes scene-ecran-profil {
+  0%, 42% { opacity: 0; transform: translateY(6%); }
+  52%, 78% { opacity: 1; transform: translateY(0); }
+  86%, 100% { opacity: 0; transform: translateY(6%); }
+}
+
+/* La personne qui reçoit penche la tête vers son écran, puis se redresse. */
+@keyframes scene-tete {
+  0%, 44% { transform: rotate(0deg); }
+  54%, 76% { transform: rotate(7deg); }
+  86%, 100% { transform: rotate(0deg); }
+}
+
+/* La respiration : quelques pixels, juste pour que la scène ne soit pas morte. */
+@keyframes scene-respire {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
 }
 
 @keyframes kartaa-flotte {
@@ -72,9 +150,28 @@
   .kartaa-balance,
   .kartaa-lueur,
   .kartaa-reflet,
+  .scene-carte,
+  .scene-bras,
+  .scene-lueur,
+  .scene-onde,
+  .scene-ecran-attente,
+  .scene-ecran-profil,
+  .scene-tete,
+  .scene-respire,
   .animate-fade-up,
   .animate-scale-in {
     animation: none !important;
   }
   .kartaa-flotte { transform: rotate(-9deg); }
+
+  /*
+   * Sans mouvement, la scène se fige sur son moment le plus parlant : la carte
+   * au contact, le profil ouvert. L'histoire se lit d'un coup d'œil, sans
+   * qu'on ait à regarder quoi que ce soit bouger.
+   */
+  .scene-carte { transform: translate(61%, 15%) rotate(3deg); }
+  .scene-bras { transform: translate(77px, 11px); }
+  .scene-ecran-attente { opacity: 0; }
+  .scene-ecran-profil { opacity: 1; }
+  .scene-tete { transform: rotate(7deg); }
 }

@@ -8,6 +8,7 @@ import { useCardAssets, useQrVectoriel } from '../../hooks/useCardAssets'
 import ProfileView from '../public/ProfileView'
 import { DEMO_CARDS } from './demoCards'
 import SceneBureau from './SceneBureau'
+import SceneAnimee from './SceneAnimee'
 import { useAuth } from '../../state/AuthContext'
 import { useTranslation, LANGUAGES } from '../../i18n'
 import { InstallButton, useModeInstallation } from '../../components/InstallApp'
@@ -262,32 +263,33 @@ function Entete({ isAuthenticated }) {
 /* -------------------------------------------------------------------- hero */
 
 function Hero() {
-  const exemple = DEMO_CARDS[0]
-  // Ce QR ouvre le site de Kartaa, pas un profil inventé : celui qui le scanne
-  // depuis une capture d'écran arrive quelque part de réel.
-  const qr = useQrVectoriel(APP.publicOrigin)
-
   return (
-    <section id="accueil" className="relative overflow-hidden bg-ink-950 pb-20 pt-12 text-white sm:pt-16">
+    <section id="accueil" className="relative overflow-hidden bg-ink-950 pb-20 pt-10 text-white sm:pt-14">
       <div className="mesh absolute inset-0 opacity-90" />
       <div className="grain absolute inset-0 opacity-30" />
-      <div className="container-app relative grid items-center gap-12 lg:grid-cols-[1fr,1.05fr]">
-        <div className="min-w-0 animate-fade-up">
-          <span className="mb-7 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-bold">
-            <Icon name="sparkles" size={13} className="text-gold-400" />
-            La carte de visite numérique : QR Code et NFC
-          </span>
-          <h1 className="font-display text-[2.5rem] font-extrabold leading-[1.08] tracking-tight text-balance sm:text-[3.4rem]">
+
+      {/* La scène occupe le haut de la page, dans le même fond que le texte :
+          pas de cadre, pas de colonne à côté, aucune couture entre les deux. */}
+      <div className="container-app relative text-center">
+        <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-bold">
+          <Icon name="sparkles" size={13} className="text-gold-400" />
+          La carte de visite numérique : QR Code et NFC
+        </span>
+
+        <SceneAnimee className="mt-6 sm:mt-8" />
+
+        <div className="animate-fade-up">
+          <h1 className="mx-auto max-w-3xl font-display text-[2.5rem] font-extrabold leading-[1.08] tracking-tight text-balance sm:text-[3.4rem]">
             Votre identité professionnelle numérique,
             <br />
             <span className="bg-gradient-to-r from-brand-400 to-sky-400 bg-clip-text text-transparent">en un seul QR.</span>
           </h1>
-          <p className="mt-6 max-w-xl text-[1.05rem] leading-relaxed text-white/70">
+          <p className="mx-auto mt-6 max-w-2xl text-[1.05rem] leading-relaxed text-white/70">
             Créez votre profil professionnel, partagez vos <strong className="font-bold text-white">coordonnées</strong> et
             permettez à vos clients de vous retrouver facilement. On scanne votre QR Code, ou on approche simplement le
             téléphone de votre carte NFC : la même page s'ouvre.
           </p>
-          <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
             <Button
               as={Link}
               to="/inscription"
@@ -310,7 +312,7 @@ function Hero() {
               Voir la démo
             </Button>
           </div>
-          <div className="mt-9 flex flex-wrap items-center gap-x-7 gap-y-3 text-sm text-white/60">
+          <div className="mt-9 flex flex-wrap items-center justify-center gap-x-7 gap-y-3 text-sm text-white/60">
             {[
               ['download', 'Sans installation'],
               ['globe', 'Accessible partout'],
@@ -321,31 +323,6 @@ function Hero() {
                 {texte}
               </span>
             ))}
-          </div>
-        </div>
-
-        {/* Le produit réel : le profil dans un téléphone, et les deux faces de la carte. */}
-        <div className="relative min-w-0 animate-fade-up [animation-delay:120ms]">
-          <div className="absolute -inset-10 rounded-[3rem] bg-brand-500/10 blur-3xl" />
-          <div className="relative flex items-center justify-center gap-6">
-            <Telephone card={exemple} largeur={250} hauteur={510} />
-            <div className="hidden w-[190px] shrink-0 space-y-4 sm:block">
-              <div className="rotate-[6deg] overflow-hidden rounded-2xl shadow-card transition-transform duration-500 hover:rotate-0">
-                <CardScaler maxWidth={190}>
-                  <CardArtwork card={exemple} side="front" />
-                </CardScaler>
-              </div>
-              <div className="rotate-[-4deg] overflow-hidden rounded-2xl shadow-card transition-transform duration-500 hover:rotate-0">
-                <CardScaler maxWidth={190}>
-                  <CardArtwork card={exemple} side="back" qr={qr} />
-                </CardScaler>
-              </div>
-              <p className="pt-1 text-center text-xs font-semibold leading-relaxed text-white/50">
-                Une carte minimaliste,
-                <br />
-                un accès complet.
-              </p>
-            </div>
           </div>
         </div>
       </div>

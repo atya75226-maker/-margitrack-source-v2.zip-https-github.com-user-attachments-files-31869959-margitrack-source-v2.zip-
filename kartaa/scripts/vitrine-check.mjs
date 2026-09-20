@@ -76,7 +76,17 @@ verifier('la page se charge sans erreur JavaScript', erreurs.length === 0, `→ 
 verifier('la page est complète', reseaux > 0 && texte.length > 1500, `→ ${texte.length} caractères`)
 
 console.log('\nLa scène d’accueil')
-verifier('la scène est dessinée, et décrite pour les lecteurs d’écran',
+// La scène du hero : deux personnes, une carte, un téléphone. Elle est décrite
+// pour ceux qui ne la voient pas.
+verifier('la scène du haut de page est décrite pour les lecteurs d’écran',
+  (await page.locator('svg[role="img"][aria-label*="tend sa carte"]').count()) > 0)
+verifier('le téléphone de la scène montre le vrai profil',
+  (await page.locator('.scene-ecran-profil').count()) > 0
+  && (await page.locator('.scene-ecran-profil').innerText()).includes('Awa Traoré'))
+verifier('la carte de la scène est le vrai recto Kartaa',
+  (await page.locator('.scene-carte').innerText()).trim() === 'Kartaa',
+  `→ ${(await page.locator('.scene-carte').innerText()).trim()}`)
+verifier('la scène du bureau est décrite elle aussi',
   (await page.locator('svg[role="img"][aria-label*="bureau"]').count()) > 0)
 // Aucune photo d'inconnu, et rien à télécharger ailleurs : les images de cette
 // page viennent toutes de l'application elle-même.
