@@ -257,7 +257,7 @@ export const FONTS = [
 
 /** Fonctionnalités préparées mais non branchées (voir README). */
 export const FEATURE_FLAGS = {
-  payments: false,         // prestataire compatible FCFA à connecter
+  payments: true,          // Chariow : page de paiement + Pulse signé (chariow-webhook)
   physicalPrinting: false, // impression et livraison de cartes physiques
   domainRegistrar: false,  // vérification réelle d'un domaine
   nativeBiometrics: true,  // WebAuthn si l'appareil le propose

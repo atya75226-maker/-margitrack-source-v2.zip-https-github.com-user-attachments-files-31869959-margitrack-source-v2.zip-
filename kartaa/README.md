@@ -37,7 +37,7 @@ stockage de fichiers et règles d'accès côté serveur.
 | Quotas de stockage | appliqués par déclencheur ; le plan Supabase lui-même plafonne l'espace total du projet (1 Go sur l'offre gratuite) |
 | Nom de domaine personnalisé | **interface + instructions DNS uniquement** — aucun registrar branché |
 | Commande de cartes physiques | **formulaire de demande uniquement** |
-| Paiement en ligne | **non branché** — l'offre se change en mode démonstration |
+| Paiement en ligne | Chariow : page de paiement + confirmation signée (`chariow-webhook`) |
 
 ---
 
@@ -391,6 +391,59 @@ sinon, à la connexion.
 `npm run test:pwa` vérifie tout cela dans un navigateur, à commencer par
 l'absence de toute ressource externe dans les caches.
 
+## Le profil public, et la vitrine
+
+Le mini-site public (`/<votre-adresse>`) et la page d'accueil partagent un seul
+composant d'affichage : `src/features/public/ProfileView.jsx`.
+
+Ce n'est pas une coquetterie d'architecture. La page d'accueil montre un profil
+dans un téléphone ; si c'était une maquette dessinée à côté, elle se mettrait à
+mentir au premier changement du vrai profil. Ici, la démonstration EST le
+produit — seules les informations affichées sont des exemples, et la page le
+dit.
+
+`PublicProfilePage` garde ce qui touche aux données : chargement, mode hors
+connexion, comptage des visites, partage, fiche contact. `ProfileView` ne fait
+qu'afficher ce qu'on lui donne.
+
+### Rien n'est affiché qui n'existe pas
+
+| Donnée absente | Ce qui s'affiche |
+| --- | --- |
+| Pas de numéro | pas de bouton « Appeler » |
+| Pas d'e-mail | pas de bouton « E-mail » |
+| Aucun réseau | pas de section « Mes réseaux » |
+| Aucun service, aucune photo | sections absentes, pas de liste vide |
+| Pas de photo de profil | les initiales, sur le même fond |
+
+Un profil qui ne renseigne que son nom et son WhatsApp reste une page nette.
+C'est vérifié : `npm run test:profil` joue un profil complet *et* un profil
+presque vide.
+
+### Les réseaux, en ligne
+
+Les réseaux sont une rangée d'icônes, défilante sur téléphone. Une plateforme
+qui ne porte qu'un compte mène directement au lien ; une plateforme qui en porte
+plusieurs — c'est permis — déplie la liste, parce qu'une icône ne peut pas mener
+à deux endroits. Les sites et autres adresses ont leur propre section, avec leur
+libellé en toutes lettres.
+
+### La vitrine ne promet que ce qui existe
+
+`npm run test:vitrine` relit la page d'accueil comme un visiteur la reçoit et
+refuse : le NFC, le domaine personnalisé, l'impression de cartes — tout ce que
+`FEATURE_FLAGS` annonce comme non branché. Le pied de page, lui, dit franchement
+ce qui ne l'est pas encore.
+
+Le bouton « Passer à Pro » mène au vrai parcours (`/app/abonnement`, ou
+l'inscription si personne n'est connecté), jamais à une activation directe.
+
+```bash
+npm run build && npm run preview -- --port 4173
+npm run test:profil     # profil complet, puis profil presque vide
+npm run test:vitrine    # aucune promesse qui n'existe pas
+```
+
 ## La carte : deux faces, rien de plus
 
 La carte ne contient pas l'identité — elle y donne accès.
@@ -613,10 +666,14 @@ Pour activer un compte à la main : `select set_user_plan('<id>', 'pro');`.
 
 ### Aucun paiement n'est simulé
 
-La page d'abonnement écrivait directement `plan = 'pro'` : un paiement réussi
-qui n'avait jamais eu lieu. Le bouton enregistre désormais une intention dans
-`subscription_requests` et le dit clairement. L'activation passe par
-`set_user_plan()`, côté serveur — c'est là que se branchera l'encaissement.
+La page d'abonnement écrivait autrefois directement `plan = 'pro'` : un paiement
+réussi qui n'avait jamais eu lieu.
+
+Aujourd'hui, le bouton ouvre la page de paiement du prestataire (Chariow). Le
+retour du navigateur n'accorde rien — il est sous le contrôle du visiteur, donc
+sans valeur comme preuve. Seule la confirmation signée envoyée par le
+prestataire à `supabase/functions/chariow-webhook` active l'abonnement, après
+vérification de sa signature HMAC, en appelant `activate_pro()` côté serveur.
 
 `npm run test:plan` compare les deux offres dans un navigateur : un seul bouton,
 un seul prix, aucune activation sans paiement, et un verrou qui nomme la
@@ -741,9 +798,9 @@ et fiche contact.
 > Supabase : il lit encore la base locale du prototype (`kartaa.db.v1`), attend
 > des identifiants `crd_`/`vlt_`, et déroule le Coffre Sécurité, retiré de
 > l'application depuis. Il est conservé pour mémoire, à réécrire. Les contrôles
-> qui font foi aujourd'hui sont les suivants (`test:carte`, `test:offline`,
-> `test:pwa`, `test:session`, `test:plan`, `test:export`, `test:photo`,
-> `test:scanner`, `test:maj`).
+> qui font foi aujourd'hui sont les suivants (`test:profil`, `test:vitrine`,
+> `test:carte`, `test:offline`, `test:pwa`, `test:session`, `test:plan`,
+> `test:export`, `test:photo`, `test:scanner`, `test:maj`).
 
 `scripts/e2e-smoke.mjs` rejoue tout le parcours dans un vrai navigateur — compte,
 carte, QR Code, mini-site, téléchargement PNG/PDF, coffre, fichier chiffré,
@@ -766,11 +823,11 @@ confirmation, ce que le test signale clairement).
 
 `FEATURE_FLAGS` dans `src/config/app.config.js` décrit l'état de chaque extension.
 
-- **Paiement** : l'abonnement s'active aujourd'hui en mode démonstration depuis
-  `/app/abonnement`. Brancher un prestataire compatible FCFA (Wave, Orange Money,
-  MTN MoMo, Stripe…) revient à écrire la colonne `profiles.plan` depuis un webhook
-  serveur — les limites sont déjà appliquées en base, elles suivront
-  automatiquement. Le montant à transmettre est **5 000 FCFA par mois**.
+- **Paiement** : branché. `/app/abonnement` ouvre la page de paiement de
+  Chariow, et c'est la confirmation signée du prestataire, reçue par
+  `chariow-webhook`, qui active l'abonnement — jamais un retour de navigateur.
+  Le montant est de **5 000 FCFA par mois**. Ce qui reste à faire : configurer
+  le Pulse et le secret `CHARIOW_PULSE_SECRET` sur un nouveau projet.
 - **Impression physique** : le formulaire enregistre la demande ; il reste à la
   transmettre à un imprimeur.
 - **Domaine personnalisé** : l'interface enregistre le domaine et affiche les
