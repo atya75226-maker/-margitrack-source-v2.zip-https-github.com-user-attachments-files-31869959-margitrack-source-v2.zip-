@@ -109,6 +109,39 @@ verifier('le prix affiché est 5 000 FCFA', /5\s?000\s*FCFA/.test(texte))
 verifier('aucune autre offre payante n’est nommée',
   !/Premium\s*[—:-]\s*\d|VIP\s*[—:-]\s*\d|abonnement (Premium|VIP)/i.test(texte))
 
+console.log('\nL’écran du téléphone, à toutes les tailles')
+/*
+ * Le profil est rendu à sa largeur mobile réelle puis réduit. Si l'échelle ne
+ * suit pas la taille de l'écran, la page déborde et l'on n'en voit qu'une
+ * bande — c'est arrivé : sur un téléphone, le profil était rendu deux fois et
+ * demie trop large et l'en-tête coloré passait pour un écran vide.
+ */
+for (const largeur of [360, 412, 768, 1280]) {
+  await page.setViewportSize({ width: largeur, height: 900 })
+  await page.waitForTimeout(700)
+  const mesures = await page.evaluate(() => {
+    const ecran = document.querySelector('.scene-ecran-profil')
+    const contenu = ecran?.firstElementChild
+    if (!ecran || !contenu) return null
+    const cadre = ecran.getBoundingClientRect()
+    const page = contenu.getBoundingClientRect()
+    return {
+      ecran: cadre.width,
+      profil: page.width,
+      debordeAGauche: page.left - cadre.left,
+      alignementHaut: page.top - cadre.top,
+    }
+  })
+  verifier(`à ${largeur} px, le profil occupe exactement l’écran`,
+    mesures && Math.abs(mesures.profil - mesures.ecran) <= 1,
+    `→ écran ${Math.round(mesures?.ecran)} px, profil ${Math.round(mesures?.profil)} px`)
+  verifier(`à ${largeur} px, il est aligné sur le bord de l’écran`,
+    mesures && Math.abs(mesures.debordeAGauche) <= 1 && Math.abs(mesures.alignementHaut) <= 1,
+    `→ décalage ${Math.round(mesures?.debordeAGauche)} / ${Math.round(mesures?.alignementHaut)} px`)
+}
+await page.setViewportSize({ width: 1280, height: 1000 })
+await page.waitForTimeout(500)
+
 console.log('\nSur un téléphone')
 await page.setViewportSize({ width: 390, height: 844 })
 await page.waitForTimeout(800)
