@@ -1,0 +1,21 @@
+PHOTOS DE LA PAGE D'ACCUEIL
+===========================
+
+Deposez ici vos photos, avec EXACTEMENT ces noms de fichiers :
+
+  comptoir.jpg   le comptoir / la reception du restaurant, avec une personne
+  cahier.jpg     un cahier de comptes, une calculatrice, des recus
+  reserve.jpg    la reserve : casiers de boissons, cartons, sacs
+  equipe.jpg     l'equipe du restaurant en service
+  gerant.jpg     le gerant ou la gerante regardant ses chiffres sur un telephone
+
+Des qu'un fichier est depose, il apparait sur la page d'accueil sans aucune
+modification du code. Tant qu'il n'y est pas, la page affiche a la place un
+visuel Margitrack : elle n'est jamais cassee.
+
+Conseils :
+  - format .jpg, en largeur (paysage), au moins 1400 pixels de large
+  - moins de 400 Ko par photo pour que la page reste rapide
+  - de vraies photos de restaurant : comptoir, cuisine, service, reserve
+  - vous devez avoir le droit d'utiliser ces photos (les votres, ou des
+    photos libres de droits)
