@@ -249,7 +249,7 @@ const TIPS = [
   "Trois à quatre réseaux bien choisis valent mieux qu'une liste complète.",
   "Écrivez comme vous parleriez à un client : une phrase, un bénéfice.",
   "Une entreprise et deux ou trois services rendent votre mini-site immédiatement utile.",
-  "La carte doit rester lisible : deux couleurs, une typographie, c'est tout.",
+  "La carte ne porte que le nom Kartaa et votre QR Code : tout le reste vit sur votre mini-site.",
 ]
 
 function PreviewBlock({ draft, assets }) {
@@ -260,12 +260,12 @@ function PreviewBlock({ draft, assets }) {
       </p>
       <div className="overflow-hidden rounded-2xl shadow-soft">
         <CardScaler>
-          <CardArtwork card={draft} qr={assets.qr} photoUrl={assets.photoUrl} logoUrl={assets.logoUrl} />
+          <CardArtwork card={draft} qr={assets.qr} />
         </CardScaler>
       </div>
       <div className="mt-3 overflow-hidden rounded-2xl shadow-soft">
         <CardScaler>
-          <CardArtwork card={draft} side="back" qr={assets.qr} photoUrl={assets.photoUrl} logoUrl={assets.logoUrl} />
+          <CardArtwork card={draft} side="back" qr={assets.qr} />
         </CardScaler>
       </div>
     </>

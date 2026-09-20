@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Badge, Button, ConfirmDialog, Field, Input, Modal, Panel, SectionTitle, Spinner, Tabs, Textarea } from '../../components/ui'
 import { Icon } from '../../components/ui/Icons'
 import { CardArtwork, CardScaler } from '../../components/card/CardArtwork'
-import { useCardAssets, usePhotoEmbarquee } from '../../hooks/useCardAssets'
+import { useCardAssets } from '../../hooks/useCardAssets'
 import { useAuth } from '../../state/AuthContext'
 import { useToast } from '../../state/ToastContext'
 import { repo } from '../../lib/storage'
@@ -37,10 +37,6 @@ export default function CardDetailPage() {
   }, [cardId])
 
   const assets = useCardAssets(card || {})
-  // Les faces rendues hors écran servent au téléchargement : elles reçoivent la
-  // photo déjà embarquée, pour que le fichier obtenu contienne bien l'image vue
-  // à l'écran plutôt qu'un emplacement vide.
-  const photoExport = usePhotoEmbarquee(assets.photoUrl)
 
   if (!card) {
     return (
@@ -96,7 +92,7 @@ export default function CardDetailPage() {
         />
         <div className="overflow-hidden rounded-2xl shadow-lift">
           <CardScaler>
-            <CardArtwork card={card} side={side} qr={assets.qr} photoUrl={assets.photoUrl} logoUrl={assets.logoUrl} branded={!can(user, 'removeBranding')} />
+            <CardArtwork card={card} side={side} qr={assets.qr} />
           </CardScaler>
         </div>
         <div className="mt-5 grid gap-2 sm:grid-cols-3">
@@ -140,7 +136,7 @@ export default function CardDetailPage() {
                 >
                   Copier
                 </Button>
-                <Button size="sm" variant="outline" icon="download" onClick={() => assets.qr && downloadUrl(assets.qr, `qr-${card.slug}.png`)}>
+                <Button size="sm" variant="outline" icon="download" onClick={() => assets.qrPng && downloadUrl(assets.qrPng, `qr-${card.slug}.png`)}>
                   QR Code
                 </Button>
                 <Button size="sm" variant="soft" icon="external" as="a" href={url} target="_blank" rel="noreferrer" className="col-span-2">
@@ -219,10 +215,10 @@ export default function CardDetailPage() {
       {/* Rendu hors écran, à taille réelle, utilisé pour l'export des fichiers. */}
       <div aria-hidden className="pointer-events-none fixed -left-[4000px] top-0">
         <div ref={frontRef}>
-          <CardArtwork card={card} qr={assets.qr} photoUrl={photoExport} logoUrl={assets.logoUrl} />
+          <CardArtwork card={card} qr={assets.qr} />
         </div>
         <div ref={backRef}>
-          <CardArtwork card={card} side="back" qr={assets.qr} photoUrl={photoExport} logoUrl={assets.logoUrl} branded={!can(user, 'removeBranding')} />
+          <CardArtwork card={card} side="back" qr={assets.qr} />
         </div>
       </div>
 

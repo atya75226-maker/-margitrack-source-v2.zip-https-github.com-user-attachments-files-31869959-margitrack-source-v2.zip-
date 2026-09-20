@@ -19,10 +19,11 @@ stockage de fichiers et règles d'accès côté serveur.
 | --- | --- |
 | Création de compte et connexion | Supabase Auth — e-mail + mot de passe, ou Google |
 | Assistant de création de carte en 5 étapes | fonctionnel |
-| Prévisualisation en direct, 3 modèles, couleurs et typographie | fonctionnel |
+| Prévisualisation en direct, 3 modèles de carte | fonctionnel |
+| Couleurs et typographie du mini-site | fonctionnel |
 | Génération du QR Code | fonctionnel (le QR pointe vers le mini-site, jamais vers un numéro) |
 | Page publique / mini-site | fonctionnel, avec « Ajouter aux contacts » (.vcf) |
-| Téléchargement de la carte en PNG / JPG / PDF | fonctionnel (PDF recto + verso) |
+| Téléchargement de la carte en PNG / JPG / PDF | fonctionnel (PDF recto + verso), QR Code vectoriel |
 | Coffre Sécurité : création, fichiers, dossiers | fonctionnel, **chiffré AES-256-GCM avant téléversement** |
 | Protection par mot de passe | fonctionnel, **tentatives comptées côté serveur** |
 | Déverrouillage biométrique | WebAuthn quand l'appareil le propose |
@@ -390,6 +391,65 @@ sinon, à la connexion.
 `npm run test:pwa` vérifie tout cela dans un navigateur, à commencer par
 l'absence de toute ressource externe dans les caches.
 
+## La carte : deux faces, rien de plus
+
+La carte ne contient pas l'identité — elle y donne accès.
+
+| | Recto | Verso |
+| --- | --- | --- |
+| Standard | « Kartaa » en blanc sur bleu nuit | QR Code |
+| Premium | « Kartaa » en lettrage fin sur noir satiné | QR Code |
+| VIP | « Kartaa » doré sur noir profond, liseré or | QR Code |
+
+C'est tout. Pas de nom, pas de photo, pas de logo, pas de téléphone, pas de
+métier, pas de réseaux — et au verso, aucun texte, pas même une adresse ou un
+« scannez-moi ». Un QR Code se reconnaît sans légende.
+
+Ces informations n'ont pas disparu : elles vivent dans le profil, dans la base
+et sur le mini-site public, qui est précisément ce que le QR Code ouvre. La
+photo, le logo et les coordonnées continuent de s'y afficher.
+
+### Pourquoi la carte a son propre composant
+
+`src/components/card/CardArtwork.jsx` ne lit du `card` que son modèle. Rien
+d'autre n'y entre : pas de profil, pas de compte, pas de thème. C'est cette
+frontière qui garantit qu'une modification du profil ne peut ni déplacer quoi
+que ce soit sur la carte, ni y faire réapparaître une information.
+
+Les trois habillages sont figés dans ce fichier. Les couleurs et la typographie
+choisies dans l'assistant habillent le mini-site public — l'écran le dit —, pas
+la carte : une carte Standard ressemble toujours à une carte Standard.
+
+### Le QR Code
+
+Il pointe vers l'adresse publique de référence (`kartaa-eight.vercel.app/<votre-adresse>`),
+jamais vers celle du navigateur : un code imprimé depuis une préproduction
+resterait coincé dessus.
+
+Il est **vectoriel** sur la carte : le dessin est recalculé à la résolution du
+fichier produit, donc net à l'impression quelle que soit la taille. Le
+téléchargement du code seul reste une image `.png`, forme attendue par la
+plupart des usages.
+
+Il occupe 328 px de côté sur une carte de 1050 px, soit environ 26 mm sur une
+carte de 85 mm — bien au-dessus des 20 mm en dessous desquels un téléphone
+commence à peiner. Il est posé sur une plaque blanche : les trois modèles sont
+sombres, et sans ce blanc aucun ne se laisserait scanner. La lisibilité passe
+avant l'esthétique, toujours.
+
+### Vérification
+
+```bash
+npm run build && npm run preview -- --port 4173
+npm run test:carte
+```
+
+Pour chacun des trois modèles, avec un compte volontairement rempli (nom, photo,
+métier, entreprise, téléphone, e-mail, réseaux) : le recto n'affiche que
+« Kartaa » au mot près, le verso aucun texte, aucune de ces informations
+n'apparaît sur l'une des deux faces, aucun pixel de la photo non plus, et le QR
+Code lu dans le fichier téléchargé ouvre bien le profil public attendu.
+
 ## Sans réseau
 
 Kartaa s'ouvre et reste utilisable sans connexion. Pas complètement : une partie
@@ -636,6 +696,10 @@ recto. Regarder l'écran ne suffisait pas : le recto s'affichait correctement,
 c'est le fichier qui était faux — l'export rendait `front` quelle que soit la
 face demandée.
 
+Il vérifie aussi ce que les fichiers ne contiennent pas : la photo du compte,
+pourtant bien présente dans le profil, ne doit apparaître sur aucune des deux
+faces (voir « La carte : deux faces, rien de plus »).
+
 ### Vérification de la session et de la navigation (navigateur réel)
 
 ```bash
@@ -677,9 +741,9 @@ et fiche contact.
 > Supabase : il lit encore la base locale du prototype (`kartaa.db.v1`), attend
 > des identifiants `crd_`/`vlt_`, et déroule le Coffre Sécurité, retiré de
 > l'application depuis. Il est conservé pour mémoire, à réécrire. Les contrôles
-> qui font foi aujourd'hui sont les suivants (`test:offline`, `test:pwa`,
-> `test:session`, `test:plan`, `test:export`, `test:photo`, `test:scanner`,
-> `test:maj`).
+> qui font foi aujourd'hui sont les suivants (`test:carte`, `test:offline`,
+> `test:pwa`, `test:session`, `test:plan`, `test:export`, `test:photo`,
+> `test:scanner`, `test:maj`).
 
 `scripts/e2e-smoke.mjs` rejoue tout le parcours dans un vrai navigateur — compte,
 carte, QR Code, mini-site, téléchargement PNG/PDF, coffre, fichier chiffré,

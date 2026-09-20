@@ -206,25 +206,35 @@ export const NETWORK_BY_KEY = Object.fromEntries(SOCIAL_NETWORKS.map((item) => [
 
 /* ----------------------------------------------------------------- modèles */
 
+/**
+ * Les trois modèles de carte.
+ *
+ * Tous suivent la même règle : le nom Kartaa au recto, le QR Code au verso,
+ * aucune information personnelle. Ils ne diffèrent que par la finition — le
+ * dessin exact vit dans `components/card/CardArtwork.jsx`.
+ *
+ * `defaults` n'habille plus la carte : ce sont les couleurs et la typographie
+ * proposées pour le mini-site public au moment où l'on choisit un modèle.
+ */
 export const TEMPLATES = [
   {
     id: 'standard',
     name: 'Carte Standard',
-    description: 'Design clair et professionnel. Va droit au but.',
+    description: 'Bleu nuit, nom blanc. Va droit au but.',
     pro: false,
     defaults: { primary: '#6d28d9', accent: '#f5b229', font: 'sans', layout: 'left' },
   },
   {
     id: 'premium',
     name: 'Carte Premium',
-    description: 'Dégradé élégant, plus de personnalisation.',
+    description: 'Noir satiné, lettrage fin et espacé.',
     pro: true,
     defaults: { primary: '#5b21b6', accent: '#f5b229', font: 'display', layout: 'center' },
   },
   {
     id: 'vip',
     name: 'Carte VIP',
-    description: 'Finition sombre et dorée, haut de gamme.',
+    description: 'Noir profond, liseré et nom dorés.',
     pro: true,
     defaults: { primary: '#141728', accent: '#f5b229', font: 'serif', layout: 'left' },
   },

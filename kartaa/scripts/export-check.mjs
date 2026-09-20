@@ -9,6 +9,9 @@
  * ni vide, ni une copie du recto, et qu'il contient bien ce que le verso
  * affiche. Regarder l'écran ne suffisait pas : le recto s'affichait
  * correctement, c'est le fichier qui était faux.
+ *
+ * Il vérifie aussi ce que la carte ne contient PAS : aucune donnée personnelle
+ * ne doit franchir la frontière entre le profil et la carte.
  */
 import { chromium } from 'playwright'
 import { PNG } from 'pngjs'
@@ -21,8 +24,9 @@ const COMPTE = '11111111-1111-1111-1111-111111111111'
 
 /**
  * Photo de test : un carré d'une couleur qu'on ne trouve nulle part ailleurs
- * dans la carte. La compter dans le fichier produit prouve que la photo du
- * compte est bien arrivée jusqu'au téléchargement, et pas seulement à l'écran.
+ * dans la carte. La compter dans le fichier produit dit si la photo du compte
+ * s'est invitée sur la carte — elle ne doit plus jamais y apparaître : la carte
+ * ne porte que la marque et le QR Code, la photo vit sur le mini-site.
  */
 const PHOTO_URL = 'https://photos.exemple.test/moi.png'
 const PHOTO_ROSE = { r: 255, g: 0, b: 255 }
@@ -200,8 +204,11 @@ verifier('le verso est une vraie image', imageVerso.png.width > 100 && imageVers
 verifier('les deux faces ont la même taille',
   imageRecto.png.width === imageVerso.png.width && imageRecto.png.height === imageVerso.png.height)
 
+// Un verso minimaliste compte peu de couleurs — c'est voulu : un QR Code noir
+// sur blanc. Ce qu'on vérifie, c'est qu'il porte bien quelque chose, et pas
+// qu'il soit chargé.
 const richesseVerso = richesse(imageVerso.png)
-verifier('le verso n’est pas vide', richesseVerso.varies > 0.05 && richesseVerso.couleurs > 50,
+verifier('le verso n’est pas vide', richesseVerso.varies > 0.1 && richesseVerso.couleurs >= 2,
   `→ ${(richesseVerso.varies * 100).toFixed(1)} % de pixels non uniformes, ${richesseVerso.couleurs} couleurs`)
 
 const identiques = imageRecto.png.data.equals(imageVerso.png.data)
@@ -216,14 +223,12 @@ verifier('le QR Code du verso est lisible', qrVerso !== null)
 verifier('le QR Code du verso ouvre le profil public de production',
   qrVerso === 'https://kartaa-eight.vercel.app/awa-diallo', `→ ${qrVerso}`)
 
-// La photo du compte doit se retrouver sur le verso — la carte n'en a aucune
-// qui lui soit propre, elle reprend donc celle du profil.
-const photoVerso = comptePhoto(imageVerso.png)
-verifier('le verso téléchargé contient la photo du compte', photoVerso > 20000,
-  `→ ${photoVerso} pixels`)
-// Le recto porte désormais l'identité du propriétaire, photo comprise : aucun
-// logo ni aucune marque ne lui est imposé.
-verifier('le recto porte aussi la photo du propriétaire', comptePhoto(imageRecto.png) > 20000,
+// La carte ne porte plus aucune information personnelle : ni photo, ni nom, ni
+// coordonnées. Le compte de ce test en a pourtant une — sa couleur ne doit
+// apparaître sur aucune des deux faces téléchargées.
+verifier('le verso téléchargé ne contient pas la photo du compte', comptePhoto(imageVerso.png) === 0,
+  `→ ${comptePhoto(imageVerso.png)} pixels`)
+verifier('le recto téléchargé ne contient pas la photo du compte', comptePhoto(imageRecto.png) === 0,
   `→ ${comptePhoto(imageRecto.png)} pixels`)
 
 // Le contenu du verso doit correspondre à ce que l'écran affiche.
@@ -231,7 +236,7 @@ await page.click('button:has-text("Verso")')
 await page.waitForTimeout(800)
 const capture = PNG.sync.read(await page.locator('.shadow-lift').first().screenshot())
 const versoAffiche = richesse(capture)
-verifier('la photo est aussi visible dans l’aperçu', comptePhoto(capture) > 500,
+verifier('l’aperçu du verso ne montre pas davantage la photo', comptePhoto(capture) === 0,
   `→ ${comptePhoto(capture)} pixels à l’écran`)
 verifier('le verso affiché et le verso téléchargé se ressemblent',
   Math.abs(versoAffiche.varies - richesseVerso.varies) < 0.25,

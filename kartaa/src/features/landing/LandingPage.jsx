@@ -146,8 +146,8 @@ function Hero() {
             <span className="bg-gradient-to-r from-gold-300 to-gold-500 bg-clip-text text-transparent">Votre QR Code.</span>
           </h1>
           <p className="mt-6 max-w-xl text-[1.05rem] leading-relaxed text-white/70">
-            Créez votre carte de visite numérique, partagez toutes vos coordonnées en un seul scan et protégez vos
-            un seul scan.
+            Créez votre carte de visite numérique et partagez toutes vos coordonnées en un seul scan : la carte reste
+            minimaliste, votre mini-site porte le reste.
           </p>
           <div className="mt-9 flex flex-col gap-3 sm:flex-row">
             <Button as={Link} to="/inscription" size="lg" variant="gold" icon="card">
@@ -258,7 +258,7 @@ function Examples() {
         <SectionHeading
           eyebrow="Exemples"
           title="Des cartes que l'on est fier de présenter."
-          subtitle="Standard, Premium ou VIP : le même contenu, trois niveaux de finition. Chaque carte porte son propre QR Code."
+          subtitle="Une carte volontairement nue : le nom Kartaa au recto, votre QR Code au verso. Standard, Premium ou VIP ne changent que la finition — vos informations, elles, vivent sur le mini-site qui s'ouvre au scan."
         />
         <div className="mb-8 flex flex-wrap justify-center gap-2">
           {DEMO_CARDS.map((item, index) => (

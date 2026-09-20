@@ -14,6 +14,13 @@ import { groupByPlatform, linkHref, linkLabel, activeLinks } from '../../lib/soc
 import { useToast } from '../../state/ToastContext'
 
 /** Mini-site public : la page qu'ouvre le QR Code. Pensée d'abord pour le téléphone. */
+/** Les trois typographies proposées, telles qu'elles sont chargées par l'application. */
+const POLICES_MINI_SITE = {
+  sans: "'Plus Jakarta Sans', system-ui, sans-serif",
+  display: "'Sora', 'Plus Jakarta Sans', sans-serif",
+  serif: "'Fraunces', Georgia, serif",
+}
+
 export default function PublicProfilePage() {
   const { slug } = useParams()
   const toast = useToast()
@@ -92,7 +99,10 @@ export default function PublicProfilePage() {
   }
 
   const p = card.profile || {}
-  const theme = { primary: '#6d28d9', accent: '#f5b229', ...(card.theme || {}) }
+  const theme = { primary: '#6d28d9', accent: '#f5b229', font: 'sans', ...(card.theme || {}) }
+  // La typographie choisie dans l'assistant habille cette page : c'est ici
+  // qu'elle s'applique, la carte gardant la finition de son modèle.
+  const police = POLICES_MINI_SITE[theme.font] || POLICES_MINI_SITE.sans
   const fullName = [p.firstName, p.lastName].filter(Boolean).join(' ')
   const groups = groupByPlatform(card.socialLinks)
   const website = activeLinks(card.socialLinks).find((link) => link.platform === 'website')
@@ -115,7 +125,7 @@ export default function PublicProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-ink-50 pb-16">
+    <div className="min-h-screen bg-ink-50 pb-16" style={{ fontFamily: police }}>
       <div className="mx-auto w-full max-w-lg">
         {horsLigne && (
           <p className="flex items-center justify-center gap-2 bg-gold-50 px-4 py-2 text-center text-xs font-semibold text-gold-800">
