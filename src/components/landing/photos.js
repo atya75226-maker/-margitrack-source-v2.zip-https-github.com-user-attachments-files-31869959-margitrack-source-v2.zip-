@@ -35,10 +35,10 @@ export const PHOTOS = {
     icon: "👥",
     label: "Équipe en service",
   },
-  gerant: {
-    src: "/images/photos/gerant.jpg",
-    alt: "Gérante de restaurant consultant ses chiffres sur un téléphone",
-    icon: "📱",
-    label: "Gérant et ses chiffres",
+  accueil: {
+    src: "/images/photos/accueil.jpg",
+    alt: "Comptoir d'accueil d'un établissement, avec postes de travail",
+    icon: "🛎️",
+    label: "Comptoir d'accueil",
   },
 };

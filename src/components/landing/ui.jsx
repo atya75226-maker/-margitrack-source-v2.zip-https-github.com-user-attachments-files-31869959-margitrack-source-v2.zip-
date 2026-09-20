@@ -226,7 +226,7 @@ export function WindowFrame({ c, children, className = "" }) {
  * tient sa place sans jamais casser la page. Dès qu'une photo est déposée
  * sous le même nom, elle prend sa place sans toucher au code.
  */
-export function Photo({ c, src, alt, label, icon, className = "", ratio = "4 / 3", rounded = "rounded-3xl" }) {
+export function Photo({ c, src, alt, icon, className = "", ratio = "4 / 3", rounded = "rounded-3xl", position = "center" }) {
   const [failed, setFailed] = useState(false);
 
   return (
@@ -246,6 +246,7 @@ export function Photo({ c, src, alt, label, icon, className = "", ratio = "4 / 3
           decoding="async"
           onError={() => setFailed(true)}
           className="absolute inset-0 w-full h-full object-cover"
+          style={{ objectPosition: position }}
         />
       ) : (
         <div
@@ -266,6 +267,8 @@ export function Photo({ c, src, alt, label, icon, className = "", ratio = "4 / 3
             }}
             aria-hidden="true"
           />
+          {/* Un pictogramme seul, sans légende : une phrase du genre « photo à
+              déposer » ferait passer un choix de décor pour un oubli. */}
           <span
             className="relative inline-flex items-center justify-center rounded-2xl"
             style={{ width: 64, height: 64, backgroundColor: c.card, border: `1px solid ${c.line}`, fontSize: 30 }}
@@ -273,7 +276,12 @@ export function Photo({ c, src, alt, label, icon, className = "", ratio = "4 / 3
           >
             {icon}
           </span>
-          <p className="relative text-xs font-medium max-w-[16rem]" style={{ color: c.muted }}>{label ?? alt}</p>
+          <img
+            src="/logo.svg"
+            alt=""
+            aria-hidden="true"
+            className="absolute bottom-4 right-4 w-7 h-7 rounded-lg opacity-40"
+          />
         </div>
       )}
     </div>

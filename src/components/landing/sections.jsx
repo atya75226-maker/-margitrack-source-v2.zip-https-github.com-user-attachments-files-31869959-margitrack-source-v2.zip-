@@ -145,7 +145,7 @@ export function Hero({ c, theme, onStart, install }) {
             />
             {/* Le téléphone déborde sur la photo : l'outil et le lieu où il
                 sert tiennent dans une seule image. */}
-            <div className="hidden sm:block absolute -bottom-10 -left-2 lg:left-0 w-[40%] max-w-[210px]">
+            <div className="hidden sm:block absolute -bottom-10 -right-2 lg:right-0 w-[40%] max-w-[210px]">
               <PhoneFrame c={c} name="dashboard" theme={theme} maxWidth={210} priority
                           alt="Tableau de bord Margitrack sur téléphone" />
             </div>
@@ -180,7 +180,7 @@ export function Probleme({ c }) {
         </Reveal>
 
         <Reveal delay={120}>
-          <Photo c={c} {...PHOTOS.probleme} ratio="4 / 3" />
+          <Photo c={c} {...PHOTOS.probleme} ratio="16 / 10" />
           <Card c={c} className="p-5 sm:p-6 mt-6" style={{ borderColor: `${c.violet}55` }}>
             <p className="text-sm font-semibold mb-1.5" style={{ color: c.violet }}>Avec Margitrack</p>
             <p className="text-[15px] leading-relaxed" style={{ color: c.ink }}>
@@ -284,7 +284,7 @@ export function Stock({ c, theme }) {
 
         <Reveal delay={120}>
           <div className="relative">
-            <Photo c={c} {...PHOTOS.stock} ratio="4 / 3" />
+            <Photo c={c} {...PHOTOS.stock} ratio="16 / 10" />
             <div className="hidden sm:block absolute -bottom-12 right-0 w-[42%] max-w-[200px]">
               <PhoneFrame c={c} name="stock" theme={theme} maxWidth={200}
                           alt="Écran du stock dans Margitrack" />
@@ -308,7 +308,7 @@ export function Equipe({ c }) {
     <Section className="py-14 sm:py-20">
       <div className="grid lg:grid-cols-2 gap-10 items-center">
         <Reveal className="order-2 lg:order-1" delay={120}>
-          <Photo c={c} {...PHOTOS.equipe} ratio="4 / 3" />
+          <Photo c={c} {...PHOTOS.equipe} ratio="16 / 10" />
         </Reveal>
 
         <Reveal className="order-1 lg:order-2">
@@ -617,7 +617,7 @@ export function CtaFinale({ c, onStart, theme }) {
           </p>
         </Reveal>
         <Reveal delay={120}>
-          <Photo c={c} {...PHOTOS.gerant} ratio="16 / 10" />
+          <Photo c={c} {...PHOTOS.accueil} ratio="4 / 3" />
         </Reveal>
       </div>
     </Section>
