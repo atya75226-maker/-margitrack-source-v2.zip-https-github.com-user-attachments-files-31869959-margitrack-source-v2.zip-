@@ -49,14 +49,23 @@ function Patientez() {
  */
 function AccueilOuApplication() {
   const { isAuthenticated, ready } = useAuth()
+  const location = useLocation()
   if (!ready) return <Patientez />
   if (isAuthenticated) return <Navigate to="/app" replace />
-  // Lancée depuis son icône, l'application ne doit jamais s'ouvrir sur la page
+
+  // Une visite demandée explicitement — après une déconnexion, ou depuis le
+  // bouton « Retour à l'accueil » des écrans de connexion — l'emporte sur la
+  // règle ci-dessous : la page d'accueil doit rester atteignable, y compris
+  // depuis l'application installée.
+  const demandee = !!location.state?.accueil
+
+  // Lancée depuis son icône, l'application ne doit pas s'ouvrir sur la page
   // vitrine : le manifeste démarre sur /app, mais une fenêtre autonome peut
   // atterrir sur « / » (lien partagé, page d'accueil du navigateur, retour
   // arrière). Sans compte, on emmène vers la connexion, pas vers le marketing.
-  if (estInstallee()) return <Navigate to="/connexion" replace />
-  return <LandingPage />
+  if (estInstallee() && !demandee) return <Navigate to="/connexion" replace />
+
+  return <LandingPage deconnecte={!!location.state?.deconnecte} />
 }
 
 /** Les écrans de connexion n'ont plus lieu d'être une fois la session ouverte. */

@@ -385,11 +385,46 @@ worker enregistré, actif, page contrôlée, proposition reçue, HTTPS, fenêtre
 intégrée.
 
 Une fois installée, l'application dit qu'elle l'est et ne propose plus rien. Et
-`/` n'y affiche jamais la page vitrine : connecté, on arrive au tableau de bord ;
+`/` n'y ouvre pas la page vitrine : connecté, on arrive au tableau de bord ;
 sinon, à la connexion.
+
+Cette règle vaut pour l'ouverture, pas pour la navigation : une visite demandée
+explicitement l'emporte (voir « Se déconnecter » ci-dessous).
 
 `npm run test:pwa` vérifie tout cela dans un navigateur, à commencer par
 l'absence de toute ressource externe dans les caches.
+
+## Se déconnecter
+
+Se déconnecter ramène sur la page d'accueil, et non sur un écran de connexion
+nu. C'est de là qu'on se reconnecte ou qu'on ouvre un autre compte, et les deux
+boutons sont posés en haut de la page, dans un bandeau : personne ne doit avoir
+à deviner où aller ensuite.
+
+La page d'accueil reste atteignable partout ailleurs : les écrans de connexion
+et d'inscription portent un lien « Retour à l'accueil » écrit en toutes lettres,
+et sur téléphone « Se connecter » est visible dans l'en-tête, sans passer par le
+menu.
+
+### Le cas de l'application installée
+
+L'application posée sur l'écran d'accueil suit une règle particulière : lancée
+depuis son icône sans session, elle ouvre la connexion, pas la vitrine. Cette
+règle ne doit pas rendre l'accueil inatteignable pour autant.
+
+Une déconnexion et le bouton « Retour à l'accueil » marquent donc la visite
+comme voulue (un état passé au routeur), et l'accueil s'affiche alors, même
+installée. Le lancement depuis l'icône, lui, ne porte pas cet état : il continue
+d'aller droit à la connexion.
+
+```bash
+npm run build && npm run preview -- --port 4173
+npm run test:deconnexion
+```
+
+Le contrôle joue les deux situations — navigateur ordinaire et application
+installée — et vérifie les deux sens : on revient bien à l'accueil, et
+l'ouverture depuis l'icône mène toujours à la connexion.
 
 ## Le profil public, et la vitrine
 
@@ -799,8 +834,8 @@ et fiche contact.
 > des identifiants `crd_`/`vlt_`, et déroule le Coffre Sécurité, retiré de
 > l'application depuis. Il est conservé pour mémoire, à réécrire. Les contrôles
 > qui font foi aujourd'hui sont les suivants (`test:profil`, `test:vitrine`,
-> `test:carte`, `test:offline`, `test:pwa`, `test:session`, `test:plan`,
-> `test:export`, `test:photo`, `test:scanner`, `test:maj`).
+> `test:carte`, `test:deconnexion`, `test:offline`, `test:pwa`, `test:session`,
+> `test:plan`, `test:export`, `test:photo`, `test:scanner`, `test:maj`).
 
 `scripts/e2e-smoke.mjs` rejoue tout le parcours dans un vrai navigateur — compte,
 carte, QR Code, mini-site, téléchargement PNG/PDF, coffre, fichier chiffré,

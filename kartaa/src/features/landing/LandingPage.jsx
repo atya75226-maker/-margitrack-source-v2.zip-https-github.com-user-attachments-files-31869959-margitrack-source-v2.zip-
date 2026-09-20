@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { APP, PRO_PRICE, SOCIAL_NETWORKS } from '../../config/app.config'
 import { Icon, Logo, SocialIcon } from '../../components/ui/Icons'
@@ -110,11 +110,21 @@ const TONS = {
   rose: 'bg-rose-50 text-rose-600',
 }
 
-export default function LandingPage() {
+export default function LandingPage({ deconnecte = false }) {
   const { isAuthenticated } = useAuth()
+
+  // On arrive ici depuis une autre page — une déconnexion, par exemple — et le
+  // navigateur garde la position de défilement précédente : sans cela, la page
+  // s'ouvrait en plein milieu et le bandeau du haut passait inaperçu. Un lien
+  // d'ancre (#profil) garde la priorité, puisqu'il demande un endroit précis.
+  useEffect(() => {
+    if (!window.location.hash) window.scrollTo(0, 0)
+  }, [])
+
   return (
     <div className="bg-white">
       <Entete isAuthenticated={isAuthenticated} />
+      {deconnecte && <Deconnexion />}
       <Hero />
       <Fonctionnement />
       <Solution />
@@ -124,6 +134,33 @@ export default function LandingPage() {
       <Questions />
       <Installation />
       <Pied />
+    </div>
+  )
+}
+
+/**
+ * Bandeau affiché juste après une déconnexion.
+ *
+ * On ne laisse pas la personne deviner où aller : les deux chemins — revenir
+ * dans son compte, ou en ouvrir un autre — sont posés là, visibles.
+ */
+function Deconnexion() {
+  return (
+    <div className="border-b border-ink-100 bg-emerald-50">
+      <div className="container-app flex flex-col items-center justify-between gap-3 py-3.5 sm:flex-row">
+        <p className="flex items-center gap-2 text-sm font-bold text-emerald-800">
+          <Icon name="check" size={16} />
+          Vous êtes déconnecté de {APP.name}.
+        </p>
+        <div className="flex gap-2">
+          <Button as={Link} to="/connexion" size="sm" variant="outline">
+            Se connecter
+          </Button>
+          <Button as={Link} to="/inscription" size="sm" className="bg-gradient-to-r from-brand-600 to-brand-500 text-white">
+            Créer un compte
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -180,9 +217,16 @@ function Entete({ isAuthenticated }) {
             </>
           )}
         </div>
-        <button type="button" className="rounded-xl p-2 text-white md:hidden" onClick={() => setOpen((value) => !value)} aria-label="Menu">
-          <Icon name={open ? 'x' : 'list'} size={22} />
-        </button>
+        <div className="flex items-center gap-1 md:hidden">
+          {!isAuthenticated && (
+            <Button as={Link} to="/connexion" variant="ghost" size="sm" className="text-white/80 hover:bg-white/10 hover:text-white">
+              Se connecter
+            </Button>
+          )}
+          <button type="button" className="rounded-xl p-2 text-white" onClick={() => setOpen((value) => !value)} aria-label="Menu">
+            <Icon name={open ? 'x' : 'list'} size={22} />
+          </button>
+        </div>
       </div>
       {open && (
         <div className="border-t border-white/10 bg-ink-950 px-5 py-4 md:hidden">
