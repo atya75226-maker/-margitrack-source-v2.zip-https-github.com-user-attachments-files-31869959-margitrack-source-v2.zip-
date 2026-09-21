@@ -22,7 +22,8 @@
     "test:profil": "node scripts/profil-check.mjs",
     "test:vitrine": "node scripts/vitrine-check.mjs",
     "test:deconnexion": "node scripts/deconnexion-check.mjs",
-    "test:nfc": "node scripts/nfc-check.mjs"
+    "test:nfc": "node scripts/nfc-check.mjs",
+    "test:offres": "node scripts/offres-check.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",

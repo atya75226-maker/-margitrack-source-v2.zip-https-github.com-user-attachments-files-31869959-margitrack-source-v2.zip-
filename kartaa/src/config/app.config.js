@@ -36,7 +36,11 @@ const ORIGINE_PUBLIQUE = origineUtilisable(import.meta.env.VITE_PUBLIC_ORIGIN) |
 
 export const APP = {
   name: 'Kartaa',
-  tagline: 'Votre identité. Votre carte. Votre QR Code.',
+  // Le positionnement du produit, tel qu'il est écrit en haut de la page
+  // d'accueil : Kartaa crée une identité professionnelle numérique, et la carte
+  // — numérique aujourd'hui, physique et NFC plus tard — n'est que le chemin
+  // qui y mène.
+  tagline: 'Votre identité professionnelle numérique.',
   publicOrigin: ORIGINE_PUBLIQUE,
   publicDomain: ORIGINE_PUBLIQUE.replace(/^https?:\/\//, ''),
   supportEmail: 'contact@kartaa.app',
@@ -146,13 +150,17 @@ export const PRO_CAPABILITIES = {
     label: 'Personnalisation avancée',
     value: "Couleurs, typographies et mise en page : votre carte à vos codes, pas aux nôtres.",
   },
+  proSocials: {
+    label: 'Facebook, TikTok, YouTube et Telegram',
+    value: "Vos réseaux d'audience sur votre profil. Téléphone, WhatsApp, e-mail et vos autres liens restent gratuits.",
+  },
+  companyInfo: {
+    label: "Informations d'entreprise",
+    value: "Nom de la structure, logo, adresse, site professionnel : ce qui fait une identité d'entreprise et non un simple contact.",
+  },
   gallery: {
     label: 'Galerie photos',
     value: "Vos réalisations, vos produits, votre local : ce qui donne du crédit à une carte.",
-  },
-  multipleCompanies: {
-    label: 'Plusieurs entreprises',
-    value: "Présentez chacune de vos structures sur la même carte.",
   },
   multipleActivities: {
     label: 'Plusieurs activités',
@@ -160,19 +168,11 @@ export const PRO_CAPABILITIES = {
   },
   advancedStats: {
     label: 'Statistiques avancées',
-    value: "Analysez les performances de vos cartes : qui appelle, qui écrit, quels réseaux sont ouverts.",
-  },
-  customDomain: {
-    label: 'Domaine personnalisé',
-    value: "Votre mini-site à votre propre adresse, au lieu d'une adresse fournie par l'application.",
-  },
-  advancedQr: {
-    label: 'QR Code personnalisé',
-    value: "Aux couleurs de votre carte, toujours aussi facile à scanner.",
+    value: "Qui appelle, qui écrit, quels réseaux sont ouverts : ce que devient votre carte une fois partagée.",
   },
   removeBranding: {
-    label: 'Mini-site sans mention Kartaa',
-    value: "Votre page, votre nom, rien d'autre en bas.",
+    label: 'Carte et profil sans filigrane',
+    value: "La mention « Powered by Kartaa » disparaît du verso de votre carte et du bas de votre profil public.",
   },
 }
 
@@ -187,22 +187,38 @@ export function can(user, capability) {
 /**
  * Chaque plateforme accepte autant de comptes que souhaité : la liste ci-dessous
  * décrit seulement comment présenter et valider une entrée.
+ *
+ * `pro: true` marque les réseaux inclus dans l'abonnement Kartaa Pro. Ce n'est
+ * qu'un guide d'affichage : la base refuse de son côté, dans
+ * set_card_social_links(), qui lit la même liste via pro_social_platforms().
+ * Les deux listes doivent rester identiques.
+ *
+ * Les coordonnées de base — téléphone, WhatsApp, e-mail — n'en font jamais
+ * partie : sans elles, une carte gratuite ne servirait à rien.
  */
 export const SOCIAL_NETWORKS = [
   { key: 'whatsapp',  label: 'WhatsApp',  kind: 'phone', color: '#25D366', placeholder: '+225 07 00 00 00 00', titlePlaceholder: 'Ligne professionnelle' },
-  { key: 'facebook',  label: 'Facebook',  kind: 'url',   color: '#1877F2', placeholder: 'https://facebook.com/…', titlePlaceholder: 'Page de l’entreprise' },
+  { key: 'facebook',  label: 'Facebook',  kind: 'url',   color: '#1877F2', placeholder: 'https://facebook.com/…', titlePlaceholder: 'Page de l’entreprise', pro: true },
   { key: 'instagram', label: 'Instagram', kind: 'url',   color: '#E4405F', placeholder: 'https://instagram.com/…', titlePlaceholder: 'Compte personnel' },
-  { key: 'tiktok',    label: 'TikTok',    kind: 'url',   color: '#111111', placeholder: 'https://tiktok.com/@…', titlePlaceholder: 'Compte principal' },
-  { key: 'youtube',   label: 'YouTube',   kind: 'url',   color: '#FF0000', placeholder: 'https://youtube.com/@…', titlePlaceholder: 'Ma chaîne principale' },
+  { key: 'tiktok',    label: 'TikTok',    kind: 'url',   color: '#111111', placeholder: 'https://tiktok.com/@…', titlePlaceholder: 'Compte principal', pro: true },
+  { key: 'youtube',   label: 'YouTube',   kind: 'url',   color: '#FF0000', placeholder: 'https://youtube.com/@…', titlePlaceholder: 'Ma chaîne principale', pro: true },
   { key: 'linkedin',  label: 'LinkedIn',  kind: 'url',   color: '#0A66C2', placeholder: 'https://linkedin.com/in/…', titlePlaceholder: 'Profil professionnel' },
   { key: 'x',         label: 'X',         kind: 'url',   color: '#111111', placeholder: 'https://x.com/…', titlePlaceholder: 'Compte principal' },
   { key: 'snapchat',  label: 'Snapchat',  kind: 'url',   color: '#FFFC00', placeholder: 'https://snapchat.com/add/…', titlePlaceholder: 'Compte personnel' },
-  { key: 'telegram',  label: 'Telegram',  kind: 'url',   color: '#26A5E4', placeholder: 'https://t.me/…', titlePlaceholder: 'Canal public' },
+  { key: 'telegram',  label: 'Telegram',  kind: 'url',   color: '#26A5E4', placeholder: 'https://t.me/…', titlePlaceholder: 'Canal public', pro: true },
   { key: 'website',   label: 'Sites web', kind: 'url',   color: '#6d28d9', placeholder: 'https://…', titlePlaceholder: 'Mon entreprise', namedFirst: true },
   { key: 'other',     label: 'Autres liens', kind: 'url', color: '#41486c', placeholder: 'https://…', titlePlaceholder: 'Mon catalogue PDF', namedFirst: true },
 ]
 
 export const NETWORK_BY_KEY = Object.fromEntries(SOCIAL_NETWORKS.map((item) => [item.key, item]))
+
+/** Les réseaux inclus dans Pro. Doit rester aligné sur pro_social_platforms() en base. */
+export const PRO_SOCIAL_KEYS = SOCIAL_NETWORKS.filter((item) => item.pro).map((item) => item.key)
+
+/** Vrai si cette plateforme demande un abonnement Pro à cette personne. */
+export function socialLocked(user, platform) {
+  return PRO_SOCIAL_KEYS.includes(platform) && !isPro(user)
+}
 
 /* ----------------------------------------------------------------- modèles */
 

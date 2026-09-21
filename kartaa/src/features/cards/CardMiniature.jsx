@@ -4,12 +4,15 @@ import { useCardAssets } from '../../hooks/useCardAssets'
 import { Badge } from '../../components/ui'
 import { Icon } from '../../components/ui/Icons'
 import { formatNumber } from '../../lib/format'
+import { isPro } from '../../config/app.config'
+import { useAuth } from '../../state/AuthContext'
 
 const TEMPLATE_LABEL = { standard: 'Standard', premium: 'Premium', vip: 'VIP' }
 
 /** Vignette de carte utilisée sur le tableau de bord et la liste des cartes. */
 export default function CardMiniature({ card, to }) {
   const { qr } = useCardAssets(card)
+  const { user } = useAuth()
   return (
     <Link
       to={to || `/app/cartes/${card.id}`}
@@ -17,7 +20,7 @@ export default function CardMiniature({ card, to }) {
     >
       <div className="overflow-hidden bg-ink-100">
         <CardScaler>
-          <CardArtwork card={card} side="back" qr={qr} />
+          <CardArtwork card={card} side="back" qr={qr} filigrane={!isPro(user)} />
         </CardScaler>
       </div>
       <div className="flex items-center justify-between gap-3 px-4 py-3.5">

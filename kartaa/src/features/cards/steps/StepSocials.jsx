@@ -1,6 +1,8 @@
 import { Button, Field, Input, Panel } from '../../../components/ui'
 import { Icon, SocialIcon } from '../../../components/ui/Icons'
-import { SOCIAL_NETWORKS } from '../../../config/app.config'
+import { SOCIAL_NETWORKS, isPro, formatPrice } from '../../../config/app.config'
+import { useProLock } from '../../../components/ProLock'
+import { useAuth } from '../../../state/AuthContext'
 
 /**
  * Réseaux et liens : autant de comptes que souhaité par plateforme.
@@ -8,9 +10,27 @@ import { SOCIAL_NETWORKS } from '../../../config/app.config'
  * Le tableau `socialLinks` est la seule source de vérité. Chaque ligne vide est
  * simplement ignorée à l'enregistrement, ce qui permet d'afficher un premier
  * champ pour chaque plateforme sans forcer l'utilisateur à le remplir.
+ *
+ * QUATRE RÉSEAUX SONT INCLUS DANS L'ABONNEMENT PRO
+ *
+ * Facebook, TikTok, YouTube et Telegram (`pro: true` dans la configuration).
+ * Les coordonnées de base — téléphone, WhatsApp, e-mail — et tous les autres
+ * liens restent gratuits : une carte gratuite doit rester une vraie carte.
+ *
+ * Ce que l'écran fait ici n'est qu'une courtoisie. Le refus réel vient de
+ * set_card_social_links(), qui compare le plan EFFECTIF du propriétaire et
+ * rejette toute adresse nouvelle sur ces quatre plateformes.
+ *
+ * UN ABONNEMENT QUI PREND FIN NE FAIT RIEN DISPARAÎTRE. Les comptes déjà
+ * enregistrés restent affichés, restent modifiables et restent en base ; ils
+ * cessent seulement de pouvoir s'étendre. La base applique la même règle, en
+ * comparant les adresses avant d'écrire.
  */
 export default function StepSocials({ draft, update }) {
   const links = draft.socialLinks || []
+  const { user } = useAuth()
+  const { requirePro } = useProLock()
+  const pro = isPro(user)
 
   const setLinks = (next) => update({ socialLinks: next })
 
@@ -62,6 +82,10 @@ export default function StepSocials({ draft, update }) {
 
       {SOCIAL_NETWORKS.map((network) => {
         const rows = links.filter((link) => link.platform === network.key)
+        const remplies = rows.filter((row) => row.url)
+        // Verrouillé seulement pour ce qui reste à AJOUTER : les comptes déjà
+        // enregistrés continuent de s'afficher et de se modifier.
+        const verrouille = network.pro && !pro
         return (
           <Panel key={network.key} className="!p-4">
             <div className="mb-3 flex items-center gap-3">
@@ -72,36 +96,49 @@ export default function StepSocials({ draft, update }) {
                 <SocialIcon network={network.key} size={19} />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="font-display text-sm font-bold text-ink-900">{network.label}</p>
-                {rows.filter((row) => row.url).length > 1 && (
-                  <p className="hint mt-0.5">{rows.filter((row) => row.url).length} comptes</p>
-                )}
+                <p className="flex items-center gap-2 font-display text-sm font-bold text-ink-900">
+                  {network.label}
+                  {verrouille && <Icon name="lock" size={13} className="text-gold-600" />}
+                </p>
+                {remplies.length > 1 && <p className="hint mt-0.5">{remplies.length} comptes</p>}
               </div>
             </div>
 
+            {verrouille && remplies.length > 0 && (
+              <p className="mb-3 rounded-2xl bg-gold-50 px-3.5 py-2.5 text-xs leading-relaxed text-ink-600">
+                Vos comptes {network.label} sont conservés et restent visibles sur votre profil.
+                Vous pouvez les supprimer ; en ajouter ou changer leur adresse demande Kartaa Pro.
+              </p>
+            )}
+
             <div className="space-y-3">
-              {rows.map((row, index) => (
+              {(verrouille ? remplies : rows).map((row, index, affichees) => (
                 <LinkRow
                   key={row.uid}
                   row={row}
                   index={index}
-                  total={rows.length}
+                  total={affichees.length}
                   network={network}
+                  lectureSeule={verrouille}
                   onChange={(patch) => patchRow(row.uid, patch)}
-                  onRemove={rows.length > 1 || row.url ? () => removeRow(row.uid) : null}
+                  onRemove={affichees.length > 1 || row.url ? () => removeRow(row.uid) : null}
                   onMove={(direction) => moveRow(row.uid, direction)}
                 />
               ))}
             </div>
 
-            <button
-              type="button"
-              onClick={() => addRow(network.key)}
-              className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-ink-200 py-2.5 text-sm font-bold text-brand-600 transition-colors hover:border-brand-300 hover:bg-brand-50"
-            >
-              <Icon name="plus" size={16} />
-              Ajouter un autre {network.label.replace(/^Sites web$/, 'site web').replace(/^Autres liens$/, 'lien')}
-            </button>
+            {verrouille ? (
+              <VerrouReseau network={network} onUnlock={() => requirePro('proSocials')} />
+            ) : (
+              <button
+                type="button"
+                onClick={() => addRow(network.key)}
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-ink-200 py-2.5 text-sm font-bold text-brand-600 transition-colors hover:border-brand-300 hover:bg-brand-50"
+              >
+                <Icon name="plus" size={16} />
+                Ajouter un autre {network.label.replace(/^Sites web$/, 'site web').replace(/^Autres liens$/, 'lien')}
+              </button>
+            )}
           </Panel>
         )
       })}
@@ -109,7 +146,33 @@ export default function StepSocials({ draft, update }) {
   )
 }
 
-function LinkRow({ row, index, total, network, onChange, onRemove, onMove }) {
+/**
+ * Ce qui remplace le bouton « Ajouter » sur un réseau Pro, en offre gratuite.
+ *
+ * Il dit ce qui est verrouillé, à quel prix, et mène à la page d'abonnement.
+ * Ce n'est pas une erreur et l'écran ne le présente pas comme telle : c'est un
+ * choix commercial, annoncé comme tel.
+ */
+function VerrouReseau({ network, onUnlock }) {
+  return (
+    <div className="mt-3 rounded-2xl border border-gold-200 bg-gold-50/70 p-3.5 text-center">
+      <span className="mx-auto grid h-9 w-9 place-items-center rounded-xl bg-gold-100 text-gold-700">
+        <Icon name="lock" size={16} />
+      </span>
+      <p className="mt-2 text-sm font-bold text-ink-900">
+        {network.label} — disponible avec Kartaa Pro
+      </p>
+      <p className="mt-1 text-xs leading-relaxed text-ink-600">
+        {formatPrice()}/mois. Votre téléphone, votre WhatsApp et votre e-mail restent gratuits.
+      </p>
+      <Button size="sm" icon="crown" className="mt-3" onClick={onUnlock}>
+        Débloquer Kartaa Pro
+      </Button>
+    </div>
+  )
+}
+
+function LinkRow({ row, index, total, network, onChange, onRemove, onMove, lectureSeule = false }) {
   return (
     <div className="rounded-2xl border border-ink-100 p-3">
       <div className="mb-2 flex items-center justify-between gap-2">
@@ -158,14 +221,19 @@ function LinkRow({ row, index, total, network, onChange, onRemove, onMove }) {
             value={row.title}
             onChange={(event) => onChange({ title: event.target.value })}
             placeholder={network.titlePlaceholder}
+            disabled={lectureSeule}
           />
         </Field>
-        <Field label={network.kind === 'phone' ? 'Numéro' : 'Adresse du lien'}>
+        <Field
+          label={network.kind === 'phone' ? 'Numéro' : 'Adresse du lien'}
+          hint={lectureSeule ? 'Modifier cette adresse demande Kartaa Pro.' : undefined}
+        >
           <Input
             value={row.url}
             onChange={(event) => onChange({ url: event.target.value })}
             placeholder={network.placeholder}
             inputMode={network.kind === 'phone' ? 'tel' : 'url'}
+            disabled={lectureSeule}
           />
         </Field>
       </div>
