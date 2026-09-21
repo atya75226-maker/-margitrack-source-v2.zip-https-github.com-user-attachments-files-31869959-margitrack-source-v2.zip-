@@ -6,7 +6,7 @@ import { uploadImage, removeImage } from '../../../lib/storage'
 import { randomId } from '../../../lib/crypto'
 import { useProLock, ProBadge } from '../../../components/ProLock'
 import { useAuth } from '../../../state/AuthContext'
-import { can } from '../../../config/app.config'
+import { can, formatPrice } from '../../../config/app.config'
 
 const EMPTY_COMPANY = {
   name: '', description: '', phone: '', whatsapp: '', address: '', website: '',
@@ -21,9 +21,22 @@ export default function StepCompanies({ draft, update }) {
   const { requirePro } = useProLock()
   const companies = draft.companies || []
   const services = draft.services || []
-  // Une entreprise pour tout le monde ; la suivante est incluse dans Pro. Les
-  // services, eux, restent libres : c'est le cœur d'une carte professionnelle.
-  const plusieursEntreprises = can(user, 'multipleCompanies')
+  /**
+   * Les informations d'entreprise relèvent de l'abonnement Kartaa Pro.
+   *
+   * Une carte gratuite reste une vraie carte : nom, profession, téléphone,
+   * WhatsApp, e-mail, adresse, services. Ce qui bascule dans Pro, c'est
+   * l'identité D'ENTREPRISE — la structure, son logo, son adresse, son site.
+   *
+   * Les services, eux, restent gratuits : présenter ce qu'on fait est le cœur
+   * même d'une carte professionnelle, y compris sans société déclarée.
+   *
+   * Le refus réel vient du déclencheur enforce_card_plan_features() : il ne
+   * bloque que ce qui AUGMENTE le nombre d'entreprises. Un compte qui en avait
+   * déjà une — parce qu'il était Pro, ou parce qu'il l'a créée quand l'offre
+   * gratuite en permettait une — la garde, la voit et peut la supprimer.
+   */
+  const entreprisesAutorisees = can(user, 'companyInfo')
 
   const saveCompany = () => {
     const value = { ...companyDraft, name: companyDraft.name.trim() }
@@ -52,39 +65,48 @@ export default function StepCompanies({ draft, update }) {
           <div>
             <p className="flex items-center gap-2 font-display text-base font-bold text-ink-900">
               Mes entreprises
-              {companies.length >= 1 && !plusieursEntreprises && <ProBadge />}
+              {!entreprisesAutorisees && <ProBadge />}
             </p>
             <p className="hint mt-0.5">
-              {plusieursEntreprises
-                ? 'Ajoutez une ou plusieurs structures. La première apparaît sur la carte.'
-                : 'Une structure sur l’offre Gratuit. La suivante est incluse dans Pro.'}
+              {entreprisesAutorisees
+                ? 'Ajoutez une ou plusieurs structures. La première apparaît en tête de votre profil.'
+                : 'Les informations d’entreprise sont incluses dans Kartaa Pro.'}
             </p>
           </div>
-          <Button
-            size="sm"
-            variant="outline"
-            icon={companies.length >= 1 && !plusieursEntreprises ? 'lock' : 'plus'}
-            onClick={() => {
-              if (companies.length >= 1 && !requirePro('multipleCompanies')) return
-              setCompanyDraft({ ...EMPTY_COMPANY, id: randomId('cmp') })
-            }}
-          >
-            {companies.length >= 1 && !plusieursEntreprises ? 'Voir Pro' : 'Ajouter'}
-          </Button>
+          {entreprisesAutorisees && (
+            <Button
+              size="sm"
+              variant="outline"
+              icon="plus"
+              onClick={() => setCompanyDraft({ ...EMPTY_COMPANY, id: randomId('cmp') })}
+            >
+              Ajouter
+            </Button>
+          )}
         </div>
+
+        {!entreprisesAutorisees && companies.length > 0 && (
+          <p className="mb-3 rounded-2xl bg-gold-50 px-3.5 py-2.5 text-xs leading-relaxed text-ink-600">
+            Votre entreprise est conservée et reste affichée sur votre profil. Reprenez Kartaa Pro
+            pour la modifier ou en ajouter une autre.
+          </p>
+        )}
+
         {companies.length ? (
           <div className="space-y-3">
             {companies.map((company) => (
               <CompanyRow
                 key={company.id}
                 company={company}
-                onEdit={() => setCompanyDraft(company)}
+                onEdit={entreprisesAutorisees ? () => setCompanyDraft(company) : null}
                 onRemove={() => update({ companies: companies.filter((item) => item.id !== company.id) })}
               />
             ))}
           </div>
-        ) : (
+        ) : entreprisesAutorisees ? (
           <EmptyState icon="briefcase" title="Aucune entreprise" description="Facultatif : vous pouvez présenter une carte purement personnelle." className="!py-8" />
+        ) : (
+          <VerrouEntreprise onUnlock={() => requirePro('companyInfo')} />
         )}
       </Panel>
 
@@ -120,6 +142,34 @@ export default function StepCompanies({ draft, update }) {
   )
 }
 
+/**
+ * Ce que voit un compte gratuit à la place du formulaire d'entreprise.
+ *
+ * Il nomme ce qui est réservé, le prix, et mène à la page d'abonnement — pas
+ * un message d'erreur, pas une fonctionnalité qui aurait l'air cassée.
+ */
+function VerrouEntreprise({ onUnlock }) {
+  return (
+    <div className="rounded-2xl border border-gold-200 bg-gold-50/70 p-5 text-center">
+      <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-gold-100 text-gold-700">
+        <Icon name="lock" size={22} />
+      </span>
+      <p className="mt-3 font-display text-base font-bold text-ink-900">
+        Disponible avec Kartaa Pro
+      </p>
+      <p className="mx-auto mt-1.5 max-w-sm text-sm leading-relaxed text-ink-600">
+        Nom de la structure, logo, adresse, site professionnel : de quoi présenter une entreprise
+        et non un simple contact. Votre nom, votre profession, vos coordonnées et vos services
+        restent gratuits.
+      </p>
+      <p className="mt-3 text-sm font-semibold text-ink-800">{formatPrice()}/mois</p>
+      <Button icon="crown" className="mt-4" onClick={onUnlock}>
+        Passer à Kartaa Pro
+      </Button>
+    </div>
+  )
+}
+
 function CompanyRow({ company, onEdit, onRemove }) {
   const logoUrl = company.logoUrl
   return (
@@ -131,9 +181,13 @@ function CompanyRow({ company, onEdit, onRemove }) {
         <p className="truncate font-semibold text-ink-900">{company.name}</p>
         <p className="truncate text-xs text-ink-400">{company.description || company.website || 'Aucune description'}</p>
       </div>
-      <button type="button" onClick={onEdit} className="rounded-xl p-2 text-ink-400 hover:bg-ink-100 hover:text-ink-800" aria-label="Modifier">
-        <Icon name="edit" size={17} />
-      </button>
+      {/* Sans `onEdit` — offre gratuite — on n'affiche pas un bouton qui ne
+          ferait rien : l'entreprise reste visible, et supprimable. */}
+      {onEdit && (
+        <button type="button" onClick={onEdit} className="rounded-xl p-2 text-ink-400 hover:bg-ink-100 hover:text-ink-800" aria-label="Modifier">
+          <Icon name="edit" size={17} />
+        </button>
+      )}
       <button type="button" onClick={onRemove} className="rounded-xl p-2 text-ink-400 hover:bg-rose-50 hover:text-rose-600" aria-label="Supprimer">
         <Icon name="trash" size={17} />
       </button>

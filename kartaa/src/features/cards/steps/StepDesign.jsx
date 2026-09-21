@@ -1,6 +1,6 @@
 import { Badge, Field, Input, Panel } from '../../../components/ui'
 import { Icon } from '../../../components/ui/Icons'
-import { FONTS, PALETTES, TEMPLATES, can } from '../../../config/app.config'
+import { FONTS, PALETTES, TEMPLATES, can, formatPrice } from '../../../config/app.config'
 import { useProLock } from '../../../components/ProLock'
 import { CardArtwork, CardScaler } from '../../../components/card/CardArtwork'
 import { useAuth } from '../../../state/AuthContext'
@@ -11,6 +11,15 @@ export default function StepDesign({ draft, update, assets, slugError }) {
   const { user } = useAuth()
   const { requirePro } = useProLock()
   const allowedPremium = can(user, 'premiumTemplates')
+  /**
+   * Les couleurs et la typographie du mini-site font partie de l'abonnement.
+   *
+   * Le déclencheur enforce_card_plan_features() refuse toute MODIFICATION du
+   * thème pour un compte gratuit : l'écran ne fait donc qu'annoncer à l'avance
+   * ce que la base répondrait. Le thème déjà enregistré reste affiché — rien
+   * n'est effacé, et tout redevient modifiable au renouvellement.
+   */
+  const allowedDesign = can(user, 'advancedDesign')
 
   return (
     <div className="space-y-5">
@@ -28,7 +37,17 @@ export default function StepDesign({ draft, update, assets, slugError }) {
               <button
                 key={template.id}
                 type="button"
-                onClick={() => (locked ? requirePro('premiumTemplates') : true) && !locked && update({ template: template.id, theme: { ...draft.theme, ...template.defaults, primary: draft.theme?.primary || template.defaults.primary } })}
+                onClick={() => {
+                  if (locked) { requirePro('premiumTemplates'); return }
+                  // Sans le droit à la personnalisation, choisir un modèle ne
+                  // touche pas aux couleurs : les réécrire ferait refuser
+                  // l'enregistrement par la base, pour un geste anodin.
+                  if (!allowedDesign) { update({ template: template.id }); return }
+                  update({
+                    template: template.id,
+                    theme: { ...draft.theme, ...template.defaults, primary: draft.theme?.primary || template.defaults.primary },
+                  })
+                }}
                 className={`overflow-hidden rounded-3xl border-2 text-left transition-all ${
                   active ? 'border-brand-600 shadow-lift' : 'border-ink-100 hover:border-ink-300'
                 } ${locked ? 'opacity-70' : ''}`}
@@ -59,11 +78,15 @@ export default function StepDesign({ draft, update, assets, slugError }) {
       </Panel>
 
       <Panel>
-        <p className="font-display text-base font-bold text-ink-900">Couleurs de mon mini-site</p>
+        <p className="flex items-center gap-2 font-display text-base font-bold text-ink-900">
+          Couleurs de mon mini-site
+          {!allowedDesign && <Icon name="lock" size={14} className="text-gold-600" />}
+        </p>
         <p className="hint mt-0.5 mb-4">
           Elles habillent la page que votre QR Code ouvre. La carte, elle, garde la finition de son modèle.
         </p>
-        <div className="flex flex-wrap gap-2.5">
+        {!allowedDesign && <VerrouDesign onUnlock={() => requirePro('advancedDesign')} />}
+        <div className={`flex flex-wrap gap-2.5 ${allowedDesign ? '' : 'pointer-events-none opacity-50'}`}>
           {PALETTES.map((palette) => {
             const active = draft.theme?.primary === palette.primary
             return (
@@ -84,7 +107,7 @@ export default function StepDesign({ draft, update, assets, slugError }) {
             )
           })}
         </div>
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+        <div className={`mt-5 grid gap-4 sm:grid-cols-2 ${allowedDesign ? '' : 'pointer-events-none opacity-50'}`}>
           <Field label="Couleur principale">
             <div className="flex items-center gap-3">
               <input
@@ -111,8 +134,12 @@ export default function StepDesign({ draft, update, assets, slugError }) {
       </Panel>
 
       <Panel>
-        <p className="font-display text-base font-bold text-ink-900">Typographie de mon mini-site</p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <p className="flex items-center gap-2 font-display text-base font-bold text-ink-900">
+          Typographie de mon mini-site
+          {!allowedDesign && <Icon name="lock" size={14} className="text-gold-600" />}
+        </p>
+        {!allowedDesign && <div className="mt-3"><VerrouDesign onUnlock={() => requirePro('advancedDesign')} /></div>}
+        <div className={`mt-4 grid gap-3 sm:grid-cols-3 ${allowedDesign ? '' : 'pointer-events-none opacity-50'}`}>
           {FONTS.map((font) => (
             <button
               key={font.id}
@@ -147,6 +174,32 @@ export default function StepDesign({ draft, update, assets, slugError }) {
           <Badge tone="neutral" icon="link">Modifiable plus tard</Badge>
         </div>
       </Panel>
+    </div>
+  )
+}
+
+/**
+ * Le verrou des couleurs et de la typographie.
+ *
+ * Les réglages restent VISIBLES — on voit ce que l'abonnement débloque, et le
+ * thème déjà enregistré continue de s'afficher — mais ils ne répondent plus.
+ * L'opacité et `pointer-events-none` ne sont que la forme : le fond, c'est le
+ * déclencheur en base, qui refuse la modification quoi qu'il arrive.
+ */
+function VerrouDesign({ onUnlock }) {
+  return (
+    <div className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl border border-gold-200 bg-gold-50/70 px-4 py-3">
+      <Icon name="lock" size={16} className="shrink-0 text-gold-700" />
+      <p className="min-w-0 flex-1 text-sm leading-relaxed text-ink-700">
+        Disponible avec Kartaa Pro — {formatPrice()}/mois. Votre mini-site garde les couleurs du modèle Standard.
+      </p>
+      <button
+        type="button"
+        onClick={onUnlock}
+        className="shrink-0 text-sm font-bold text-brand-600"
+      >
+        Débloquer Pro
+      </button>
     </div>
   )
 }

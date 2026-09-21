@@ -128,6 +128,19 @@ export default function PublicProfilePage() {
     toast.success('Lien copié.')
   }
 
+  /**
+   * La mention Kartaa en bas du profil public tombe avec l'abonnement Pro.
+   *
+   * `ownerPlan` est calculé par la base (card_by_slug → plan_of) : il vaut
+   * « pro » exactement tant que l'abonnement est en cours, échéance comprise.
+   * Ni le visiteur ni le propriétaire ne peuvent l'influencer — ce bandeau ne
+   * dépend d'aucune valeur venue du navigateur. C'est la partie de la règle
+   * « sans filigrane » qui est réellement inviolable.
+   *
+   * La comparaison portait auparavant sur « vip », un plan qui n'a jamais
+   * existé : la mention s'affichait donc pour tout le monde, y compris pour les
+   * abonnés qui l'avaient payée.
+   */
   return (
     <ProfileView
       card={card}
@@ -136,7 +149,7 @@ export default function PublicProfilePage() {
       onVcard={enregistrerLeContact}
       onShare={partager}
       publicHref={adresse}
-      branded={card.ownerPlan !== 'vip'}
+      branded={card.ownerPlan !== 'pro'}
       entete={horsLigne ? (
         <p className="flex items-center justify-center gap-2 bg-gold-50 px-4 py-2 text-center text-xs font-semibold text-gold-800">
           <Icon name="cloudOff" size={14} />

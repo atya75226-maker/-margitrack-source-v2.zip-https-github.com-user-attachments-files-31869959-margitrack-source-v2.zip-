@@ -22,6 +22,23 @@ import { APP } from '../../config/app.config'
  *
  * Les trois modèles ne changent que l'habillage : fond, typographie, traitement
  * du nom. Tous suivent la même règle — recto « Kartaa », verso QR Code.
+ *
+ * LE FILIGRANE DE L'OFFRE GRATUITE
+ *
+ * Une carte gratuite porte au verso, sous le QR Code, une ligne « Powered by
+ * Kartaa ». Elle disparaît avec l'abonnement Pro. Elle tient dans la marge de
+ * sécurité, ne touche ni le QR Code ni sa zone calme, et reste assez petite
+ * pour passer pour une mention d'éditeur — jamais un bandeau en travers de la
+ * carte.
+ *
+ * Elle ne va qu'au verso : le recto porte déjà le nom Kartaa en grand, qui est
+ * le dessin même de la carte et reste identique dans les deux offres. Ce que le
+ * Pro retire, c'est la mention AJOUTÉE, pas l'identité de la carte.
+ *
+ * `filigrane` est décidé par l'appelant à partir du plan effectif, lui-même lu
+ * dans une colonne que le navigateur ne peut pas écrire (déclencheur
+ * protect_plan_column) et dont l'échéance est vérifiée. Voir la note dans
+ * CardDetailPage sur ce que cette protection couvre et ne couvre pas.
  */
 
 export const CARD_WIDTH = 1050
@@ -97,6 +114,41 @@ function habillage(template) {
   return MODELES[template] || MODELES.standard
 }
 
+/**
+ * Mention de l'offre gratuite, au verso.
+ *
+ * Posée dans la marge de sécurité (`CARD_SAFE`), donc à l'abri du massicot, et
+ * sous la plaque du QR Code, qu'elle ne chevauche jamais : la plaque s'arrête à
+ * 486 px du haut, cette ligne commence 30 px plus bas.
+ *
+ * L'or du modèle VIP reprend la teinte du liseré ; les deux autres restent en
+ * blanc très atténué. Dans tous les cas la mention se lit de près et s'efface
+ * de loin, ce qui est exactement son rôle.
+ */
+function Filigrane({ modele }) {
+  const couleur = modele.cadre ? 'rgba(201,162,74,.66)' : 'rgba(255,255,255,.44)'
+  return (
+    <div
+      className="absolute inset-x-0 flex justify-center"
+      style={{ bottom: CARD_SAFE }}
+    >
+      <span
+        style={{
+          fontFamily: POLICES.sans,
+          fontSize: 20,
+          fontWeight: 600,
+          letterSpacing: '.22em',
+          textTransform: 'uppercase',
+          color: couleur,
+          lineHeight: 1,
+        }}
+      >
+        Powered by {APP.name}
+      </span>
+    </div>
+  )
+}
+
 /** Liseré du modèle, le long du bord. Les modèles qui n'en ont pas n'en dessinent aucun. */
 function Cadre({ modele }) {
   if (!modele.cadre) return null
@@ -161,7 +213,7 @@ function Recto({ modele }) {
  * reconnaît sans légende. Ce qu'il contient reste une simple adresse publique —
  * jamais une donnée personnelle, jamais un fichier.
  */
-function Verso({ modele, qr }) {
+function Verso({ modele, qr, filigrane }) {
   // 328 px de code sur 1050, soit environ 26 mm sur une carte de 85 mm : bien
   // au-dessus des 20 mm en dessous desquels un téléphone commence à peiner.
   const cote = 372
@@ -198,6 +250,7 @@ function Verso({ modele, qr }) {
           )}
         </div>
       </div>
+      {filigrane && <Filigrane modele={modele} />}
     </div>
   )
 }
@@ -206,9 +259,11 @@ function Verso({ modele, qr }) {
  * `qr` est la seule chose qui vienne du dehors : l'image du code, calculée à
  * partir de l'adresse publique de la carte. Tout le reste est décidé ici.
  */
-export function CardArtwork({ card, side = 'front', qr }) {
+export function CardArtwork({ card, side = 'front', qr, filigrane = false }) {
   const modele = habillage(card?.template || 'standard')
-  return side === 'back' ? <Verso modele={modele} qr={qr} /> : <Recto modele={modele} />
+  return side === 'back'
+    ? <Verso modele={modele} qr={qr} filigrane={filigrane} />
+    : <Recto modele={modele} />
 }
 
 /** Conteneur responsive : met la carte à l'échelle sans déformer le rendu. */

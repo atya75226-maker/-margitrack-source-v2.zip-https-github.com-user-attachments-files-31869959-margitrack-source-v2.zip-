@@ -16,7 +16,7 @@ import {
   ATTENTE_ECRITURE, chargerCarte, depuisServeur, enregistrerCarte, estPanneReseau, verifierAdresse,
 } from '../../lib/offline/donnees'
 import { normalizeSlug, suggestSlug } from '../../lib/slug'
-import { TEMPLATES, can } from '../../config/app.config'
+import { TEMPLATES, can, isPro } from '../../config/app.config'
 import { ensureRows } from '../../lib/socialLinks'
 
 const STEPS = ['Informations', 'Réseaux', 'Présentation', 'Entreprises', 'Design']
@@ -134,6 +134,21 @@ export default function CardWizardPage() {
     try {
       const payload = { ...draft, slug, template }
 
+      /**
+       * Couleurs et typographie : incluses dans Kartaa Pro.
+       *
+       * On retire purement le thème du paquet plutôt que de l'envoyer tel quel.
+       * Le déclencheur refuse en base TOUTE modification du thème pour un compte
+       * gratuit ; s'il partait avec ne serait-ce qu'une différence involontaire,
+       * l'enregistrement entier serait rejeté et la personne ne pourrait plus
+       * corriger son numéro de téléphone. Ne pas l'envoyer revient à le laisser
+       * intact — ce qui est exactement la règle.
+       *
+       * À la création, le thème part normalement : il porte les couleurs du
+       * modèle Standard, et la base n'encadre que les modifications.
+       */
+      if (cardId && !can(user, 'advancedDesign')) delete payload.theme
+
       if (cardId) {
         // Modification d'une carte existante : elle peut être enregistrée sur
         // l'appareil si le réseau manque, puis envoyée à son retour.
@@ -205,7 +220,7 @@ export default function CardWizardPage() {
 
       {showPreview && (
         <Panel className="lg:hidden">
-          <PreviewBlock draft={draft} assets={assets} />
+          <PreviewBlock draft={draft} assets={assets} filigrane={!isPro(user)} />
         </Panel>
       )}
 
@@ -214,7 +229,7 @@ export default function CardWizardPage() {
         <aside className="hidden lg:block">
           <div className="sticky top-6 space-y-4">
             <Panel>
-              <PreviewBlock draft={draft} assets={assets} />
+              <PreviewBlock draft={draft} assets={assets} filigrane={!isPro(user)} />
             </Panel>
             <Panel className="!p-4">
               <p className="mb-2 flex items-center gap-2 text-xs font-extrabold uppercase tracking-wide text-ink-400">
@@ -252,7 +267,7 @@ const TIPS = [
   "La carte ne porte que le nom Kartaa et votre QR Code : tout le reste vit sur votre mini-site.",
 ]
 
-function PreviewBlock({ draft, assets }) {
+function PreviewBlock({ draft, assets, filigrane }) {
   return (
     <>
       <p className="mb-3 flex items-center gap-2 text-xs font-extrabold uppercase tracking-wide text-ink-400">
@@ -260,12 +275,12 @@ function PreviewBlock({ draft, assets }) {
       </p>
       <div className="overflow-hidden rounded-2xl shadow-soft">
         <CardScaler>
-          <CardArtwork card={draft} qr={assets.qr} />
+          <CardArtwork card={draft} qr={assets.qr} filigrane={filigrane} />
         </CardScaler>
       </div>
       <div className="mt-3 overflow-hidden rounded-2xl shadow-soft">
         <CardScaler>
-          <CardArtwork card={draft} side="back" qr={assets.qr} />
+          <CardArtwork card={draft} side="back" qr={assets.qr} filigrane={filigrane} />
         </CardScaler>
       </div>
     </>

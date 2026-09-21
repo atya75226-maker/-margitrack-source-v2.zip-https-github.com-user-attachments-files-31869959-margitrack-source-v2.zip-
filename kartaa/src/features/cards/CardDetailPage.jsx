@@ -13,7 +13,49 @@ import { exportCard } from '../../lib/cardExport'
 import { copyToClipboard, downloadUrl } from '../../lib/download'
 import { publicUrl } from '../../lib/slug'
 import { formatDate, formatNumber } from '../../lib/format'
-import { FEATURE_FLAGS, can, PRO_CAPABILITIES } from '../../config/app.config'
+import { FEATURE_FLAGS, isPro } from '../../config/app.config'
+
+/**
+ * La carte physique Kartaa — annoncée, pas simulée.
+ *
+ * Le parcours visé est le suivant : l'identité numérique existe déjà (profil,
+ * QR Code, carte), et la carte physique n'en sera que le prolongement — le même
+ * QR Code, la même puce NFC, la même adresse publique. Rien à refaire.
+ *
+ * Tant qu'aucun imprimeur n'est branché (FEATURE_FLAGS.physicalPrinting), cette
+ * section ne propose AUCUN bouton : pas de commande, pas de paiement, pas de
+ * formulaire qui n'aboutirait nulle part. Elle dit ce qui existe déjà — la puce
+ * NFC se programme dès maintenant depuis le panneau du dessus — et ce qui ne
+ * existe pas encore. Le jour où l'impression sera réelle, le formulaire et la
+ * table card_orders sont prêts à reprendre du service.
+ */
+function CartePhysique() {
+  if (FEATURE_FLAGS.physicalPrinting) return null
+  return (
+    <Panel>
+      <div className="flex items-start gap-4">
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-ink-100 text-ink-500">
+          <Icon name="printer" size={20} />
+        </span>
+        <div className="min-w-0">
+          <p className="flex flex-wrap items-center gap-2 font-display text-base font-bold text-ink-900">
+            Carte physique Kartaa
+            <Badge tone="neutral">Bientôt disponible</Badge>
+          </p>
+          <p className="mt-1.5 text-sm leading-relaxed text-ink-600">
+            Une carte imprimée qui portera ce même QR Code, et une puce NFC. Votre identité
+            numérique est déjà prête : la carte physique n'y ajoutera rien, elle y mènera.
+          </p>
+          <p className="mt-2 text-xs leading-relaxed text-ink-500">
+            L'impression et la livraison ne sont pas encore en place — nous ne prenons donc pas de
+            commande. En attendant, vous pouvez déjà programmer une puce NFC que vous possédez, avec
+            le panneau ci-dessus.
+          </p>
+        </div>
+      </div>
+    </Panel>
+  )
+}
 
 export default function CardDetailPage() {
   const { cardId } = useParams()
@@ -28,6 +70,27 @@ export default function CardDetailPage() {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const frontRef = useRef(null)
   const backRef = useRef(null)
+
+  /**
+   * La mention « Powered by Kartaa » au verso, et le fait qu'elle tombe avec
+   * l'abonnement Pro.
+   *
+   * `user.plan` et `user.proUntil` viennent de la ligne `profiles`, que le
+   * navigateur ne peut pas écrire : un déclencheur (protect_plan_column) annule
+   * toute tentative, et seul activate_pro(), appelé par la fonction Edge après
+   * une notification signée du prestataire, la modifie. Passer Pro en trafiquant
+   * une valeur dans l'application est donc sans effet — la page rechargée
+   * relirait « free ».
+   *
+   * CE QUE CELA NE COUVRE PAS, ET IL FAUT LE DIRE : l'export PNG/JPG/PDF est
+   * fabriqué par le navigateur à partir du rendu ci-dessous. Quelqu'un qui
+   * modifie le code de sa propre page peut donc produire un fichier sans la
+   * mention. Rendre cela impossible demanderait de fabriquer l'image côté
+   * serveur ; tant que ce n'est pas fait, la protection réelle porte sur le
+   * plan lui-même et sur le mini-site public, dont le bandeau est décidé par la
+   * base (card_by_slug renvoie le plan effectif du propriétaire).
+   */
+  const filigrane = !isPro(user)
 
   useEffect(() => {
     // chargerCarte rend la copie locale quand le serveur ne répond pas : la
@@ -93,7 +156,7 @@ export default function CardDetailPage() {
         />
         <div className="overflow-hidden rounded-2xl shadow-lift">
           <CardScaler>
-            <CardArtwork card={card} side={side} qr={assets.qr} />
+            <CardArtwork card={card} side={side} qr={assets.qr} filigrane={filigrane} />
           </CardScaler>
         </div>
         <div className="mt-5 grid gap-2 sm:grid-cols-3">
@@ -168,6 +231,8 @@ export default function CardDetailPage() {
 
       <CarteNfc card={card} url={url} />
 
+      <CartePhysique />
+
       <div className="grid gap-5 lg:grid-cols-2">
         {/* Domaine personnalisé et carte physique : les deux dépendent de services
             qui ne sont pas connectés (FEATURE_FLAGS.domainRegistrar,
@@ -185,7 +250,7 @@ export default function CardDetailPage() {
                 ? `${card.customDomain.value} — ${card.customDomain.status === 'verified' ? 'vérifié' : 'en attente de vérification'}`
                 : "Remplacez l'adresse par la vôtre : www.votre-nom.com"
             }
-            badge={can(user, 'customDomain') ? null : 'Pro'}
+            badge={isPro(user) ? null : 'Pro'}
             action="Connecter mon domaine"
             onClick={() => setDomainOpen(true)}
           />
@@ -215,17 +280,20 @@ export default function CardDetailPage() {
         </div>
       </Panel>
 
-      {/* Rendu hors écran, à taille réelle, utilisé pour l'export des fichiers. */}
+      {/* Rendu hors écran, à taille réelle, utilisé pour l'export des fichiers.
+          C'est CE rendu qui devient le PNG, le JPG et le PDF : il porte donc le
+          même filigrane que l'aperçu, sans quoi le fichier téléchargé aurait
+          échappé à la règle que l'écran affiche. */}
       <div aria-hidden className="pointer-events-none fixed -left-[4000px] top-0">
         <div ref={frontRef}>
-          <CardArtwork card={card} qr={assets.qr} />
+          <CardArtwork card={card} qr={assets.qr} filigrane={filigrane} />
         </div>
         <div ref={backRef}>
-          <CardArtwork card={card} side="back" qr={assets.qr} />
+          <CardArtwork card={card} side="back" qr={assets.qr} filigrane={filigrane} />
         </div>
       </div>
 
-      <DomainModal open={domainOpen} onClose={() => setDomainOpen(false)} card={card} allowed={can(user, 'customDomain')} />
+      <DomainModal open={domainOpen} onClose={() => setDomainOpen(false)} card={card} allowed={isPro(user)} />
       <PrintModal open={printOpen} onClose={() => setPrintOpen(false)} card={card} />
       <ConfirmDialog
         open={confirmDelete}
@@ -295,9 +363,13 @@ function DomainModal({ open, onClose, card, allowed }) {
           <div className="flex gap-3 text-sm text-gold-800">
             <Icon name="lock" size={18} className="mt-0.5 shrink-0" />
             <p>
-              <strong className="font-bold">{PRO_CAPABILITIES.customDomain.label}</strong>
+              {/* Texte écrit ici, et non lu dans PRO_CAPABILITIES : le domaine
+                  personnalisé n'est plus vendu dans l'abonnement, faute de
+                  vérification DNS réelle (FEATURE_FLAGS.domainRegistrar). */}
+              <strong className="font-bold">Domaine personnalisé</strong>
               {' — '}
-              {PRO_CAPABILITIES.customDomain.value} Vous pouvez préparer la configuration dès maintenant.
+              votre mini-site à votre propre adresse. Le service n'est pas encore branché ;
+              vous pouvez préparer la configuration dès maintenant.
             </p>
           </div>
           <Button as={Link} to="/app/abonnement" variant="gold" size="sm" className="mt-3">

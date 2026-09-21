@@ -112,7 +112,7 @@ for (const plan of ['free', 'pro']) {
   const stats = await page.innerText('body')
   if (plan === 'free') {
     verifier('statistiques avancées verrouillées', /Statistiques avancées/.test(stats))
-    verifier('la valeur de la fonctionnalité est expliquée', /qui appelle, qui écrit/.test(stats))
+    verifier('la valeur de la fonctionnalité est expliquée', /qui appelle, qui écrit/i.test(stats))
     verifier('un chemin « Voir Pro » est proposé', /Voir Pro/.test(stats))
   } else {
     verifier('aucun verrou affiché à un abonné', !/Voir Pro/.test(stats))

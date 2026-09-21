@@ -698,12 +698,17 @@ n'ont pas d'abonnement à eux.
 
 | Gratuit | Pro |
 | --- | --- |
-| 1 carte, modèle Standard | Plusieurs cartes, modèles Premium et VIP |
-| Mini-site public complet : coordonnées, WhatsApp, e-mail, réseaux, services | Galerie, plusieurs entreprises, plusieurs activités, personnalisation avancée |
-| Réseaux et liens illimités | Domaine personnalisé, QR personnalisé |
+| 1 carte, modèle Standard, filigrane « Powered by Kartaa » au verso | Plusieurs cartes, modèles Premium et VIP, **aucun filigrane** |
+| Mini-site public complet : coordonnées, WhatsApp, e-mail, services | Galerie photos, plusieurs activités, couleurs et typographie |
+| WhatsApp, Instagram, LinkedIn, X, Snapchat, sites web et liens sans limite | **Facebook, TikTok, YouTube, Telegram** |
+| Profil personnel : nom, profession, coordonnées | **Informations d'entreprise** : structure, logo, adresse, site |
 | Scanner universel et historique | Statistiques avancées |
 | 1 coffre, 200 Mo | Plusieurs coffres, 20 Go |
 | Application installable, français et anglais | — |
+
+Le domaine personnalisé et le QR Code personnalisé ne sont **plus vendus** :
+le premier n'a pas de vérification DNS réelle, le second n'existe pas. Ils
+étaient annoncés dans l'offre sans être implémentés.
 
 ### La séparation est tenue par la base, pas par l'écran
 
@@ -718,11 +723,38 @@ tiennent désormais côté serveur :
    fonction `SECURITY DEFINER`, `current_user` vaut le propriétaire et ne permet
    jamais de reconnaître un appel venu du navigateur.
 2. **Les options Pro d'une carte** — modèles Premium et VIP, domaine, galerie,
-   entreprises et activités multiples — sont refusées par un déclencheur sur
-   `cards`. Il ne bloque que ce qui *augmente* : un compte qui repasse en gratuit
-   garde ses données et peut toujours les corriger.
+   entreprises, activités multiples, couleurs et typographie — sont refusées par
+   un déclencheur sur `cards`. Il ne bloque que ce qui *augmente* ou ce qui
+   *change* : un compte qui repasse en gratuit garde ses données et peut
+   toujours les corriger.
 3. **Les statistiques avancées** répondent `{"locked":"pro"}` au lieu de
    chiffres.
+4. **Facebook, TikTok, YouTube et Telegram** sont refusés par
+   `set_card_social_links()`, qui compare le plan effectif du propriétaire. La
+   liste vit dans `pro_social_platforms()`, en base, et doit rester alignée sur
+   `PRO_SOCIAL_KEYS` côté application. Un compte gratuit peut garder, renommer
+   et supprimer un compte déjà enregistré ; il ne peut ni en ajouter, ni
+   repointer une adresse existante vers une autre.
+5. **La mention Kartaa du mini-site** suit `ownerPlan`, calculé par
+   `card_by_slug()` avec `plan_of()`. Elle ne dépend d'aucune valeur venue du
+   navigateur.
+
+### Le filigrane de la carte, et ce qu'il protège vraiment
+
+Une carte gratuite porte au verso, sous le QR Code, une ligne « Powered by
+Kartaa » ; l'abonnement Pro la retire, de l'aperçu comme des fichiers PNG, JPG
+et PDF — c'est le même rendu qui sert aux deux.
+
+Le plan qui décide vient de la colonne `profiles.plan`, que le navigateur ne
+peut pas écrire, et son échéance est vérifiée. Trafiquer une valeur dans
+l'application ne donne donc rien : la page rechargée relit `free`.
+
+**Ce que cela ne couvre pas, et il faut le dire :** l'export est fabriqué par le
+navigateur à partir du rendu de la page. Quelqu'un qui modifie le code de sa
+propre page peut produire un fichier sans la mention. Le rendre impossible
+demanderait de fabriquer l'image côté serveur. Tant que ce n'est pas fait, la
+protection réelle porte sur le plan lui-même, sur les données Pro, et sur le
+mini-site public — dont la mention est décidée par la base.
 
 Le nombre de cartes, de coffres et le quota de stockage étaient déjà tenus par
 `plan_limits()` et ses déclencheurs ; rien n'y a changé.

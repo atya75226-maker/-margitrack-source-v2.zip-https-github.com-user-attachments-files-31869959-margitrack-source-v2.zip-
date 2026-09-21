@@ -74,17 +74,18 @@ const ETAPES = [
 const PRO_INCLUS = [
   'Plusieurs cartes professionnelles',
   'Modèles Premium et VIP',
-  'Galerie photos sur votre profil',
-  'Plusieurs entreprises et activités',
+  'Facebook, TikTok, YouTube et Telegram',
+  'Informations d’entreprise et galerie photos',
   'Couleurs et typographie de votre profil',
   'Statistiques détaillées des interactions',
+  'Carte et profil sans la mention Kartaa',
 ]
 
 const GRATUIT_INCLUS = [
   'Une carte et son QR Code',
   'Votre profil public complet',
   'Appel, WhatsApp, e-mail, fiche contact',
-  'Réseaux et liens sans limite',
+  'Instagram, LinkedIn, X, Snapchat et vos liens',
   'Scanner de QR Codes',
   'Application installable, mode hors connexion',
 ]
@@ -623,6 +624,7 @@ function Reseaux() {
         <p className="mt-4 leading-relaxed text-ink-500">
           Une rangée d'icônes sur votre profil, dans l'ordre que vous choisissez. Vous pouvez même ajouter plusieurs
           comptes sur une même plateforme — un compte personnel et un compte d'entreprise, par exemple.
+          Les quatre marquées d'un cadenas sont incluses dans Kartaa Pro.
         </p>
       </div>
       <div className="flex flex-wrap items-center justify-center gap-3">
@@ -632,6 +634,7 @@ function Reseaux() {
               <SocialIcon network={network.key} size={16} />
             </span>
             <span className="text-sm font-semibold text-ink-700">{network.label}</span>
+            {network.pro && <Icon name="lock" size={12} className="text-gold-600" />}
           </span>
         ))}
       </div>
