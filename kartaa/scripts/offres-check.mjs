@@ -15,6 +15,8 @@
  * protège rien, et ce fichier ne prétend pas le contraire.
  */
 import { chromium } from 'playwright'
+import { PNG } from 'pngjs'
+import jsQR from 'jsqr'
 
 const BASE = process.env.BASE_URL || 'http://localhost:4173'
 const KEY = 'sb-wadapjshbdjkjrfnsnyr-auth-token'
@@ -140,15 +142,26 @@ for (const cas of CAS) {
   await page.waitForTimeout(600)
 
   const filigranes = await page.locator('text=/Powered by Kartaa/i').count()
+  // Le semis : on compte les « Kartaa » répétés de la face affichée, sans le
+  // nom de marque du recto ni la mention du bas.
+  const semis = await page.evaluate(() => {
+    const face = document.querySelector('.shadow-lift [style*="1050px"], .shadow-lift > div')
+    if (!face) return null
+    return [...face.querySelectorAll('span')]
+      .filter((n) => n.textContent.trim() === 'Kartaa'
+        && parseFloat(getComputedStyle(n).fontSize) < 60).length
+  })
+
   if (cas.pro) {
     verifier('aucun filigrane sur la carte Pro', filigranes === 0, `→ ${filigranes}`)
+    verifier('aucun semis sur la carte Pro', semis === 0, `→ ${semis}`)
   } else {
-    verifier('le filigrane « Powered by Kartaa » est présent', filigranes > 0, `→ ${filigranes}`)
-    // Discret, donc petit : une mention qui ferait la taille du nom de marque
-    // abîmerait la carte, ce que la consigne interdit explicitement.
+    verifier('la mention « Powered by Kartaa » est présente', filigranes > 0, `→ ${filigranes}`)
+    verifier('le semis répète le nom de nombreuses fois', semis >= 20, `→ ${semis}`)
     const taille = await page.locator('text=/Powered by Kartaa/i').first()
       .evaluate((n) => parseFloat(getComputedStyle(n).fontSize))
-    verifier('le filigrane reste discret (≤ 24 px sur 1050)', taille > 0 && taille <= 24, `→ ${taille}px`)
+    verifier('la mention est assez grande pour se voir (≥ 24 px sur 1050)',
+      taille >= 24, `→ ${taille}px`)
   }
 
   // Le rendu hors écran est celui que l'export transforme en PNG/JPG/PDF :
@@ -206,6 +219,77 @@ for (const cas of CAS) {
       !/erreur|error|indisponible pour le moment/i.test(entreprise))
   }
 
+  await context.close()
+}
+
+/* ------------------ les filigranes n'empêchent jamais de scanner le code */
+// C'est la limite que rien ne justifie de franchir : un filigrane qui rendrait
+// le QR Code illisible ne serait pas un filigrane, ce serait une panne. On ne
+// se contente donc pas de regarder le dessin — on relit réellement le code
+// dans l'image produite, sur les trois modèles.
+console.log('\nLe QR Code reste lisible sous les filigranes')
+for (const modele of ['standard', 'premium', 'vip']) {
+  const { page, context } = await ouvrir('free', null, { ...carte, template: modele })
+  await page.goto(`${BASE}/app/cartes/${CARTE}`, { waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(2600)
+  await page.click('button:has-text("Verso")')
+  await page.waitForTimeout(700)
+
+  const image = PNG.sync.read(await page.locator('.shadow-lift').first().screenshot())
+  const lu = jsQR(new Uint8ClampedArray(image.data), image.width, image.height)
+  verifier(`modèle ${modele} : le code se relit malgré les filigranes`,
+    !!lu && /\/awa-diallo$/.test(lu.data || ''), `→ ${lu ? lu.data : 'illisible'}`)
+
+  const semis = await page.evaluate(() =>
+    (document.querySelector('.shadow-lift')?.textContent.match(/Kartaa/g) || []).length)
+  verifier(`modèle ${modele} : les filigranes sont bien là pendant ce test`,
+    semis >= 20, `→ ${semis}`)
+  await context.close()
+}
+
+/* ---------------- un abonné n'a de filigrane sur AUCUN modèle de carte */
+// Le filigrane suit l'ABONNEMENT, jamais le modèle. Un abonné qui garde la
+// carte Standard doit donc l'avoir propre, exactement comme s'il avait choisi
+// Premium ou VIP. C'est la confusion la plus facile à introduire par accident,
+// d'où ce test sur les trois modèles et les deux faces.
+console.log('\nUn abonné n’a de filigrane sur aucun modèle')
+for (const modele of ['standard', 'premium', 'vip']) {
+  const { page, context } = await ouvrir('pro', null, { ...carte, template: modele })
+  await page.goto(`${BASE}/app/cartes/${CARTE}`, { waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(2600)
+
+  for (const face of ['Recto', 'Verso']) {
+    await page.click(`button:has-text("${face}")`)
+    await page.waitForTimeout(600)
+    const mention = await page.locator('text=/Powered by Kartaa/i').count()
+    verifier(`Pro + modèle ${modele} — ${face.toLowerCase()} sans mention`, mention === 0, `→ ${mention}`)
+  }
+
+  // Y compris dans le rendu hors écran, celui qui devient le fichier exporté.
+  const dansLExport = await page.evaluate(() => {
+    const zone = document.querySelector('[aria-hidden].fixed')
+    return zone ? zone.textContent.match(/Kartaa/g)?.length || 0 : null
+  })
+  // Un seul « Kartaa » attendu dans toute la zone d'export : le nom de marque
+  // du recto. Le verso ne porte que le code, et une carte Pro n'a ni semis ni
+  // mention. Pour comparaison, la même zone en compte plus de cent en gratuit.
+  verifier(`Pro + modèle ${modele} — fichiers exportés sans filigrane`,
+    dansLExport === 1, `→ ${dansLExport} « Kartaa » (1 attendu : le nom de marque du recto)`)
+  await context.close()
+}
+
+// Et l'inverse : le compte gratuit, sur son unique modèle, les a bien.
+console.log('\nLe compte gratuit garde ses filigranes')
+{
+  const { page, context } = await ouvrir('free')
+  await page.goto(`${BASE}/app/cartes/${CARTE}`, { waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(2600)
+  for (const face of ['Recto', 'Verso']) {
+    await page.click(`button:has-text("${face}")`)
+    await page.waitForTimeout(600)
+    const mention = await page.locator('text=/Powered by Kartaa/i').count()
+    verifier(`Gratuit — ${face.toLowerCase()} porte la mention`, mention > 0, `→ ${mention}`)
+  }
   await context.close()
 }
 
