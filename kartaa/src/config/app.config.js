@@ -151,8 +151,8 @@ export const PRO_CAPABILITIES = {
     value: "Couleurs, typographies et mise en page : votre carte à vos codes, pas aux nôtres.",
   },
   proSocials: {
-    label: 'Facebook, TikTok, YouTube et Telegram',
-    value: "Vos réseaux d'audience sur votre profil. Téléphone, WhatsApp, e-mail et vos autres liens restent gratuits.",
+    label: 'Facebook, Instagram, Telegram et X',
+    value: "Vos réseaux d'audience sur votre profil. Téléphone, WhatsApp, e-mail, TikTok, YouTube, LinkedIn, Snapchat et vos autres liens restent gratuits.",
   },
   companyInfo: {
     label: "Informations d'entreprise",
@@ -194,16 +194,18 @@ export function can(user, capability) {
  * Les deux listes doivent rester identiques.
  *
  * Les coordonnées de base — téléphone, WhatsApp, e-mail — n'en font jamais
- * partie : sans elles, une carte gratuite ne servirait à rien.
+ * partie : sans elles, une carte gratuite ne servirait à rien. TikTok, YouTube,
+ * LinkedIn, Snapchat, les sites web et les autres liens restent gratuits eux
+ * aussi.
  */
 export const SOCIAL_NETWORKS = [
   { key: 'whatsapp',  label: 'WhatsApp',  kind: 'phone', color: '#25D366', placeholder: '+225 07 00 00 00 00', titlePlaceholder: 'Ligne professionnelle' },
   { key: 'facebook',  label: 'Facebook',  kind: 'url',   color: '#1877F2', placeholder: 'https://facebook.com/…', titlePlaceholder: 'Page de l’entreprise', pro: true },
-  { key: 'instagram', label: 'Instagram', kind: 'url',   color: '#E4405F', placeholder: 'https://instagram.com/…', titlePlaceholder: 'Compte personnel' },
-  { key: 'tiktok',    label: 'TikTok',    kind: 'url',   color: '#111111', placeholder: 'https://tiktok.com/@…', titlePlaceholder: 'Compte principal', pro: true },
-  { key: 'youtube',   label: 'YouTube',   kind: 'url',   color: '#FF0000', placeholder: 'https://youtube.com/@…', titlePlaceholder: 'Ma chaîne principale', pro: true },
+  { key: 'instagram', label: 'Instagram', kind: 'url',   color: '#E4405F', placeholder: 'https://instagram.com/…', titlePlaceholder: 'Compte personnel', pro: true },
+  { key: 'tiktok',    label: 'TikTok',    kind: 'url',   color: '#111111', placeholder: 'https://tiktok.com/@…', titlePlaceholder: 'Compte principal' },
+  { key: 'youtube',   label: 'YouTube',   kind: 'url',   color: '#FF0000', placeholder: 'https://youtube.com/@…', titlePlaceholder: 'Ma chaîne principale' },
   { key: 'linkedin',  label: 'LinkedIn',  kind: 'url',   color: '#0A66C2', placeholder: 'https://linkedin.com/in/…', titlePlaceholder: 'Profil professionnel' },
-  { key: 'x',         label: 'X',         kind: 'url',   color: '#111111', placeholder: 'https://x.com/…', titlePlaceholder: 'Compte principal' },
+  { key: 'x',         label: 'X',         kind: 'url',   color: '#111111', placeholder: 'https://x.com/…', titlePlaceholder: 'Compte principal', pro: true },
   { key: 'snapchat',  label: 'Snapchat',  kind: 'url',   color: '#FFFC00', placeholder: 'https://snapchat.com/add/…', titlePlaceholder: 'Compte personnel' },
   { key: 'telegram',  label: 'Telegram',  kind: 'url',   color: '#26A5E4', placeholder: 'https://t.me/…', titlePlaceholder: 'Canal public', pro: true },
   { key: 'website',   label: 'Sites web', kind: 'url',   color: '#6d28d9', placeholder: 'https://…', titlePlaceholder: 'Mon entreprise', namedFirst: true },

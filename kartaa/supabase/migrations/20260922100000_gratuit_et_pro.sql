@@ -7,7 +7,7 @@
 --
 -- Quatre verrous manquaient côté base — l'écran seul ne protège rien :
 --
---  1. les réseaux Facebook, TikTok, YouTube et Telegram. set_card_social_links()
+--  1. les réseaux Facebook, Instagram, Telegram et X. set_card_social_links()
 --     acceptait n'importe quelle plateforme, quel que soit l'abonnement ;
 --  2. les informations d'entreprise. Le déclencheur en tolérait une en gratuit ;
 --     elles relèvent désormais entièrement du Pro ;
@@ -29,14 +29,15 @@
 -- ------------------------------------------ les réseaux réservés à l'offre Pro
 -- Une seule liste, lue par le déclencheur comme par l'application. Téléphone,
 -- WhatsApp et e-mail n'en font pas partie : ce sont les coordonnées de base,
--- et elles restent gratuites.
+-- et elles restent gratuites. TikTok, YouTube, LinkedIn, Snapchat, les sites
+-- web et les autres liens non plus.
 create or replace function public.pro_social_platforms()
 returns text[] language sql immutable set search_path = '' as $$
-  select array['facebook', 'tiktok', 'youtube', 'telegram']::text[];
+  select array['facebook', 'instagram', 'telegram', 'x']::text[];
 $$;
 
 comment on function public.pro_social_platforms() is
-  'Réseaux inclus dans l''abonnement Pro. Doit rester aligné sur PRO_SOCIAL_KEYS (src/config/app.config.js).';
+  'Réseaux inclus dans l''abonnement Pro : Facebook, Instagram, Telegram et X. Doit rester aligné sur PRO_SOCIAL_KEYS (src/config/app.config.js).';
 
 /**
  * Remplace d'un bloc les liens d'une carte, en refusant qu'un compte gratuit
