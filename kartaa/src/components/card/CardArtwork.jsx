@@ -23,17 +23,24 @@ import { APP } from '../../config/app.config'
  * Les trois modèles ne changent que l'habillage : fond, typographie, traitement
  * du nom. Tous suivent la même règle — recto « Kartaa », verso QR Code.
  *
- * LE FILIGRANE DE L'OFFRE GRATUITE
+ * LES FILIGRANES DE L'OFFRE GRATUITE
  *
- * Une carte gratuite porte au verso, sous le QR Code, une ligne « Powered by
- * Kartaa ». Elle disparaît avec l'abonnement Pro. Elle tient dans la marge de
- * sécurité, ne touche ni le QR Code ni sa zone calme, et reste assez petite
- * pour passer pour une mention d'éditeur — jamais un bandeau en travers de la
- * carte.
+ * Une carte gratuite porte, sur SES DEUX FACES, un semis de « Kartaa » répété
+ * en diagonale, plus une mention « Powered by Kartaa » en bas. Tout cela
+ * disparaît avec l'abonnement Pro.
  *
- * Elle ne va qu'au verso : le recto porte déjà le nom Kartaa en grand, qui est
- * le dessin même de la carte et reste identique dans les deux offres. Ce que le
- * Pro retire, c'est la mention AJOUTÉE, pas l'identité de la carte.
+ * Le semis est volontairement nombreux et lisible : une mention trop timide ne
+ * se voyait pas une fois la carte réduite à la taille d'un téléphone, et ne
+ * remplissait donc pas son rôle. Il reste néanmoins sous le contenu, jamais
+ * par-dessus, et son intensité tient dans une seule constante — `FILIGRANE` —
+ * pour se régler d'un seul endroit.
+ *
+ * LA RÈGLE QUI NE PLIE PAS : LE QR CODE RESTE SCANNABLE.
+ *
+ * Au verso, le semis est dessiné AVANT la plaque blanche du code, donc
+ * derrière elle. La plaque est opaque : ni le code ni sa zone calme ne sont
+ * jamais recouverts, quelle que soit l'intensité choisie. Un filigrane qui
+ * empêcherait de scanner ne serait pas un filigrane, ce serait une panne.
  *
  * `filigrane` est décidé par l'appelant à partir du plan effectif, lui-même lu
  * dans une colonne que le navigateur ne peut pas écrire (déclencheur
@@ -115,31 +122,110 @@ function habillage(template) {
 }
 
 /**
- * Mention de l'offre gratuite, au verso.
+ * Réglages des filigranes, en un seul endroit.
  *
- * Posée dans la marge de sécurité (`CARD_SAFE`), donc à l'abri du massicot, et
- * sous la plaque du QR Code, qu'elle ne chevauche jamais : la plaque s'arrête à
- * 486 px du haut, cette ligne commence 30 px plus bas.
- *
- * L'or du modèle VIP reprend la teinte du liseré ; les deux autres restent en
- * blanc très atténué. Dans tous les cas la mention se lit de près et s'efface
- * de loin, ce qui est exactement son rôle.
+ * `opacite` est le seul curseur à toucher pour les rendre plus ou moins
+ * présents ; le reste décrit la grille du semis.
  */
-function Filigrane({ modele }) {
-  const couleur = modele.cadre ? 'rgba(201,162,74,.66)' : 'rgba(255,255,255,.44)'
+const FILIGRANE = {
+  texte: 32,        // taille du mot répété
+  mention: 26,      // taille de la ligne « Powered by Kartaa »
+  opacite: 0.12,    // semis, sur fond sombre
+  opaciteMention: 0.5,
+  angle: -24,       // pente du semis
+  pasX: 300,        // écart horizontal entre deux mots
+  pasY: 132,        // écart vertical entre deux rangées
+}
+
+/** Teinte des filigranes : l'or du liseré sur le modèle VIP, le blanc ailleurs. */
+function teinte(modele, opacite) {
+  return modele.cadre
+    ? `rgba(201,162,74,${opacite + 0.04})`
+    : `rgba(255,255,255,${opacite})`
+}
+
+/**
+ * Le semis de « Kartaa », répété en diagonale sur toute la face.
+ *
+ * La grille est calculée pour couvrir la carte même après rotation : on dessine
+ * sur une surface plus large que la carte, centrée, et le `overflow-hidden` de
+ * la face coupe ce qui dépasse. Les rangées impaires sont décalées d'un demi-pas
+ * pour éviter l'effet de colonnes.
+ *
+ * Il est posé SOUS le contenu : au recto le nom reste net, au verso la plaque
+ * blanche du QR Code le masque entièrement.
+ */
+function SemisFiligrane({ modele }) {
+  const largeur = CARD_WIDTH * 1.55
+  const hauteur = CARD_HEIGHT * 1.75
+  const colonnes = Math.ceil(largeur / FILIGRANE.pasX) + 1
+  const rangees = Math.ceil(hauteur / FILIGRANE.pasY) + 1
+  const couleur = teinte(modele, FILIGRANE.opacite)
+
+  const mots = []
+  for (let rangee = 0; rangee < rangees; rangee += 1) {
+    for (let colonne = 0; colonne < colonnes; colonne += 1) {
+      mots.push(
+        <span
+          key={`${rangee}-${colonne}`}
+          style={{
+            position: 'absolute',
+            left: colonne * FILIGRANE.pasX + (rangee % 2 ? FILIGRANE.pasX / 2 : 0),
+            top: rangee * FILIGRANE.pasY,
+            fontFamily: POLICES.display,
+            fontSize: FILIGRANE.texte,
+            fontWeight: 700,
+            letterSpacing: '.2em',
+            color: couleur,
+            whiteSpace: 'nowrap',
+            lineHeight: 1,
+          }}
+        >
+          {APP.name}
+        </span>,
+      )
+    }
+  }
+
   return (
     <div
-      className="absolute inset-x-0 flex justify-center"
-      style={{ bottom: CARD_SAFE }}
+      aria-hidden
+      className="pointer-events-none absolute"
+      style={{
+        left: (CARD_WIDTH - largeur) / 2,
+        top: (CARD_HEIGHT - hauteur) / 2,
+        width: largeur,
+        height: hauteur,
+        transform: `rotate(${FILIGRANE.angle}deg)`,
+      }}
+    >
+      {mots}
+    </div>
+  )
+}
+
+/**
+ * La mention « Powered by Kartaa », en bas de face.
+ *
+ * Posée dans la marge de sécurité (`CARD_SAFE`), donc à l'abri du massicot, et
+ * sous la plaque du QR Code au verso : la plaque s'arrête à 486 px du haut,
+ * cette ligne commence plus bas.
+ */
+function MentionFiligrane({ modele }) {
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none absolute inset-x-0 flex justify-center"
+      style={{ bottom: CARD_SAFE - 8 }}
     >
       <span
         style={{
           fontFamily: POLICES.sans,
-          fontSize: 20,
-          fontWeight: 600,
+          fontSize: FILIGRANE.mention,
+          fontWeight: 700,
           letterSpacing: '.22em',
           textTransform: 'uppercase',
-          color: couleur,
+          color: teinte(modele, FILIGRANE.opaciteMention),
           lineHeight: 1,
         }}
       >
@@ -188,18 +274,26 @@ function Marque({ modele }) {
 
 /* ------------------------------------------------------------------ recto */
 
-/** Recto : le nom de la marque, centré, seul. */
-function Recto({ modele }) {
+/**
+ * Recto : le nom de la marque, centré, seul.
+ *
+ * En offre gratuite s'y ajoutent le semis et la mention — posés avant le nom,
+ * donc derrière lui : le nom de marque reste net, sans quoi le recto perdrait
+ * ce qui en fait une carte.
+ */
+function Recto({ modele, filigrane }) {
   return (
     <div
       style={{ width: CARD_WIDTH, height: CARD_HEIGHT, background: modele.fond }}
       className="relative overflow-hidden"
     >
       <div style={{ background: modele.voile }} className="absolute inset-0" />
+      {filigrane && <SemisFiligrane modele={modele} />}
       <Cadre modele={modele} />
       <div className="relative grid h-full place-items-center" style={{ padding: CARD_SAFE }}>
         <Marque modele={modele} />
       </div>
+      {filigrane && <MentionFiligrane modele={modele} />}
     </div>
   )
 }
@@ -224,6 +318,10 @@ function Verso({ modele, qr, filigrane }) {
       className="relative overflow-hidden"
     >
       <div style={{ background: modele.voile }} className="absolute inset-0" />
+      {/* Le semis vient AVANT la plaque du code : il passe donc derrière elle.
+          La plaque étant opaque, ni le code ni sa zone calme ne sont jamais
+          recouverts — le filigrane ne peut pas empêcher de scanner. */}
+      {filigrane && <SemisFiligrane modele={modele} />}
       <Cadre modele={modele} />
       <div className="relative grid h-full place-items-center" style={{ padding: CARD_SAFE }}>
         {/* La plaque blanche et sa marge forment la zone calme du code : sans
@@ -250,7 +348,7 @@ function Verso({ modele, qr, filigrane }) {
           )}
         </div>
       </div>
-      {filigrane && <Filigrane modele={modele} />}
+      {filigrane && <MentionFiligrane modele={modele} />}
     </div>
   )
 }
@@ -263,7 +361,7 @@ export function CardArtwork({ card, side = 'front', qr, filigrane = false }) {
   const modele = habillage(card?.template || 'standard')
   return side === 'back'
     ? <Verso modele={modele} qr={qr} filigrane={filigrane} />
-    : <Recto modele={modele} />
+    : <Recto modele={modele} filigrane={filigrane} />
 }
 
 /** Conteneur responsive : met la carte à l'échelle sans déformer le rendu. */

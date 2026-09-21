@@ -739,11 +739,26 @@ tiennent désormais côté serveur :
    `card_by_slug()` avec `plan_of()`. Elle ne dépend d'aucune valeur venue du
    navigateur.
 
-### Le filigrane de la carte, et ce qu'il protège vraiment
+### Les filigranes de la carte, et ce qu'ils protègent vraiment
 
-Une carte gratuite porte au verso, sous le QR Code, une ligne « Powered by
-Kartaa » ; l'abonnement Pro la retire, de l'aperçu comme des fichiers PNG, JPG
-et PDF — c'est le même rendu qui sert aux deux.
+Une carte gratuite porte, **sur ses deux faces**, un semis de « Kartaa » répété
+en diagonale — une soixantaine d'occurrences — plus une ligne « Powered by
+Kartaa » en bas. L'abonnement Pro retire tout cela, de l'aperçu comme des
+fichiers PNG, JPG et PDF : c'est le même rendu qui sert aux deux.
+
+Le filigrane suit **l'abonnement, jamais le modèle de carte**. Un abonné qui
+garde la carte Standard l'a donc propre, exactement comme s'il avait choisi
+Premium ou VIP ; et toutes ses cartes le sont, pas seulement la première. Un
+compte gratuit n'a qu'une carte (`plan_limits`), et elle porte les filigranes.
+
+**Le QR Code reste scannable, sans exception.** Au verso, le semis est dessiné
+avant la plaque blanche du code, donc derrière elle ; la plaque étant opaque, ni
+le code ni sa zone calme ne sont jamais recouverts. Le test `offres-check`
+décode réellement le code depuis l'image produite, filigranes compris.
+
+L'intensité tient dans une seule constante, `FILIGRANE` dans
+`components/card/CardArtwork.jsx` : `opacite` est le seul curseur à toucher pour
+les rendre plus ou moins présents.
 
 Le plan qui décide vient de la colonne `profiles.plan`, que le navigateur ne
 peut pas écrire, et son échéance est vérifiée. Trafiquer une valeur dans
