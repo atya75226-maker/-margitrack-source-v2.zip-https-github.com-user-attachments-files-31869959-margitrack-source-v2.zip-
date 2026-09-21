@@ -700,7 +700,7 @@ n'ont pas d'abonnement à eux.
 | --- | --- |
 | 1 carte, modèle Standard, filigrane « Powered by Kartaa » au verso | Plusieurs cartes, modèles Premium et VIP, **aucun filigrane** |
 | Mini-site public complet : coordonnées, WhatsApp, e-mail, services | Galerie photos, plusieurs activités, couleurs et typographie |
-| WhatsApp, Instagram, LinkedIn, X, Snapchat, sites web et liens sans limite | **Facebook, TikTok, YouTube, Telegram** |
+| WhatsApp, TikTok, YouTube, LinkedIn, Snapchat, sites web et liens sans limite | **Facebook, Instagram, Telegram, X** |
 | Profil personnel : nom, profession, coordonnées | **Informations d'entreprise** : structure, logo, adresse, site |
 | Scanner universel et historique | Statistiques avancées |
 | 1 coffre, 200 Mo | Plusieurs coffres, 20 Go |
@@ -729,7 +729,7 @@ tiennent désormais côté serveur :
    toujours les corriger.
 3. **Les statistiques avancées** répondent `{"locked":"pro"}` au lieu de
    chiffres.
-4. **Facebook, TikTok, YouTube et Telegram** sont refusés par
+4. **Facebook, Instagram, Telegram et X** sont refusés par
    `set_card_social_links()`, qui compare le plan effectif du propriétaire. La
    liste vit dans `pro_social_platforms()`, en base, et doit rester alignée sur
    `PRO_SOCIAL_KEYS` côté application. Un compte gratuit peut garder, renommer

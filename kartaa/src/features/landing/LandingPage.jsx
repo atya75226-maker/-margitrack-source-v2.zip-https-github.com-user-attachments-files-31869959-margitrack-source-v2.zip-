@@ -74,7 +74,7 @@ const ETAPES = [
 const PRO_INCLUS = [
   'Plusieurs cartes professionnelles',
   'Modèles Premium et VIP',
-  'Facebook, TikTok, YouTube et Telegram',
+  'Facebook, Instagram, Telegram et X',
   'Informations d’entreprise et galerie photos',
   'Couleurs et typographie de votre profil',
   'Statistiques détaillées des interactions',
@@ -85,7 +85,7 @@ const GRATUIT_INCLUS = [
   'Une carte et son QR Code',
   'Votre profil public complet',
   'Appel, WhatsApp, e-mail, fiche contact',
-  'Instagram, LinkedIn, X, Snapchat et vos liens',
+  'TikTok, YouTube, LinkedIn, Snapchat et vos liens',
   'Scanner de QR Codes',
   'Application installable, mode hors connexion',
 ]

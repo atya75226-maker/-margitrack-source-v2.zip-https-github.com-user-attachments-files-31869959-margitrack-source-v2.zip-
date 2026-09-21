@@ -13,9 +13,10 @@ import { useAuth } from '../../../state/AuthContext'
  *
  * QUATRE RÉSEAUX SONT INCLUS DANS L'ABONNEMENT PRO
  *
- * Facebook, TikTok, YouTube et Telegram (`pro: true` dans la configuration).
- * Les coordonnées de base — téléphone, WhatsApp, e-mail — et tous les autres
- * liens restent gratuits : une carte gratuite doit rester une vraie carte.
+ * Facebook, Instagram, Telegram et X (`pro: true` dans la configuration). Les
+ * coordonnées de base — téléphone, WhatsApp, e-mail — ainsi que TikTok,
+ * YouTube, LinkedIn, Snapchat, les sites web et les autres liens restent
+ * gratuits : une carte gratuite doit rester une vraie carte.
  *
  * Ce que l'écran fait ici n'est qu'une courtoisie. Le refus réel vient de
  * set_card_social_links(), qui compare le plan EFFECTIF du propriétaire et

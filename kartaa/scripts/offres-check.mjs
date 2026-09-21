@@ -46,11 +46,11 @@ const json = (route, corps) => route.fulfill({
 })
 
 /**
- * Une carte qui porte DÉJÀ une entreprise et un compte TikTok.
+ * Une carte qui porte DÉJÀ une entreprise et un compte Instagram.
  *
- * C'est volontaire : elle sert à vérifier qu'un compte gratuit — ou un
- * abonnement échu — voit toujours ces données, et qu'elles ne sont jamais
- * effacées par le verrouillage.
+ * C'est volontaire : Instagram fait partie des réseaux Pro, et cette carte sert
+ * à vérifier qu'un compte gratuit — ou un abonnement échu — voit toujours ces
+ * données, et qu'elles ne sont jamais effacées par le verrouillage.
  */
 const carte = {
   id: CARTE, user_id: COMPTE, slug: 'awa-diallo', template: 'standard',
@@ -67,8 +67,8 @@ const carte = {
 }
 
 const LIENS = [
-  { id: 'l1', card_id: CARTE, platform: 'instagram', title: 'Mon compte', url: 'https://instagram.com/awa', display_order: 0, is_active: true },
-  { id: 'l2', card_id: CARTE, platform: 'tiktok', title: 'Ma chaîne', url: 'https://tiktok.com/@awa', display_order: 1, is_active: true },
+  { id: 'l1', card_id: CARTE, platform: 'linkedin', title: 'Mon profil', url: 'https://linkedin.com/in/awa', display_order: 0, is_active: true },
+  { id: 'l2', card_id: CARTE, platform: 'instagram', title: 'Mon compte', url: 'https://instagram.com/awa', display_order: 1, is_active: true },
 ]
 
 const browser = await chromium.launch()
@@ -171,12 +171,12 @@ for (const cas of CAS) {
   await allerALEtape(page, 1) // 0 Informations → 1 Réseaux
   const reseaux = await page.innerText('body')
 
-  for (const marque of ['Facebook', 'TikTok', 'YouTube', 'Telegram']) {
+  for (const marque of ['Facebook', 'Instagram', 'Telegram', 'X']) {
     const verrou = new RegExp(`${marque} — disponible avec Kartaa Pro`)
     verifier(`${marque} ${cas.pro ? 'ouvert' : 'verrouillé'}`,
       verrou.test(reseaux) === !cas.pro)
   }
-  for (const libre of ['WhatsApp', 'Instagram', 'LinkedIn', 'Snapchat']) {
+  for (const libre of ['WhatsApp', 'TikTok', 'YouTube', 'LinkedIn', 'Snapchat']) {
     verifier(`${libre} reste gratuit`,
       !new RegExp(`${libre} — disponible avec Kartaa Pro`).test(reseaux))
   }
@@ -184,8 +184,8 @@ for (const cas of CAS) {
   // Les données existantes ne disparaissent jamais avec le verrou. Les adresses
   // sont dans des <input> : innerText ne les voit pas, on lit les valeurs.
   const adresses = await page.locator('input').evaluateAll((n) => n.map((e) => e.value))
-  verifier('le compte TikTok déjà enregistré reste visible',
-    adresses.some((valeur) => /tiktok\.com\/@awa/.test(valeur || '')), `→ ${cas.nom}`)
+  verifier('le compte Instagram déjà enregistré reste visible',
+    adresses.some((valeur) => /instagram\.com\/awa/.test(valeur || '')), `→ ${cas.nom}`)
 
   /* ------------------------------------------------------------- entreprise */
   await allerALEtape(page, 2) // 1 Réseaux → 2 Présentation → 3 Entreprises
@@ -265,7 +265,7 @@ for (const [ownerPlan, attendu] of [['free', true], ['pro', false]]) {
     profile: carte.profile, socials: [], about: '', activities: [],
     companies: carte.companies, services: [], gallery: [], scans: 4,
     createdAt: carte.created_at, ownerPlan, ownerAvatarUrl: '',
-    socialLinks: [{ id: 'l1', platform: 'instagram', title: 'Mon compte', url: 'https://instagram.com/awa', displayOrder: 0 }],
+    socialLinks: [{ id: 'l1', platform: 'linkedin', title: 'Mon profil', url: 'https://linkedin.com/in/awa', displayOrder: 0 }],
   }))
   const page = await context.newPage()
   await page.goto(`${BASE}/awa-diallo`, { waitUntil: 'domcontentloaded' })
@@ -337,7 +337,7 @@ console.log('\nCe qui est vendu existe')
   verifier('aucun QR Code personnalisé promis', !/QR Code personnalisé/i.test(abonnement))
   verifier('aucun domaine personnalisé promis', !/domaine personnalisé/i.test(abonnement))
   verifier('le sans-filigrane est annoncé', /sans la mention Kartaa/i.test(abonnement))
-  verifier('les réseaux Pro sont annoncés', /Facebook, TikTok, YouTube et Telegram/i.test(abonnement))
+  verifier('les réseaux Pro sont annoncés', /Facebook, Instagram, Telegram et X/i.test(abonnement))
   verifier("les informations d'entreprise sont annoncées", /Informations d’entreprise|Informations d'entreprise/i.test(abonnement))
   verifier('un seul prix, 5 000 FCFA', /5\s?000\s?FCFA/.test(abonnement))
 
